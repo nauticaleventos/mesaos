@@ -9,12 +9,12 @@ interface SavedResult {
 }
 
 interface Props {
-  onSave:   (item: NewFridgeItem) => void
+  onSave:  (item: NewFridgeItem) => void
   onCancel: () => void
-  onDone:   () => void
+  onDone:  () => void
 }
 
-export default function PhotoScan({ onSave, onCancel, onDone }: Props) {
+export default function PhotoScan({ onSave, onCancel: _onCancel, onDone }: Props) {
   const inputRef                        = useRef<HTMLInputElement>(null)
   const galleryRef                      = useRef<HTMLInputElement>(null)
   const [scanning, setScanning]         = useState(false)
