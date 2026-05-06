@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useFamilyStore } from '../store/familyStore'
+import { useFridgeStore } from '../store/fridgeStore'
+import { calcularNivelNevera } from '../lib/nivelNevera'
 import type { FamilyMember } from '../lib/types'
 import StepAddMember from '../components/onboarding/StepAddMember'
 
@@ -9,6 +11,13 @@ export default function HomePage() {
   const navigate                          = useNavigate()
   const { signOut }                     = useAuthStore()
   const { family, members, deleteMember } = useFamilyStore()
+  const { items, loadItems }            = useFridgeStore()
+
+  useEffect(() => {
+    if (family?.id) loadItems(family.id)
+  }, [family?.id, loadItems])
+
+  const nivel = calcularNivelNevera(items)
   const [addingMember, setAddingMember] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
@@ -147,27 +156,67 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Módulos */}
-      <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => navigate('/nevera')}
-          className="card flex flex-col items-center gap-2 py-5 hover:border-accent hover:bg-accent-light transition-all active:scale-95">
-          <span className="text-3xl">🧊</span>
-          <span className="text-sm font-medium text-text">Mi Nevera</span>
-        </button>
-        <div className="card flex flex-col items-center gap-2 py-5 opacity-40 cursor-not-allowed">
-          <span className="text-3xl">📖</span>
-          <span className="text-sm font-medium text-text">Recetario</span>
-          <span className="text-xs text-muted">Próximamente</span>
+      {/* Nevera — card completo con estado */}
+      <button onClick={() => navigate('/nevera')}
+        className="card w-full text-left flex flex-col gap-3 hover:border-accent transition-all active:scale-95">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🧊</span>
+            <span className="font-semibold text-text">Mi Nevera</span>
+          </div>
+          <span className="text-xs text-muted">{items.length} item{items.length !== 1 ? 's' : ''}</span>
         </div>
-        <div className="card flex flex-col items-center gap-2 py-5 opacity-40 cursor-not-allowed">
-          <span className="text-3xl">🍽️</span>
-          <span className="text-sm font-medium text-text">Menú semanal</span>
-          <span className="text-xs text-muted">Próximamente</span>
+
+        {/* Barra de nivel */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-text">{nivel.resumen}</span>
+            <span className="text-sm font-semibold"
+              style={{ color: nivel.porcentaje >= 75 ? '#22c55e' : nivel.porcentaje >= 50 ? '#4a7c59' : nivel.porcentaje >= 25 ? '#e8a020' : '#ef4444' }}>
+              {nivel.porcentaje}%
+            </span>
+          </div>
+          <div className="w-full bg-border rounded-full h-2">
+            <div className="h-2 rounded-full transition-all duration-500"
+              style={{
+                width: `${nivel.porcentaje}%`,
+                backgroundColor: nivel.porcentaje >= 75 ? '#22c55e'
+                  : nivel.porcentaje >= 50 ? '#4a7c59'
+                  : nivel.porcentaje >= 25 ? '#e8a020'
+                  : '#ef4444'
+              }} />
+          </div>
         </div>
-        <div className="card flex flex-col items-center gap-2 py-5 opacity-40 cursor-not-allowed">
-          <span className="text-3xl">🛒</span>
-          <span className="text-sm font-medium text-text">Mercado</span>
-          <span className="text-xs text-muted">Próximamente</span>
+
+        {/* Alertas */}
+        {nivel.alertasVencimiento > 0 && (
+          <p className="text-xs text-error">
+            ⚠️ {nivel.alertasVencimiento} alimento{nivel.alertasVencimiento > 1 ? 's' : ''} por vencer
+          </p>
+        )}
+        {nivel.categoriasFaltantes.length > 0 && nivel.porcentaje < 75 && (
+          <p className="text-xs text-muted">
+            Para el mercado: <span className="text-text">{nivel.categoriasFaltantes.join(', ')}</span>
+          </p>
+        )}
+        {nivel.porcentaje >= 75 && (
+          <p className="text-xs text-success">Nevera completa — podés relajarte 😌</p>
+        )}
+      </button>
+
+      {/* Otros módulos */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="card flex flex-col items-center gap-2 py-4 opacity-40 cursor-not-allowed">
+          <span className="text-2xl">📖</span>
+          <span className="text-xs font-medium text-text text-center">Recetario</span>
+        </div>
+        <div className="card flex flex-col items-center gap-2 py-4 opacity-40 cursor-not-allowed">
+          <span className="text-2xl">🍽️</span>
+          <span className="text-xs font-medium text-text text-center">Menú semanal</span>
+        </div>
+        <div className="card flex flex-col items-center gap-2 py-4 opacity-40 cursor-not-allowed">
+          <span className="text-2xl">🛒</span>
+          <span className="text-xs font-medium text-text text-center">Mercado</span>
         </div>
       </div>
 
