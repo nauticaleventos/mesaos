@@ -1,7 +1,7 @@
 // Todas las llamadas a Claude van a través de /api/claude (proxy en Vercel)
 // La API key vive en el servidor — nunca se expone al browser
 
-const MODEL = 'claude-sonnet-4-20250514'
+const MODEL = 'claude-sonnet-4-6'
 
 async function callClaude(messages: object[], maxTokens = 1024): Promise<string> {
   const res = await fetch('/api/claude', {
