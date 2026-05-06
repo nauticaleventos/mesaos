@@ -2,7 +2,20 @@ import { useState } from 'react'
 import { useFamilyStore } from '../../store/familyStore'
 import type { FamilyMember } from '../../lib/types'
 
-const EMOJIS = ['👤','👨','👩','👦','👧','👴','👵','🧑','👶','🧒']
+const EMOJIS = [
+  // Neutro
+  '👤',
+  // Tono claro
+  '👨🏻','👩🏻','🧑🏻','👦🏻','👧🏻','🧒🏻','👴🏻','👵🏻','👶🏻',
+  // Tono medio-claro
+  '👨🏼','👩🏼','🧑🏼','👦🏼','👧🏼','🧒🏼','👴🏼','👵🏼','👶🏼',
+  // Tono medio (latino/a)
+  '👨🏽','👩🏽','🧑🏽','👦🏽','👧🏽','🧒🏽','👴🏽','👵🏽','👶🏽',
+  // Tono medio-oscuro
+  '👨🏾','👩🏾','🧑🏾','👦🏾','👧🏾','🧒🏾','👴🏾','👵🏾','👶🏾',
+  // Tono oscuro
+  '👨🏿','👩🏿','🧑🏿','👦🏿','👧🏿','🧒🏿','👴🏿','👵🏿','👶🏿',
+]
 
 const GOALS = [
   { value: 'deficit',         label: 'Bajar de peso',         desc: 'Déficit calórico moderado' },
@@ -58,30 +71,33 @@ const emptyMember = (): Omit<FamilyMember, 'id' | 'family_id' | 'created_at' | '
 
 export default function StepAddMember({ familyName, memberCount, onAdded, onFinish }: Props) {
   const [form, setForm]       = useState(emptyMember())
-  const [allergyInput, setAllergyInput]   = useState('')
+  const [allergyInput, setAllergyInput]       = useState('')
   const [prohibitedInput, setProhibitedInput] = useState('')
-  const [dislikeInput, setDislikeInput]   = useState('')
-  const [error, setError]     = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const addMember             = useFamilyStore(s => s.addMember)
+  const [dislikeInput, setDislikeInput]       = useState('')
+  const [error, setError]                     = useState<string | null>(null)
+  const [loading, setLoading]                 = useState(false)
+  const addMember                             = useFamilyStore(s => s.addMember)
 
   const set = (field: string, value: unknown) =>
     setForm(f => ({ ...f, [field]: value }))
 
   const toggleCondition = (c: string) =>
-    set('conditions', form.conditions.includes(c)
-      ? form.conditions.filter((x: string) => x !== c)
-      : [...form.conditions, c])
+    setForm(f => ({
+      ...f,
+      conditions: f.conditions.includes(c)
+        ? f.conditions.filter((x: string) => x !== c)
+        : [...f.conditions, c]
+    }))
 
   const addTag = (field: 'allergies' | 'prohibited' | 'dislikes', val: string, clear: () => void) => {
     const trimmed = val.trim()
     if (!trimmed) return
-    set(field, [...form[field], trimmed])
+    setForm(f => ({ ...f, [field]: [...f[field], trimmed] }))
     clear()
   }
 
   const removeTag = (field: 'allergies' | 'prohibited' | 'dislikes', val: string) =>
-    set(field, form[field].filter((x: string) => x !== val))
+    setForm(f => ({ ...f, [field]: f[field].filter((x: string) => x !== val) }))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -109,25 +125,32 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
-        {/* Nombre y emoji */}
-        <div className="flex gap-3 items-end">
-          <div className="flex-1">
-            <label className="input-label">Nombre</label>
-            <input
-              type="text" placeholder="Ej: Abel, Sarah..."
-              value={form.name} onChange={e => set('name', e.target.value)}
-              required autoFocus
-            />
-          </div>
-          <div>
-            <label className="input-label">Emoji</label>
-            <select
-              value={form.emoji ?? '👤'}
-              onChange={e => set('emoji', e.target.value)}
-              style={{ width: '4.5rem', textAlign: 'center', fontSize: '1.4rem', padding: '0.6rem' }}
-            >
-              {EMOJIS.map(e => <option key={e} value={e}>{e}</option>)}
-            </select>
+        {/* Nombre */}
+        <div>
+          <label className="input-label">Nombre</label>
+          <input
+            type="text" placeholder="Ej: Abel, Sarah..."
+            value={form.name} onChange={e => set('name', e.target.value)}
+            required autoFocus
+          />
+        </div>
+
+        {/* Emoji */}
+        <div>
+          <label className="input-label">
+            Avatar — seleccionado: <span className="text-xl">{form.emoji ?? '👤'}</span>
+          </label>
+          <div className="flex flex-wrap gap-1.5 p-3 bg-white border border-border rounded-xl max-h-36 overflow-y-auto">
+            {EMOJIS.map(e => (
+              <button
+                key={e} type="button"
+                onClick={() => set('emoji', e)}
+                className={`text-2xl p-1 rounded-lg transition-all
+                  ${form.emoji === e ? 'bg-accent-light ring-2 ring-accent' : 'hover:bg-gray-50'}`}
+              >
+                {e}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -245,7 +268,7 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
             <span className="text-xs font-normal text-error ml-1">(bloqueo absoluto)</span>
           </label>
           <div className="flex gap-2 mb-2">
-            <input type="text" placeholder="Ej: maní, mariscos..."
+            <input type="text" placeholder="Ej: maní, mariscos, lactosa..."
               value={allergyInput} onChange={e => setAllergyInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag('allergies', allergyInput, () => setAllergyInput('')) }}}
             />
@@ -290,10 +313,11 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
         {/* No le gusta */}
         <div>
           <label className="input-label">No le gusta
-            <span className="text-xs font-normal text-muted ml-1">(se evita pero no es crítico)</span>
+            <span className="text-xs font-normal text-muted ml-1">(se evita si hay alternativa)</span>
           </label>
+          <p className="text-xs text-muted mb-2">Sé específico: "pechuga de pollo" ≠ "pollo". "pollo frito" ≠ "pollo".</p>
           <div className="flex gap-2 mb-2">
-            <input type="text" placeholder="Ej: brócoli, hígado..."
+            <input type="text" placeholder="Ej: pechuga de pollo, brócoli, hígado..."
               value={dislikeInput} onChange={e => setDislikeInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag('dislikes', dislikeInput, () => setDislikeInput('')) }}}
             />
