@@ -84,7 +84,7 @@ export default function FridgePage() {
         <h2 className="text-xl font-serif font-semibold text-text mb-4">
           {modal === 'manual' ? 'Agregar alimento'
           : modal === 'edit'  ? `Editar: ${editingItem?.name}`
-          : modal === 'quick' ? 'Lista rápida'
+          : modal === 'quick' ? '¿Qué tenés en la nevera?'
           : 'Agregar por foto'}
         </h2>
         {modal === 'manual' && <AddItemForm onSave={handleSave} onCancel={() => setModal(null)} />}
@@ -115,7 +115,7 @@ export default function FridgePage() {
           <div className="flex gap-2">
             <button onClick={() => setModal('quick')}
               className="px-3 py-1.5 rounded-xl bg-accent-light text-accent text-sm font-medium hover:bg-accent hover:text-white transition-all">
-              📝 Lista
+              ✍️ Dictar
             </button>
             <button onClick={() => setModal('photo')}
               className="px-3 py-1.5 rounded-xl bg-accent-light text-accent text-sm font-medium hover:bg-accent hover:text-white transition-all">

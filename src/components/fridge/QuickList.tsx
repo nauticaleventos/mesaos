@@ -15,12 +15,9 @@ interface Props {
   onDone: () => void
 }
 
-const PLACEHOLDER = `Escribe un alimento por línea. Ejemplos:
-3 bolsas de leche Alpina entera
-1 bolsa de Milo en polvo 400g
-2 aguacates
-1 pollo entero
-Queso costeño`
+const PLACEHOLDER = `Escribe como si le contaras a alguien. Por ejemplo:
+
+3 bolsas de leche Alpina entera, 1 Milo en polvo, 2 aguacates, pollo, queso costeño, algo de yogur, unos 6 huevos y jugo Hit de naranja`
 
 const toNewItem = (f: FoodFromPhoto): NewFridgeItem => ({
   name: f.name, quantity: f.quantity, unit: f.unit,
@@ -137,18 +134,32 @@ export default function QuickList({ onSave, onEdit, onDone }: Props) {
   // Formulario
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <p className="text-sm text-muted mb-2">
-          Escribe lo que tienes — un alimento por línea con cantidad.
-          Claude identifica cada producto y busca su información nutricional.
+
+      {/* Ejemplo visual */}
+      <div className="bg-accent-light rounded-xl p-3 flex flex-col gap-2">
+        <p className="text-xs font-semibold text-accent">¿Cómo funciona?</p>
+        <p className="text-xs text-text leading-relaxed">
+          Escribí lo que tenés como si se lo contaras a alguien —
+          con cantidades o sin ellas, con errores o sin, todo junto o separado.
+          La app lo entiende y lo guarda automáticamente en tu nevera.
         </p>
+        <div className="bg-white rounded-lg p-2 mt-1">
+          <p className="text-xs text-muted italic leading-relaxed">
+            "me quedan 3 bolsas de leche alpina, algo de queso, unos 6 huevos, 2 aguacates, pollo y jugo hit"
+          </p>
+          <p className="text-xs text-success mt-1 font-medium">→ 7 alimentos identificados y guardados ✓</p>
+        </div>
+      </div>
+
+      <div>
+        <label className="input-label">Escribe lo que tenés</label>
         <textarea
-          rows={8}
+          rows={5}
           placeholder={PLACEHOLDER}
           value={text}
           onChange={e => setText(e.target.value)}
           className="w-full"
-          style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: '0.9rem' }}
+          style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: '0.95rem' }}
           autoFocus
         />
       </div>
@@ -159,7 +170,7 @@ export default function QuickList({ onSave, onEdit, onDone }: Props) {
 
       <button onClick={handleSubmit} className="btn-primary"
         disabled={!text.trim() || loading}>
-        Identificar y guardar
+        Agregar a mi nevera
       </button>
     </div>
   )
