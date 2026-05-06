@@ -9,8 +9,8 @@ import OnboardingPage from './pages/onboarding/OnboardingPage'
 import HomePage       from './pages/HomePage'
 
 function AppRoutes() {
-  const { session, loading: authLoading } = useAuthStore()
-  const { family, loading: familyLoading } = useFamilyStore()
+  const { session, loading: authLoading }   = useAuthStore()
+  const { family, loading: familyLoading }  = useFamilyStore()
 
   if (authLoading || (session && familyLoading)) {
     return (
@@ -24,16 +24,18 @@ function AppRoutes() {
     <Routes>
       <Route path="/login"  element={!session ? <LoginPage />  : <Navigate to="/" replace />} />
       <Route path="/signup" element={!session ? <SignupPage /> : <Navigate to="/" replace />} />
+
+      {/* Onboarding: accesible siempre que haya sesión */}
       <Route path="/onboarding" element={
-        !session ? <Navigate to="/login" replace />
-        : family  ? <Navigate to="/" replace />
-        : <OnboardingPage />
+        !session ? <Navigate to="/login" replace /> : <OnboardingPage />
       } />
+
       <Route path="/" element={
         !session ? <Navigate to="/login" replace />
         : !family ? <Navigate to="/onboarding" replace />
         : <HomePage />
       } />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
