@@ -34,7 +34,18 @@ export default function PhotoScan({ onSave, onCancel }: Props) {
 
       const dataUrl = await readFile(file)
       const base64  = dataUrl.split(',')[1]
-      const mime    = file.type as 'image/jpeg' | 'image/png' | 'image/webp'
+
+      // iPhone puede enviar HEIC — normalizar siempre a jpeg
+      let mime: 'image/jpeg' | 'image/png' | 'image/webp' = 'image/jpeg'
+      if (file.type === 'image/png')  mime = 'image/png'
+      if (file.type === 'image/webp') mime = 'image/webp'
+
+      // Verificar que el base64 no esté vacío
+      if (!base64 || base64.length < 100) {
+        localError = `Foto ${i + 1}: imagen inválida (tamaño: ${base64?.length ?? 0})`
+        setError(localError)
+        break
+      }
 
       try {
         const detected = await scanFoodPhoto(base64, mime)
