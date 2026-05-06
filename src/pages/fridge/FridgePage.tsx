@@ -5,7 +5,7 @@ import { useFridgeStore, expiryStatus, expiryLabel, type FridgeItem, type NewFri
 import AddItemForm from '../../components/fridge/AddItemForm'
 import PhotoScan from '../../components/fridge/PhotoScan'
 
-type Modal = null | 'manual' | 'photo'
+type Modal = null | 'manual' | 'photo' | 'edit'
 type Filter = 'todos' | 'nevera' | 'congelador' | 'despensa'
 
 const STATUS_COLORS = {
@@ -31,8 +31,9 @@ const LOCATION_ICONS: Record<string, string> = {
 export default function FridgePage() {
   const navigate           = useNavigate()
   const { family }         = useFamilyStore()
-  const { items, loading, loadItems, addItem, deleteItem } = useFridgeStore()
+  const { items, loading, loadItems, addItem, updateItem, deleteItem } = useFridgeStore()
   const [modal, setModal]           = useState<Modal>(null)
+  const [editingItem, setEditingItem] = useState<FridgeItem | null>(null)
   const [filter, setFilter]         = useState<Filter>('todos')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
@@ -56,20 +57,39 @@ export default function FridgePage() {
 
   const handlePhotoDone = () => setModal(null)
 
+  const handleEdit = (item: FridgeItem) => {
+    setEditingItem(item)
+    setModal('edit')
+  }
+
+  const handleUpdate = async (updated: NewFridgeItem) => {
+    if (!editingItem) return
+    await updateItem(editingItem.id, updated)
+    setModal(null)
+    setEditingItem(null)
+  }
+
   if (modal) {
     return (
       <div className="min-h-screen px-4 py-6 max-w-lg mx-auto">
-        <button onClick={() => setModal(null)}
+        <button onClick={() => { setModal(null); setEditingItem(null) }}
           className="text-muted text-sm mb-5 flex items-center gap-1 hover:text-text transition-colors">
           ← Volver a la nevera
         </button>
         <h2 className="text-xl font-serif font-semibold text-text mb-4">
-          {modal === 'manual' ? 'Agregar alimento' : 'Agregar por foto'}
+          {modal === 'manual' ? 'Agregar alimento'
+          : modal === 'edit' ? `Editar: ${editingItem?.name}`
+          : 'Agregar por foto'}
         </h2>
-        {modal === 'manual'
-          ? <AddItemForm onSave={handleSave} onCancel={() => setModal(null)} />
-          : <PhotoScan onSave={handleSave} onCancel={() => setModal(null)} onDone={handlePhotoDone} />
-        }
+        {modal === 'manual' && <AddItemForm onSave={handleSave} onCancel={() => setModal(null)} />}
+        {modal === 'edit' && editingItem && (
+          <AddItemForm
+            initial={editingItem}
+            onSave={handleUpdate}
+            onCancel={() => { setModal(null); setEditingItem(null) }}
+          />
+        )}
+        {modal === 'photo' && <PhotoScan onSave={handleSave} onCancel={() => setModal(null)} onDone={handlePhotoDone} />}
       </div>
     )
   }
@@ -144,7 +164,12 @@ export default function FridgePage() {
         )}
 
         {/* Lista de items */}
-        {filtered.map(item => <FridgeItemCard key={item.id} item={item} onDelete={setConfirmDelete} />)}
+        {filtered.map(item => (
+          <FridgeItemCard key={item.id} item={item}
+            onDelete={setConfirmDelete}
+            onEdit={handleEdit}
+          />
+        ))}
       </div>
 
       {/* Confirmar borrar */}
@@ -167,7 +192,11 @@ export default function FridgePage() {
   )
 }
 
-function FridgeItemCard({ item, onDelete }: { item: FridgeItem; onDelete: (id: string) => void }) {
+function FridgeItemCard({ item, onDelete, onEdit }: {
+  item: FridgeItem
+  onDelete: (id: string) => void
+  onEdit: (item: FridgeItem) => void
+}) {
   const [showTip, setShowTip] = useState(false)
   const status = expiryStatus(item.expiry_date)
   const label  = expiryLabel(item.expiry_date)
@@ -208,10 +237,16 @@ function FridgeItemCard({ item, onDelete }: { item: FridgeItem; onDelete: (id: s
           )}
         </div>
 
-        <button onClick={() => onDelete(item.id)}
-          className="text-muted hover:text-error transition-colors text-lg leading-none flex-shrink-0">
-          ×
-        </button>
+        <div className="flex flex-col gap-2 flex-shrink-0">
+          <button onClick={() => onEdit(item)}
+            className="text-muted hover:text-accent transition-colors text-sm leading-none">
+            ✏️
+          </button>
+          <button onClick={() => onDelete(item.id)}
+            className="text-muted hover:text-error transition-colors text-lg leading-none">
+            ×
+          </button>
+        </div>
       </div>
     </div>
   )
