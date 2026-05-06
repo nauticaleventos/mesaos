@@ -327,6 +327,9 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
           </div>
         </div>
 
+        {/* Comidas del día */}
+        <MealsConfig form={form} setForm={setForm} />
+
         {/* Calorías y macros personalizados */}
         <CustomMacros form={form} set={set} />
 
@@ -434,6 +437,120 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
           className="w-full py-3 rounded-xl border-2 border-accent text-accent font-semibold text-sm hover:bg-accent-light transition-all">
           Listo, ya están todos ({memberCount}) →
         </button>
+      )}
+    </div>
+  )
+}
+
+// ── Comidas del día ───────────────────────────────────────────────────────────
+const MEAL_PRESETS = [
+  'Desayuno', 'Merienda mañana', 'Almuerzo',
+  'Merienda tarde', 'Cena', 'Snack noche',
+]
+
+interface Meal { name: string; time: string }
+
+function MealsConfig({
+  form,
+  setForm,
+}: {
+  form: { meals_per_day: Meal[] }
+  setForm: React.Dispatch<React.SetStateAction<ReturnType<typeof emptyMember>>>
+}) {
+  const [open, setOpen]         = useState(false)
+  const [customName, setCustomName] = useState('')
+  const meals: Meal[]           = (form.meals_per_day as Meal[]) ?? []
+
+  const addPreset = (name: string) => {
+    if (meals.find(m => m.name === name)) return
+    setForm(f => ({ ...f, meals_per_day: [...(f.meals_per_day as Meal[]), { name, time: '' }] }))
+  }
+
+  const addCustom = () => {
+    const n = customName.trim()
+    if (!n || meals.find(m => m.name === n)) return
+    setForm(f => ({ ...f, meals_per_day: [...(f.meals_per_day as Meal[]), { name: n, time: '' }] }))
+    setCustomName('')
+  }
+
+  const updateTime = (index: number, time: string) =>
+    setForm(f => {
+      const updated = [...(f.meals_per_day as Meal[])]
+      updated[index] = { ...updated[index], time }
+      return { ...f, meals_per_day: updated }
+    })
+
+  const remove = (index: number) =>
+    setForm(f => ({
+      ...f,
+      meals_per_day: (f.meals_per_day as Meal[]).filter((_, i) => i !== index)
+    }))
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-text">Comidas del día</span>
+          {meals.length > 0 && (
+            <span className="px-2 py-0.5 bg-accent-light text-accent text-xs rounded-full">
+              {meals.length} comida{meals.length > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+        <span className="text-muted text-sm">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-2 bg-white flex flex-col gap-3">
+          <p className="text-xs text-muted">
+            Configura las comidas de este miembro y su horario habitual.
+          </p>
+
+          {/* Presets */}
+          <div className="flex flex-wrap gap-2">
+            {MEAL_PRESETS.map(p => (
+              <button key={p} type="button" onClick={() => addPreset(p)}
+                className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all
+                  ${meals.find(m => m.name === p)
+                    ? 'border-accent bg-accent-light text-accent'
+                    : 'border-border text-muted hover:border-accent hover:text-accent'}`}>
+                {meals.find(m => m.name === p) ? '✓ ' : '+ '}{p}
+              </button>
+            ))}
+          </div>
+
+          {/* Comida personalizada */}
+          <div className="flex gap-2">
+            <input type="text" placeholder="Otra comida personalizada..."
+              value={customName} onChange={e => setCustomName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom() }}}
+            />
+            <button type="button" onClick={addCustom}
+              className="px-3 py-2 bg-accent-light text-accent rounded-xl text-sm font-medium whitespace-nowrap">
+              + Agregar
+            </button>
+          </div>
+
+          {/* Lista con horarios */}
+          {meals.length > 0 && (
+            <div className="flex flex-col gap-2 mt-1">
+              {meals.map((meal, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-sm text-text flex-1 font-medium">{meal.name}</span>
+                  <input type="time" value={meal.time}
+                    onChange={e => updateTime(i, e.target.value)}
+                    style={{ width: '7rem', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                  />
+                  <button type="button" onClick={() => remove(i)}
+                    className="text-muted hover:text-error transition-colors text-lg leading-none">
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
