@@ -32,20 +32,10 @@ export default function PhotoScan({ onSave, onCancel }: Props) {
       const file = files[i]
       setProgress(`Analizando foto ${i + 1} de ${files.length}...`)
 
-      const dataUrl = await readFile(file)
-      const base64  = dataUrl.split(',')[1]
-
-      // iPhone puede enviar HEIC — normalizar siempre a jpeg
-      let mime: 'image/jpeg' | 'image/png' | 'image/webp' = 'image/jpeg'
-      if (file.type === 'image/png')  mime = 'image/png'
-      if (file.type === 'image/webp') mime = 'image/webp'
-
-      // Verificar que el base64 no esté vacío
-      if (!base64 || base64.length < 100) {
-        localError = `Foto ${i + 1}: imagen inválida (tamaño: ${base64?.length ?? 0})`
-        setError(localError)
-        break
-      }
+      const rawDataUrl    = await readFile(file)
+      const compressedUrl = await compressImage(rawDataUrl)
+      const base64        = compressedUrl.split(',')[1]
+      const mime: 'image/jpeg' = 'image/jpeg'  // canvas siempre genera JPEG
 
       try {
         const detected = await scanFoodPhoto(base64, mime)
@@ -72,6 +62,25 @@ export default function PhotoScan({ onSave, onCancel }: Props) {
       const r = new FileReader()
       r.onload = () => resolve(r.result as string)
       r.readAsDataURL(file)
+    })
+
+  // Comprime la imagen a máx 1024px y 80% calidad — evita límite de 4.5MB de Vercel
+  const compressImage = (dataUrl: string): Promise<string> =>
+    new Promise(resolve => {
+      const img = new Image()
+      img.onload = () => {
+        const MAX = 1024
+        let { width, height } = img
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX }
+          else { width = Math.round(width * MAX / height); height = MAX }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.8))
+      }
+      img.src = dataUrl
     })
 
   const toNewItem = (f: FoodFromPhoto): Partial<NewFridgeItem> => ({
