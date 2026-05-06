@@ -50,8 +50,11 @@ export default function FridgePage() {
   const handleSave = async (item: NewFridgeItem) => {
     if (!family?.id) return
     await addItem(item, family.id)
-    setModal(null)
+    // Para foto: no cerrar el modal — PhotoScan gestiona su propio flujo
+    if (modal === 'manual') setModal(null)
   }
+
+  const handlePhotoDone = () => setModal(null)
 
   if (modal) {
     return (
@@ -65,7 +68,7 @@ export default function FridgePage() {
         </h2>
         {modal === 'manual'
           ? <AddItemForm onSave={handleSave} onCancel={() => setModal(null)} />
-          : <PhotoScan onSave={handleSave} onCancel={() => setModal(null)} />
+          : <PhotoScan onSave={handleSave} onCancel={() => setModal(null)} onDone={handlePhotoDone} />
         }
       </div>
     )
