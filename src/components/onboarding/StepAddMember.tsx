@@ -2,20 +2,21 @@ import { useState } from 'react'
 import { useFamilyStore } from '../../store/familyStore'
 import type { FamilyMember } from '../../lib/types'
 
-const EMOJIS = [
-  // Neutro
-  '👤',
-  // Tono claro
-  '👨🏻','👩🏻','🧑🏻','👦🏻','👧🏻','🧒🏻','👴🏻','👵🏻','👶🏻',
-  // Tono medio-claro
-  '👨🏼','👩🏼','🧑🏼','👦🏼','👧🏼','🧒🏼','👴🏼','👵🏼','👶🏼',
-  // Tono medio (latino/a)
-  '👨🏽','👩🏽','🧑🏽','👦🏽','👧🏽','🧒🏽','👴🏽','👵🏽','👶🏽',
-  // Tono medio-oscuro
-  '👨🏾','👩🏾','🧑🏾','👦🏾','👧🏾','🧒🏾','👴🏾','👵🏾','👶🏾',
-  // Tono oscuro
-  '👨🏿','👩🏿','🧑🏿','👦🏿','👧🏿','🧒🏿','👴🏿','👵🏿','👶🏿',
+// Base types con variantes de tono de piel (como WhatsApp)
+const SKIN_TONES = ['', '🏻', '🏼', '🏽', '🏾', '🏿']
+const TONE_LABELS = ['🟡', '🏻', '🏼', '🏽', '🏾', '🏿']
+
+const BASE_TYPES = [
+  { base: '👨', label: 'Hombre' },
+  { base: '👩', label: 'Mujer' },
+  { base: '👦', label: 'Niño' },
+  { base: '👧', label: 'Niña' },
+  { base: '👴', label: 'Abuelo' },
+  { base: '👵', label: 'Abuela' },
+  { base: '👶', label: 'Bebé' },
 ]
+
+const SPECIAL_EMOJIS = ['🦄','🐱','🐶','🐻','🦊','🐼','🐸','🤖','👻','⭐','🌟','💫']
 
 const GOALS = [
   { value: 'deficit',         label: 'Bajar de peso',         desc: 'Déficit calórico moderado' },
@@ -99,7 +100,8 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
   const removeTag = (field: 'allergies' | 'prohibited' | 'dislikes', val: string) =>
     setForm(f => ({ ...f, [field]: f[field].filter((x: string) => x !== val) }))
 
-  const [savedName, setSavedName] = useState<string | null>(null)
+  const [savedName, setSavedName]       = useState<string | null>(null)
+  const [selectedBase, setSelectedBase] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -173,22 +175,65 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
           />
         </div>
 
-        {/* Emoji */}
+        {/* Avatar estilo WhatsApp */}
         <div>
           <label className="input-label">
-            Avatar — seleccionado: <span className="text-xl">{form.emoji ?? '👤'}</span>
+            Avatar — <span className="text-2xl">{form.emoji ?? '👤'}</span>
           </label>
-          <div className="flex flex-wrap gap-1.5 p-3 bg-white border border-border rounded-xl max-h-36 overflow-y-auto">
-            {EMOJIS.map(e => (
-              <button
-                key={e} type="button"
-                onClick={() => set('emoji', e)}
-                className={`text-2xl p-1 rounded-lg transition-all
-                  ${form.emoji === e ? 'bg-accent-light ring-2 ring-accent' : 'hover:bg-gray-50'}`}
-              >
-                {e}
-              </button>
-            ))}
+
+          {/* Paso 1 — elegir tipo */}
+          <div className="p-3 bg-white border border-border rounded-xl flex flex-col gap-3">
+            <p className="text-xs text-muted">Elige el tipo:</p>
+            <div className="flex flex-wrap gap-2">
+              {BASE_TYPES.map(t => (
+                <button key={t.base} type="button"
+                  onClick={() => {
+                    setSelectedBase(t.base)
+                    set('emoji', t.base + '🏽') // tono medio por defecto
+                  }}
+                  className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl border transition-all
+                    ${selectedBase === t.base
+                      ? 'border-accent bg-accent-light'
+                      : 'border-border hover:bg-gray-50'}`}>
+                  <span className="text-2xl">{t.base}🏽</span>
+                  <span className="text-xs text-muted">{t.label}</span>
+                </button>
+              ))}
+              {/* Especiales */}
+              {SPECIAL_EMOJIS.map(e => (
+                <button key={e} type="button"
+                  onClick={() => { setSelectedBase(null); set('emoji', e) }}
+                  className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl border transition-all
+                    ${form.emoji === e && !selectedBase
+                      ? 'border-accent bg-accent-light'
+                      : 'border-border hover:bg-gray-50'}`}>
+                  <span className="text-2xl">{e}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Paso 2 — elegir tono (solo si hay base seleccionada) */}
+            {selectedBase && (
+              <div>
+                <p className="text-xs text-muted mb-2">Elige el tono de piel:</p>
+                <div className="flex gap-3">
+                  {SKIN_TONES.map((tone, i) => {
+                    const full = selectedBase + tone
+                    return (
+                      <button key={tone} type="button"
+                        onClick={() => set('emoji', full)}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all
+                          ${form.emoji === full
+                            ? 'border-accent bg-accent-light'
+                            : 'border-border hover:bg-gray-50'}`}>
+                        <span className="text-2xl">{full}</span>
+                        <span className="text-base">{TONE_LABELS[i]}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -381,7 +426,8 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
       </form>
 
       {memberCount > 0 && (
-        <button onClick={onFinish} className="btn-ghost">
+        <button onClick={onFinish}
+          className="w-full py-3 rounded-xl border-2 border-accent text-accent font-semibold text-sm hover:bg-accent-light transition-all">
           Listo, ya están todos ({memberCount}) →
         </button>
       )}
