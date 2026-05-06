@@ -26,6 +26,7 @@ export default function PhotoScan({ onSave, onCancel }: Props) {
     setError(null)
     setScanning(true)
     const newItems: ScannedItem[] = []
+    let localError: string | null = null
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
@@ -39,8 +40,8 @@ export default function PhotoScan({ onSave, onCancel }: Props) {
         const detected = await scanFoodPhoto(base64, mime)
         newItems.push({ preview: dataUrl, detected })
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e)
-        setError(`Error foto ${i + 1}: ${msg}`)
+        localError = e instanceof Error ? e.message : String(e)
+        setError(localError)
         break
       }
     }
@@ -50,7 +51,7 @@ export default function PhotoScan({ onSave, onCancel }: Props) {
     if (newItems.length > 0) {
       setScannedItems(prev => [...prev, ...newItems])
       setEditingIndex(0)
-    } else if (!error) {
+    } else if (!localError) {
       setError('No pude leer las fotos. Intenta con imágenes más claras.')
     }
   }
