@@ -3,11 +3,11 @@
 
 const MODEL = 'claude-sonnet-4-6'
 
-async function callClaude(messages: object[], maxTokens = 1024): Promise<string> {
+async function callClaude(messages: object[], maxTokens = 1024, temperature = 1): Promise<string> {
   const res = await fetch('/api/claude', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages }),
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, temperature, messages }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -27,31 +27,46 @@ interface ExtractedItem {
   texto_original: string
 }
 
-async function extractItemsFromText(input: string): Promise<ExtractedItem[]> {
-  const text = await callClaude([{
-    role: 'user',
-    content: `Eres un asistente que extrae items de comida de texto en lenguaje natural escrito por usuarios de una app de inventario de cocina. Los usuarios escriben rápido, con errores de tipeo, sin estructura, y con cantidades vagas o ausentes.
+const EXTRACTION_PROMPT = `Eres un asistente que extrae items de comida de texto en lenguaje natural escrito por usuarios de una app de inventario de cocina. Los usuarios escriben rápido, con errores de tipeo, sin estructura, y con cantidades vagas o ausentes.
 
-Tu trabajo es devolver un JSON con la lista de items detectados. Nada más. Sin texto adicional, sin explicaciones, sin markdown.
+Tu trabajo es devolver SOLO un JSON válido con la lista de items detectados. Nada más. Sin texto adicional, sin explicaciones, sin markdown, sin bloques de código.
 
 Formato de salida:
 {"items":[{"nombre":"string","categoria":"string","cantidad":number|null,"unidad":"string|null","es_estimado":boolean,"texto_original":"string"}]}
 
-Categorías válidas: proteina_animal, lacteo, embutido, vegetal, fruta, grano, legumbre, condimento, bebida, snack, otro
+Definición de cada campo:
+- nombre: nombre normalizado del alimento, en singular, minúsculas, en español.
+- categoria: exactamente una de: proteina_animal, embutido, lacteo, vegetal, fruta, grano, legumbre, condimento, bebida, snack, otro
+- cantidad: número si el usuario lo especificó. null si no.
+- unidad: "unidades","g","kg","ml","l","lata","paquete","porcion". null si no aplica.
+- es_estimado: true si usó palabras vagas ("algo de","aprox","unos","como") O si no especificó cantidad. false solo con cantidad y unidad concretas sin palabras vagas.
+- texto_original: fragmento exacto del input que generó este item.
 
 Reglas:
-1. Corrige errores de tipeo obvios: "yogut"→"yogur", "atun"→"atún"
-2. Normaliza nombres en español, singular, minúsculas
-3. Cantidades explícitas: si hay número, úsalo. Sin cantidad: cantidad=null, es_estimado=true
-4. Palabras vagas ("algo de", "aprox", "unos"): es_estimado=true
-5. Items compuestos: sepáralos en items individuales
-6. Ignora frases de relleno: "tengo en la nevera", "me queda", "creo que"
-7. Si no entiendes un fragmento: omítelo
+1. Corrige typos: "yogut"→"yogur", "atun"→"atún", "jamon"→"jamón"
+2. Normaliza al nombre más común en español, singular siempre
+3. Cantidades explícitas: "8 huevos"→cantidad=8, unidad="unidades", es_estimado=false
+4. Cantidades vagas: "algo de queso"→cantidad=null, es_estimado=true
+5. Mezcla vago+número: "algo de huevos unos 8"→cantidad=8, es_estimado=true
+6. Sin cantidad: cantidad=null, unidad=null, es_estimado=true. NUNCA inventes cantidades
+7. Items compuestos: "huevos y leche"→dos items separados
+8. Ignora frases de relleno: "tengo en la nevera","me queda","creo que"
+9. Si no entiendes un fragmento, omítelo
+10. Si el mismo item aparece dos veces, consolídalo sumando cantidades numéricas
 
-INPUT: ${input}`,
-  }], 1500)
+Ejemplos:
+INPUT: "me queda aprox chorizo, atun, jamon, algo de huevos unos 8 yogut griego"
+OUTPUT: {"items":[{"nombre":"chorizo","categoria":"embutido","cantidad":null,"unidad":null,"es_estimado":true,"texto_original":"chorizo"},{"nombre":"atún","categoria":"proteina_animal","cantidad":null,"unidad":null,"es_estimado":true,"texto_original":"atun"},{"nombre":"jamón","categoria":"embutido","cantidad":null,"unidad":null,"es_estimado":true,"texto_original":"jamon"},{"nombre":"huevos","categoria":"proteina_animal","cantidad":8,"unidad":"unidades","es_estimado":true,"texto_original":"algo de huevos unos 8"},{"nombre":"yogur griego","categoria":"lacteo","cantidad":null,"unidad":null,"es_estimado":true,"texto_original":"yogut griego"}]}
 
-  const match = text.match(/\{[\s\S]*\}/)
+Procesa el siguiente input y devuelve SOLO el JSON:
+
+INPUT: {{INPUT}}`
+
+async function extractItemsFromText(input: string): Promise<ExtractedItem[]> {
+  const prompt = EXTRACTION_PROMPT.replace('{{INPUT}}', input)
+  const text = await callClaude([{ role: 'user', content: prompt }], 1500, 0)
+
+  const match = text.trim().match(/\{[\s\S]*\}/)
   if (!match) throw new Error('No se pudo parsear la lista')
   const parsed = JSON.parse(match[0])
   return parsed.items as ExtractedItem[]
