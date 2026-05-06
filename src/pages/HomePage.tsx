@@ -23,7 +23,7 @@ export default function HomePage() {
 
   if (addingMember) {
     return (
-      <div className="min-h-dvh px-4 py-8 max-w-lg mx-auto">
+      <div className="min-h-screen px-4 py-8 max-w-lg mx-auto">
         <button onClick={() => setAddingMember(false)}
           className="text-muted text-sm mb-6 flex items-center gap-1 hover:text-text transition-colors">
           ← Volver
@@ -39,7 +39,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-dvh px-4 py-8 max-w-lg mx-auto flex flex-col gap-6">
+    <div className="min-h-screen px-4 py-8 max-w-lg mx-auto flex flex-col gap-6">
 
       {/* Header */}
       <div className="flex items-center justify-between">

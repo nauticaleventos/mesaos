@@ -55,7 +55,7 @@ export default function FridgePage() {
 
   if (modal) {
     return (
-      <div className="min-h-dvh px-4 py-6 max-w-lg mx-auto">
+      <div className="min-h-screen px-4 py-6 max-w-lg mx-auto">
         <button onClick={() => setModal(null)}
           className="text-muted text-sm mb-5 flex items-center gap-1 hover:text-text transition-colors">
           ← Volver a la nevera
@@ -72,7 +72,7 @@ export default function FridgePage() {
   }
 
   return (
-    <div className="min-h-dvh pb-8 max-w-lg mx-auto">
+    <div className="min-h-screen pb-8 max-w-lg mx-auto">
 
       {/* Header */}
       <div className="sticky top-0 bg-bg/95 backdrop-blur px-4 pt-6 pb-3 z-10">

@@ -19,7 +19,7 @@ export default function OnboardingPage() {
   const handleFinish        = () => navigate('/')
 
   return (
-    <div className="min-h-dvh px-4 py-8 max-w-lg mx-auto flex flex-col gap-6">
+    <div className="min-h-screen px-4 py-8 max-w-lg mx-auto flex flex-col gap-6">
 
       {/* Progreso */}
       <div className="flex items-center gap-2">

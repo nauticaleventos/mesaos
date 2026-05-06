@@ -22,7 +22,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center px-4 py-10"
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10"
          style={{ background: 'linear-gradient(160deg, #f0f7ec 0%, #f7faf5 60%, #eef5f0 100%)' }}>
 
       <div className="text-center mb-8">
