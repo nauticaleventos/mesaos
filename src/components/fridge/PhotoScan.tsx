@@ -3,107 +3,164 @@ import { scanFoodPhoto, type FoodFromPhoto } from '../../lib/claude'
 import AddItemForm from './AddItemForm'
 import type { NewFridgeItem } from '../../store/fridgeStore'
 
+interface ScannedItem {
+  preview: string
+  detected: FoodFromPhoto
+}
+
 interface Props {
   onSave:   (item: NewFridgeItem) => void
   onCancel: () => void
 }
 
 export default function PhotoScan({ onSave, onCancel }: Props) {
-  const inputRef                  = useRef<HTMLInputElement>(null)
-  const [scanning, setScanning]   = useState(false)
-  const [preview, setPreview]     = useState<string | null>(null)
-  const [detected, setDetected]   = useState<FoodFromPhoto | null>(null)
-  const [error, setError]         = useState<string | null>(null)
+  const inputRef                          = useRef<HTMLInputElement>(null)
+  const galleryRef                        = useRef<HTMLInputElement>(null)
+  const [scanning, setScanning]           = useState(false)
+  const [scannedItems, setScannedItems]   = useState<ScannedItem[]>([])
+  const [editingIndex, setEditingIndex]   = useState<number | null>(null)
+  const [error, setError]                 = useState<string | null>(null)
+  const [progress, setProgress]           = useState<string | null>(null)
 
-  const handleFile = async (file: File) => {
+  const processFiles = async (files: FileList) => {
     setError(null)
-    setDetected(null)
-    const reader = new FileReader()
-    reader.onload = async () => {
-      const dataUrl = reader.result as string
-      setPreview(dataUrl)
-      const base64 = dataUrl.split(',')[1]
-      const mime   = file.type as 'image/jpeg' | 'image/png' | 'image/webp'
-      setScanning(true)
+    setScanning(true)
+    const newItems: ScannedItem[] = []
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      setProgress(`Analizando foto ${i + 1} de ${files.length}...`)
+
+      const dataUrl = await readFile(file)
+      const base64  = dataUrl.split(',')[1]
+      const mime    = file.type as 'image/jpeg' | 'image/png' | 'image/webp'
+
       try {
-        const result = await scanFoodPhoto(base64, mime)
-        setDetected(result)
+        const detected = await scanFoodPhoto(base64, mime)
+        newItems.push({ preview: dataUrl, detected })
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : 'Error leyendo la foto'
+        const msg = e instanceof Error ? e.message : ''
         if (msg.includes('401') || msg.includes('403')) {
           setError('API key de Claude no configurada. Agrega VITE_ANTHROPIC_API_KEY al .env')
-        } else {
-          setError('No pude leer la foto. Intenta con otra imagen más clara.')
+          break
         }
+        // Si una foto falla, continuar con las demás
       }
-      setScanning(false)
     }
-    reader.readAsDataURL(file)
+
+    setScanning(false)
+    setProgress(null)
+    if (newItems.length > 0) {
+      setScannedItems(prev => [...prev, ...newItems])
+      setEditingIndex(0)
+    } else if (!error) {
+      setError('No pude leer las fotos. Intenta con imágenes más claras.')
+    }
   }
 
+  const readFile = (file: File): Promise<string> =>
+    new Promise(resolve => {
+      const r = new FileReader()
+      r.onload = () => resolve(r.result as string)
+      r.readAsDataURL(file)
+    })
+
   const toNewItem = (f: FoodFromPhoto): Partial<NewFridgeItem> => ({
-    name:              f.name,
-    quantity:          f.quantity,
-    unit:              f.unit,
-    category:          f.category,
-    expiry_date:       f.expiry_date,
-    conservation_tip:  f.conservation_tip,
+    name: f.name, quantity: f.quantity, unit: f.unit,
+    category: f.category, expiry_date: f.expiry_date,
+    conservation_tip: f.conservation_tip,
     calories_per_100g: f.calories_per_100g,
-    protein_g:         f.protein_g,
-    carbs_g:           f.carbs_g,
-    fat_g:             f.fat_g,
-    added_by_photo:    true,
-    location:          'nevera',
+    protein_g: f.protein_g, carbs_g: f.carbs_g, fat_g: f.fat_g,
+    added_by_photo: true, location: 'nevera',
   })
 
-  if (detected) {
+  const handleSaveItem = (item: NewFridgeItem) => {
+    onSave(item)
+    const remaining = scannedItems.filter((_, i) => i !== editingIndex)
+    if (remaining.length === 0) {
+      onCancel()
+    } else {
+      setScannedItems(remaining)
+      setEditingIndex(0)
+    }
+  }
+
+  const handleSkipItem = () => {
+    const remaining = scannedItems.filter((_, i) => i !== editingIndex)
+    if (remaining.length === 0) {
+      onCancel()
+    } else {
+      setScannedItems(remaining)
+      setEditingIndex(0)
+    }
+  }
+
+  // Editando un item detectado
+  if (editingIndex !== null && scannedItems[editingIndex]) {
+    const current = scannedItems[editingIndex]
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-3">
-          {preview && <img src={preview} alt="" className="w-16 h-16 rounded-xl object-cover" />}
-          <div>
-            <p className="font-semibold text-text">Claude detectó:</p>
-            <p className="text-muted text-sm">Confirma o edita antes de guardar.</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={current.preview} alt="" className="w-14 h-14 rounded-xl object-cover" />
+            <div>
+              <p className="font-semibold text-text">Claude detectó:</p>
+              <p className="text-muted text-xs">
+                {editingIndex + 1} de {scannedItems.length} foto{scannedItems.length > 1 ? 's' : ''}
+              </p>
+            </div>
           </div>
+          <button onClick={handleSkipItem} className="text-muted text-sm hover:text-text">
+            Saltar →
+          </button>
         </div>
-        <AddItemForm initial={toNewItem(detected)} onSave={onSave} onCancel={onCancel} />
+        <AddItemForm
+          initial={toNewItem(current.detected)}
+          onSave={handleSaveItem}
+          onCancel={handleSkipItem}
+        />
       </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-5 items-center py-4">
+      {/* Input cámara */}
       <input ref={inputRef} type="file" accept="image/*" capture="environment"
-        className="hidden"
-        onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]) }}
+        multiple className="hidden"
+        onChange={e => { if (e.target.files?.length) processFiles(e.target.files) }}
+      />
+      {/* Input galería (sin capture para mostrar galería) */}
+      <input ref={galleryRef} type="file" accept="image/*"
+        multiple className="hidden"
+        onChange={e => { if (e.target.files?.length) processFiles(e.target.files) }}
       />
 
-      {!preview && !scanning && (
+      {!scanning && (
         <>
           <div className="w-24 h-24 rounded-full bg-accent-light flex items-center justify-center text-5xl">
             📷
           </div>
           <div className="text-center">
             <p className="font-semibold text-text">Foto del alimento</p>
-            <p className="text-muted text-sm mt-1">Claude lee la etiqueta y carga los datos automáticamente.</p>
+            <p className="text-muted text-sm mt-1">
+              Podés seleccionar varias fotos a la vez. Claude lee cada etiqueta automáticamente.
+            </p>
           </div>
           <div className="flex flex-col gap-3 w-full">
             <button type="button" onClick={() => inputRef.current?.click()} className="btn-primary">
               📷 Tomar foto
             </button>
-            <button type="button"
-              onClick={() => { if (inputRef.current) { inputRef.current.removeAttribute('capture'); inputRef.current.click() }}}
-              className="btn-ghost">
-              🖼️ Elegir de galería
+            <button type="button" onClick={() => galleryRef.current?.click()} className="btn-ghost">
+              🖼️ Elegir de galería (una o varias)
             </button>
           </div>
         </>
       )}
 
       {scanning && (
-        <div className="flex flex-col items-center gap-4 py-8">
-          {preview && <img src={preview} alt="" className="w-28 h-28 rounded-2xl object-cover opacity-60" />}
-          <p className="text-text font-medium">Claude está leyendo la etiqueta...</p>
+        <div className="flex flex-col items-center gap-4 py-8 w-full">
+          <p className="text-text font-medium text-center">{progress ?? 'Analizando...'}</p>
           <div className="flex gap-1.5">
             <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '0ms' }} />
             <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '150ms' }} />
