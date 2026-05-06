@@ -50,10 +50,13 @@ const CONDITIONS = [
 ]
 
 interface Props {
-  familyName: string
-  memberCount: number
-  onAdded: () => void
-  onFinish: () => void
+  familyName:     string
+  memberCount:    number
+  onAdded:        () => void
+  onFinish:       () => void
+  // Modo edición
+  editingMember?: FamilyMember
+  onUpdated?:     () => void
 }
 
 const emptyMember = (): Omit<FamilyMember, 'id' | 'family_id' | 'created_at' | 'updated_at'> => ({
@@ -70,14 +73,21 @@ const emptyMember = (): Omit<FamilyMember, 'id' | 'family_id' | 'created_at' | '
   linked_user_id: null,
 })
 
-export default function StepAddMember({ familyName, memberCount, onAdded, onFinish }: Props) {
-  const [form, setForm]       = useState(emptyMember())
+export default function StepAddMember({ familyName, memberCount, onAdded, onFinish, editingMember, onUpdated }: Props) {
+  const isEditing = !!editingMember
+
+  const [form, setForm]       = useState(() =>
+    editingMember
+      ? { ...emptyMember(), ...editingMember }
+      : emptyMember()
+  )
   const [allergyInput, setAllergyInput]       = useState('')
   const [prohibitedInput, setProhibitedInput] = useState('')
   const [dislikeInput, setDislikeInput]       = useState('')
   const [error, setError]                     = useState<string | null>(null)
   const [loading, setLoading]                 = useState(false)
   const addMember                             = useFamilyStore(s => s.addMember)
+  const updateMember                          = useFamilyStore(s => s.updateMember)
 
   const set = (field: string, value: unknown) =>
     setForm(f => ({ ...f, [field]: value }))
@@ -106,10 +116,19 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim()) return setError('El nombre es obligatorio.')
-    if (loading) return                         // bloqueo extra anti-doble-click
+    if (loading) return
     setError(null)
     setLoading(true)
     const name = form.name.trim()
+
+    if (isEditing && editingMember?.id) {
+      const err = await updateMember(editingMember.id, { ...form, name } as Partial<FamilyMember>)
+      setLoading(false)
+      if (err) return setError(err)
+      onUpdated?.()
+      return
+    }
+
     const err = await addMember({ ...form, name } as FamilyMember)
     setLoading(false)
     if (err) return setError(err)
@@ -156,12 +175,14 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-serif text-text font-semibold">
-          {memberCount === 0 ? `¿Quién come en ${familyName}?` : 'Agregar otro miembro'}
+          {isEditing ? `Editar perfil de ${editingMember?.name}` : memberCount === 0 ? `¿Quién come en ${familyName}?` : 'Agregar otro miembro'}
         </h1>
-        <p className="text-muted text-sm mt-1">
-          {memberCount > 0 && `Ya tienes ${memberCount} miembro${memberCount > 1 ? 's' : ''}. `}
-          Agrega a cada persona por separado.
-        </p>
+        {!isEditing && (
+          <p className="text-muted text-sm mt-1">
+            {memberCount > 0 && `Ya tienes ${memberCount} miembro${memberCount > 1 ? 's' : ''}. `}
+            Agrega a cada persona por separado.
+          </p>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -428,7 +449,11 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
         {error && <p className="text-error text-sm">{error}</p>}
 
         <button type="submit" className="btn-primary" disabled={loading || !form.name.trim()}>
-          {loading ? 'Guardando...' : `Guardar a ${form.name || 'este miembro'}`}
+          {loading
+            ? 'Guardando...'
+            : isEditing
+              ? `Guardar cambios`
+              : `Guardar a ${form.name || 'este miembro'}`}
         </button>
       </form>
 

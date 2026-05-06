@@ -18,7 +18,8 @@ export default function HomePage() {
   }, [family?.id, loadItems])
 
   const nivel = calcularNivelNevera(items)
-  const [addingMember, setAddingMember] = useState(false)
+  const [addingMember, setAddingMember]   = useState(false)
+  const [editingMember, setEditingMember] = useState<FamilyMember | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   const goalLabel: Record<string, string> = {
@@ -30,10 +31,10 @@ export default function HomePage() {
     keto: 'Keto', paleo: 'Paleo', gluten_free: 'Sin gluten', lactose_free: 'Sin lactosa',
   }
 
-  if (addingMember) {
+  if (addingMember || editingMember) {
     return (
       <div className="min-h-screen px-4 py-8 max-w-lg mx-auto">
-        <button onClick={() => setAddingMember(false)}
+        <button onClick={() => { setAddingMember(false); setEditingMember(null) }}
           className="text-muted text-sm mb-6 flex items-center gap-1 hover:text-text transition-colors">
           ← Volver
         </button>
@@ -42,6 +43,8 @@ export default function HomePage() {
           memberCount={members.length}
           onAdded={() => setAddingMember(false)}
           onFinish={() => setAddingMember(false)}
+          editingMember={editingMember ?? undefined}
+          onUpdated={() => setEditingMember(null)}
         />
       </div>
     )
@@ -89,11 +92,16 @@ export default function HomePage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <p className="font-semibold text-text">{m.name}</p>
-                    <button
-                      onClick={() => setConfirmDelete(m.id!)}
-                      className="text-muted hover:text-error transition-colors text-sm ml-2">
-                      ×
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setEditingMember(m)}
+                        className="text-muted hover:text-accent transition-colors text-sm">
+                        ✏️
+                      </button>
+                      <button onClick={() => setConfirmDelete(m.id!)}
+                        className="text-muted hover:text-error transition-colors text-sm">
+                        ×
+                      </button>
+                    </div>
                   </div>
 
                   {/* Tags */}
