@@ -39,8 +39,12 @@
 
       // Capturar errores globales
       window.onerror = function(e, src, line) {
-        msg.textContent = 'Error JS: ' + e + ' | ' + src + ':' + line;
+        msg.textContent = 'Error JS: ' + String(e).substring(0, 120);
       };
+      // Capturar errores en Promises (async/await)
+      window.addEventListener('unhandledrejection', function(e) {
+        msg.textContent = 'Promise error: ' + String(e.reason).substring(0, 120);
+      });
     </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
