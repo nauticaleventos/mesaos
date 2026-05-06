@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useFamilyStore, type FamilyMember } from '../../store/familyStore'
+import { useFamilyStore } from '../../store/familyStore'
+import type { FamilyMember } from '../../lib/types'
 
 const EMOJIS = ['👤','👨','👩','👦','👧','👴','👵','🧑','👶','🧒']
 
@@ -41,12 +42,18 @@ interface Props {
   onFinish: () => void
 }
 
-const emptyMember = (): Omit<FamilyMember, 'id' | 'family_id'> => ({
-  name: '', emoji: '👤', type: 'adult',
+const emptyMember = (): Omit<FamilyMember, 'id' | 'family_id' | 'created_at' | 'updated_at'> => ({
+  name: '', emoji: '👤', color: null, member_type: 'adult',
   age: null, weight_kg: null, height_cm: null,
-  goal: 'mantenimiento', activity_level: 'moderate',
+  is_portion_anchor: false, portion_multiplier: 1.0,
+  goal: 'mantenimiento', goal_target_weight_kg: null, goal_target_date: null,
+  activity_level: 'moderate',
+  calories_default: null, calories_per_day: {},
+  protein_g_default: null, carbs_g_default: null, fat_g_default: null,
   eating_style: 'omnivore',
-  conditions: [], allergies: [], prohibited: [], dislikes: [], restrictions_prep: [],
+  conditions: [], allergies: [], prohibited: [], dislikes: [],
+  loves: [], restrictions_prep: [], meals_per_day: [],
+  linked_user_id: null,
 })
 
 export default function StepAddMember({ familyName, memberCount, onAdded, onFinish }: Props) {
@@ -63,7 +70,7 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
 
   const toggleCondition = (c: string) =>
     set('conditions', form.conditions.includes(c)
-      ? form.conditions.filter(x => x !== c)
+      ? form.conditions.filter((x: string) => x !== c)
       : [...form.conditions, c])
 
   const addTag = (field: 'allergies' | 'prohibited' | 'dislikes', val: string, clear: () => void) => {
@@ -115,7 +122,7 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
           <div>
             <label className="input-label">Emoji</label>
             <select
-              value={form.emoji}
+              value={form.emoji ?? '👤'}
               onChange={e => set('emoji', e.target.value)}
               style={{ width: '4.5rem', textAlign: 'center', fontSize: '1.4rem', padding: '0.6rem' }}
             >
@@ -130,9 +137,9 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
           <div className="flex gap-3">
             {[{ value: 'adult', label: 'Adulto' }, { value: 'child', label: 'Niño / Adolescente' }].map(t => (
               <button key={t.value} type="button"
-                onClick={() => set('type', t.value)}
+                onClick={() => set('member_type', t.value)}
                 className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-medium transition-all
-                  ${form.type === t.value
+                  ${form.member_type === t.value
                     ? 'border-accent bg-accent-light text-accent'
                     : 'border-border text-muted'}`}>
                 {t.label}

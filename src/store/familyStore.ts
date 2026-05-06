@@ -1,59 +1,45 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
-
-export interface FamilyMember {
-  id?: string
-  family_id?: string
-  name: string
-  emoji: string
-  type: 'adult' | 'child'
-  age: number | null
-  weight_kg: number | null
-  height_cm: number | null
-  goal: 'deficit' | 'deficit_agresivo' | 'mantenimiento' | 'volumen' | 'crecimiento' | null
-  activity_level: 'sedentary' | 'moderate' | 'active' | 'very_active' | null
-  eating_style: string
-  conditions: string[]
-  allergies: string[]
-  prohibited: string[]
-  dislikes: string[]
-  restrictions_prep: string[]
-}
-
-export interface Family {
-  id: string
-  name: string
-  owner_id: string
-}
+import type { Family, FamilyUser, FamilyMember } from '../lib/types'
+export type { FamilyMember } from '../lib/types'
+import { DEFAULT_PERMISSIONS } from '../lib/types'
 
 interface FamilyState {
-  family: Family | null
-  members: FamilyMember[]
-  loading: boolean
-  loadFamily: (userId: string) => Promise<void>
-  createFamily: (name: string, userId: string) => Promise<string | null>
-  addMember: (member: FamilyMember) => Promise<string | null>
-  updateMember: (id: string, member: Partial<FamilyMember>) => Promise<string | null>
-  deleteMember: (id: string) => Promise<void>
+  family:        Family | null
+  familyUser:    FamilyUser | null   // el usuario actual dentro de la familia
+  members:       FamilyMember[]
+  loading:       boolean
+
+  loadFamily:    (userId: string) => Promise<void>
+  createFamily:  (name: string, displayName: string, userId: string) => Promise<string | null>
+  addMember:     (member: Omit<FamilyMember, 'id' | 'family_id' | 'created_at' | 'updated_at'>) => Promise<string | null>
+  updateMember:  (id: string, data: Partial<FamilyMember>) => Promise<string | null>
+  deleteMember:  (id: string) => Promise<void>
 }
 
 export const useFamilyStore = create<FamilyState>((set, get) => ({
-  family:  null,
-  members: [],
-  loading: true,
+  family:     null,
+  familyUser: null,
+  members:    [],
+  loading:    true,
 
   loadFamily: async (userId) => {
     set({ loading: true })
-    const { data: family } = await supabase
-      .from('families')
-      .select('*')
-      .eq('owner_id', userId)
+
+    // Buscar si el usuario pertenece a alguna familia
+    const { data: fu } = await supabase
+      .from('family_users')
+      .select('*, families(*)')
+      .eq('user_id', userId)
+      .eq('is_active', true)
       .single()
 
-    if (!family) {
-      set({ family: null, members: [], loading: false })
+    if (!fu) {
+      set({ family: null, familyUser: null, members: [], loading: false })
       return
     }
+
+    const family = fu.families as unknown as Family
 
     const { data: members } = await supabase
       .from('family_members')
@@ -61,18 +47,45 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
       .eq('family_id', family.id)
       .order('created_at')
 
-    set({ family, members: members ?? [], loading: false })
+    set({
+      family,
+      familyUser: fu as FamilyUser,
+      members: members ?? [],
+      loading: false,
+    })
   },
 
-  createFamily: async (name, userId) => {
-    const { data, error } = await supabase
+  createFamily: async (name, displayName, userId) => {
+    // 1. Crear familia
+    const { data: family, error: e1 } = await supabase
       .from('families')
-      .insert({ name, owner_id: userId })
+      .insert({ name, owner_user_id: userId })
       .select()
       .single()
 
-    if (error) return error.message
-    set({ family: data })
+    if (e1 || !family) return e1?.message ?? 'Error creando familia'
+
+    // 2. Agregar al owner como family_user
+    const { data: fu, error: e2 } = await supabase
+      .from('family_users')
+      .insert({
+        family_id:    family.id,
+        user_id:      userId,
+        display_name: displayName,
+        base_role:    'owner',
+        permissions:  DEFAULT_PERMISSIONS.owner,
+      })
+      .select()
+      .single()
+
+    if (e2 || !fu) return e2?.message ?? 'Error creando usuario de familia'
+
+    // 3. Crear config de notificaciones con defaults
+    await supabase
+      .from('notifications_config')
+      .insert({ family_id: family.id })
+
+    set({ family: family as Family, familyUser: fu as FamilyUser, members: [] })
     return null
   },
 
@@ -87,19 +100,19 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
       .single()
 
     if (error) return error.message
-    set(s => ({ members: [...s.members, data] }))
+    set(s => ({ members: [...s.members, data as FamilyMember] }))
     return null
   },
 
-  updateMember: async (id, member) => {
+  updateMember: async (id, data) => {
     const { error } = await supabase
       .from('family_members')
-      .update(member)
+      .update({ ...data, updated_at: new Date().toISOString() })
       .eq('id', id)
 
     if (error) return error.message
     set(s => ({
-      members: s.members.map(m => m.id === id ? { ...m, ...member } : m)
+      members: s.members.map(m => m.id === id ? { ...m, ...data } : m)
     }))
     return null
   },

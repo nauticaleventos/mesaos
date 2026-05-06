@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { useFamilyStore, type FamilyMember } from '../store/familyStore'
+import { useFamilyStore } from '../store/familyStore'
+import type { FamilyMember } from '../lib/types'
 import StepAddMember from '../components/onboarding/StepAddMember'
 
 export default function HomePage() {
@@ -86,7 +87,7 @@ export default function HomePage() {
 
                   {/* Tags */}
                   <div className="flex flex-wrap gap-1.5 mt-2">
-                    <Tag>{m.type === 'child' ? '👦 Niño' : '🧑 Adulto'}</Tag>
+                    <Tag>{m.member_type === 'child' ? '👦 Niño' : '🧑 Adulto'}</Tag>
                     {m.age && <Tag>{m.age} años</Tag>}
                     {m.eating_style && m.eating_style !== 'omnivore' &&
                       <Tag accent>{styleLabel[m.eating_style] ?? m.eating_style}</Tag>}
