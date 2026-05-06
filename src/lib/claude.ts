@@ -128,6 +128,49 @@ export async function parseQuickList(input: string): Promise<FoodFromPhoto[]> {
   }))
 }
 
+// ── Leer tiquete / recibo de compra ──────────────────────────────────────────
+export async function scanReceiptPhoto(base64Image: string): Promise<FoodFromPhoto[]> {
+  const text = await callClaude([{
+    role: 'user',
+    content: [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64Image } },
+      {
+        type: 'text',
+        text: `Esta es una foto de un tiquete o recibo de compra de supermercado.
+Extrae TODOS los artículos de alimentos que aparecen. Los recibos usan nombres abreviados — normalízalos al nombre completo en español colombiano.
+
+Ejemplos de normalización:
+- "LCH ALPN ENT 1L" → "Leche Alpina Entera"
+- "ARRZ BLD 500G" → "Arroz Blanquita"
+- "HVS AA X12" → "Huevos"
+- "PCHG RSNR KG" → "Pechuga de pollo"
+
+Ignora: cobros de bolsa, IVA, totales, servicios, puntos de fidelidad, descuentos.
+
+Responde SOLO con un JSON array (sin markdown):
+[
+  {
+    "name": "nombre normalizado en español",
+    "quantity": número o null,
+    "unit": "unidades|kg|g|L|ml|paquete|null",
+    "category": "proteína|lácteos|frutas y verduras|granos y cereales|salsas y condimentos|bebidas|snacks|congelados|otros",
+    "expiry_date": null,
+    "calories_per_100g": null,
+    "protein_g": null,
+    "carbs_g": null,
+    "fat_g": null,
+    "conservation_tip": "tip corto en español colombiano"
+  }
+]`,
+      },
+    ],
+  }], 2000)
+
+  const match = text.match(/\[[\s\S]*\]/)
+  if (!match) throw new Error('No se pudieron leer los artículos del tiquete')
+  return JSON.parse(match[0]) as FoodFromPhoto[]
+}
+
 // ── Tip de conservación ───────────────────────────────────────────────────────
 export async function getConservationTip(foodName: string): Promise<string> {
   const text = await callClaude([{

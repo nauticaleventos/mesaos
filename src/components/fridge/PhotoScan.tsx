@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback } from 'react'
-import { scanFoodPhoto, scanFoodPhotoGroup, type FoodFromPhoto } from '../../lib/claude'
+import { scanFoodPhoto, scanFoodPhotoGroup, scanReceiptPhoto, type FoodFromPhoto } from '../../lib/claude'
 import { useFridgeStore, type FridgeItem, type NewFridgeItem } from '../../store/fridgeStore'
 
 interface SavedResult {
@@ -17,8 +17,9 @@ interface Props {
 }
 
 export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
-  const batchRef  = useRef<HTMLInputElement>(null)
-  const groupRef  = useRef<HTMLInputElement>(null)
+  const batchRef   = useRef<HTMLInputElement>(null)
+  const groupRef   = useRef<HTMLInputElement>(null)
+  const receiptRef = useRef<HTMLInputElement>(null)
 
   const [scanning,  setScanning]  = useState(false)
   const [progress,  setProgress]  = useState('')
@@ -164,6 +165,35 @@ export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
     )
   }
 
+  // ── Modo tiquete: foto del recibo → todos los artículos ──────────────────────
+  const processReceipt = async (files: FileList) => {
+    const file = files[0]
+    if (!file) return
+    setError(null); setResults([]); setDone(false)
+    setScanning(true); setTotal(1); setCurrent(1)
+    setProgress('Leyendo el tiquete de compra...')
+
+    try {
+      const raw       = await readFile(file)
+      const comp      = await compressImage(raw)
+      const base64    = comp.split(',')[1]
+      const detected  = await scanReceiptPhoto(base64)
+
+      setProgress(`Guardando ${detected.length} artículo${detected.length !== 1 ? 's' : ''}...`)
+      setTotal(detected.length); setCurrent(0)
+
+      for (let i = 0; i < detected.length; i++) {
+        setCurrent(i + 1)
+        await saveAndTrack(detected[i], `Artículo ${i + 1}`)
+      }
+    } catch (e) {
+      const localError = e instanceof Error ? e.message : String(e)
+      setError(localError)
+    }
+
+    setScanning(false); setDone(true)
+  }
+
   // ── Modal de duplicado ────────────────────────────────────────────────────────
   if (dupConfirm) {
     return (
@@ -222,6 +252,8 @@ export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
         onChange={e => { if (e.target.files?.length) processBatch(e.target.files) }} />
       <input ref={groupRef} type="file" accept="image/*" multiple className="hidden"
         onChange={e => { if (e.target.files?.length) processGroup(e.target.files) }} />
+      <input ref={receiptRef} type="file" accept="image/*" className="hidden"
+        onChange={e => { if (e.target.files?.length) processReceipt(e.target.files) }} />
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-error">{error}</div>
@@ -243,12 +275,26 @@ export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
         <div>
           <p className="font-semibold text-text text-sm">🔍 Mismo producto, varias fotos</p>
           <p className="text-muted text-xs mt-0.5">
-            Ej: una foto tiene el nombre, otra tiene la tabla nutricional o la fecha de vencimiento.
+            Ej: una foto tiene el nombre, otra tiene la tabla nutricional.
             Claude combina toda la información en un solo alimento.
           </p>
         </div>
         <button type="button" onClick={() => groupRef.current?.click()} className="btn-ghost">
           Seleccionar fotos del mismo producto
+        </button>
+      </div>
+
+      {/* Modo 3 — Tiquete de compra */}
+      <div className="card flex flex-col gap-3">
+        <div>
+          <p className="font-semibold text-text text-sm">🧾 Tiquete de compra</p>
+          <p className="text-muted text-xs mt-0.5">
+            Foto del recibo del supermercado. Claude lee todos los artículos,
+            normaliza los nombres abreviados y los agrega a tu nevera de una vez.
+          </p>
+        </div>
+        <button type="button" onClick={() => receiptRef.current?.click()} className="btn-ghost">
+          Fotografiar mi tiquete
         </button>
       </div>
     </div>
