@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useFamilyStore } from '../store/familyStore'
 import type { FamilyMember } from '../lib/types'
 import StepAddMember from '../components/onboarding/StepAddMember'
 
 export default function HomePage() {
+  const navigate                          = useNavigate()
   const { signOut }                     = useAuthStore()
   const { family, members, deleteMember } = useFamilyStore()
   const [addingMember, setAddingMember] = useState(false)
@@ -145,13 +147,29 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Próximamente */}
-      {members.length > 0 && (
-        <div className="card text-center flex flex-col gap-2 opacity-50 py-6">
-          <p className="text-2xl">🍽️</p>
-          <p className="text-text font-medium text-sm">Menú semanal — Sesión 5</p>
+      {/* Módulos */}
+      <div className="grid grid-cols-2 gap-3">
+        <button onClick={() => navigate('/nevera')}
+          className="card flex flex-col items-center gap-2 py-5 hover:border-accent hover:bg-accent-light transition-all active:scale-95">
+          <span className="text-3xl">🧊</span>
+          <span className="text-sm font-medium text-text">Mi Nevera</span>
+        </button>
+        <div className="card flex flex-col items-center gap-2 py-5 opacity-40 cursor-not-allowed">
+          <span className="text-3xl">📖</span>
+          <span className="text-sm font-medium text-text">Recetario</span>
+          <span className="text-xs text-muted">Próximamente</span>
         </div>
-      )}
+        <div className="card flex flex-col items-center gap-2 py-5 opacity-40 cursor-not-allowed">
+          <span className="text-3xl">🍽️</span>
+          <span className="text-sm font-medium text-text">Menú semanal</span>
+          <span className="text-xs text-muted">Próximamente</span>
+        </div>
+        <div className="card flex flex-col items-center gap-2 py-5 opacity-40 cursor-not-allowed">
+          <span className="text-3xl">🛒</span>
+          <span className="text-sm font-medium text-text">Mercado</span>
+          <span className="text-xs text-muted">Próximamente</span>
+        </div>
+      </div>
 
     </div>
   )

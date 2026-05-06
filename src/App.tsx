@@ -7,6 +7,7 @@ import LoginPage      from './pages/auth/LoginPage'
 import SignupPage     from './pages/auth/SignupPage'
 import OnboardingPage from './pages/onboarding/OnboardingPage'
 import HomePage       from './pages/HomePage'
+import FridgePage     from './pages/fridge/FridgePage'
 
 function AppRoutes() {
   const { session, loading: authLoading }   = useAuthStore()
@@ -34,6 +35,9 @@ function AppRoutes() {
         !session ? <Navigate to="/login" replace />
         : !family ? <Navigate to="/onboarding" replace />
         : <HomePage />
+      } />
+      <Route path="/nevera" element={
+        !session ? <Navigate to="/login" replace /> : <FridgePage />
       } />
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,0 +1,215 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useFamilyStore } from '../../store/familyStore'
+import { useFridgeStore, expiryStatus, expiryLabel, type FridgeItem, type NewFridgeItem } from '../../store/fridgeStore'
+import AddItemForm from '../../components/fridge/AddItemForm'
+import PhotoScan from '../../components/fridge/PhotoScan'
+
+type Modal = null | 'manual' | 'photo'
+type Filter = 'todos' | 'nevera' | 'congelador' | 'despensa'
+
+const STATUS_COLORS = {
+  expired:  'bg-red-100 border-red-300 text-red-700',
+  critical: 'bg-red-50 border-red-200 text-red-600',
+  warning:  'bg-yellow-50 border-yellow-200 text-yellow-700',
+  ok:       'bg-white border-border text-text',
+  none:     'bg-white border-border text-text',
+}
+
+const STATUS_DOT = {
+  expired:  'bg-red-500',
+  critical: 'bg-red-400',
+  warning:  'bg-yellow-400',
+  ok:       'bg-success',
+  none:     'bg-border',
+}
+
+const LOCATION_ICONS: Record<string, string> = {
+  nevera: '🧊', congelador: '❄️', despensa: '🗄️',
+}
+
+export default function FridgePage() {
+  const navigate           = useNavigate()
+  const { family }         = useFamilyStore()
+  const { items, loading, loadItems, addItem, deleteItem } = useFridgeStore()
+  const [modal, setModal]           = useState<Modal>(null)
+  const [filter, setFilter]         = useState<Filter>('todos')
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (family?.id) loadItems(family.id)
+  }, [family?.id, loadItems])
+
+  const filtered = filter === 'todos' ? items : items.filter(i => i.location === filter)
+
+  const expiringSoon = items.filter(i => {
+    const s = expiryStatus(i.expiry_date)
+    return s === 'expired' || s === 'critical'
+  })
+
+  const handleSave = async (item: NewFridgeItem) => {
+    if (!family?.id) return
+    await addItem(item, family.id)
+    setModal(null)
+  }
+
+  if (modal) {
+    return (
+      <div className="min-h-dvh px-4 py-6 max-w-lg mx-auto">
+        <button onClick={() => setModal(null)}
+          className="text-muted text-sm mb-5 flex items-center gap-1 hover:text-text transition-colors">
+          ← Volver a la nevera
+        </button>
+        <h2 className="text-xl font-serif font-semibold text-text mb-4">
+          {modal === 'manual' ? 'Agregar alimento' : 'Agregar por foto'}
+        </h2>
+        {modal === 'manual'
+          ? <AddItemForm onSave={handleSave} onCancel={() => setModal(null)} />
+          : <PhotoScan onSave={handleSave} onCancel={() => setModal(null)} />
+        }
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-dvh pb-8 max-w-lg mx-auto">
+
+      {/* Header */}
+      <div className="sticky top-0 bg-bg/95 backdrop-blur px-4 pt-6 pb-3 z-10">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate('/')} className="text-muted hover:text-text transition-colors">←</button>
+            <h1 className="text-xl font-serif font-semibold text-text">Mi Nevera</h1>
+            <span className="text-muted text-sm">({items.length})</span>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setModal('photo')}
+              className="px-3 py-1.5 rounded-xl bg-accent-light text-accent text-sm font-medium hover:bg-accent hover:text-white transition-all">
+              📷 Foto
+            </button>
+            <button onClick={() => setModal('manual')}
+              className="px-3 py-1.5 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-all">
+              + Agregar
+            </button>
+          </div>
+        </div>
+
+        {/* Filtros */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {(['todos','nevera','congelador','despensa'] as Filter[]).map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-all
+                ${filter === f
+                  ? 'bg-accent text-white'
+                  : 'bg-white border border-border text-muted hover:border-accent hover:text-accent'}`}>
+              {f === 'todos' ? 'Todos' : `${LOCATION_ICONS[f]} ${f.charAt(0).toUpperCase() + f.slice(1)}`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="px-4 flex flex-col gap-3 mt-2">
+
+        {/* Alerta de vencimiento próximo */}
+        {expiringSoon.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-red-700 font-semibold text-sm mb-2">
+              ⚠️ {expiringSoon.length} alimento{expiringSoon.length > 1 ? 's' : ''} por vencer
+            </p>
+            <div className="flex flex-col gap-1">
+              {expiringSoon.map(i => (
+                <p key={i.id} className="text-red-600 text-xs">
+                  • {i.name} — {expiryLabel(i.expiry_date)}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Estado vacío */}
+        {!loading && filtered.length === 0 && (
+          <div className="text-center py-16 flex flex-col items-center gap-4">
+            <span className="text-6xl">🧊</span>
+            <div>
+              <p className="text-text font-medium">Nevera vacía</p>
+              <p className="text-muted text-sm mt-1">Agrega tus alimentos para empezar.</p>
+            </div>
+            <button onClick={() => setModal('manual')} className="btn-primary max-w-xs">
+              + Agregar alimento
+            </button>
+          </div>
+        )}
+
+        {/* Lista de items */}
+        {filtered.map(item => <FridgeItemCard key={item.id} item={item} onDelete={setConfirmDelete} />)}
+      </div>
+
+      {/* Confirmar borrar */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/30 flex items-end justify-center z-50 px-4 pb-8">
+          <div className="card w-full max-w-sm flex flex-col gap-4">
+            <p className="text-text font-semibold text-center">¿Eliminar este alimento?</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(null)} className="btn-ghost flex-1">Cancelar</button>
+              <button
+                onClick={async () => { await deleteItem(confirmDelete); setConfirmDelete(null) }}
+                className="flex-1 py-3 rounded-xl bg-error text-white font-semibold text-sm">
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FridgeItemCard({ item, onDelete }: { item: FridgeItem; onDelete: (id: string) => void }) {
+  const [showTip, setShowTip] = useState(false)
+  const status = expiryStatus(item.expiry_date)
+  const label  = expiryLabel(item.expiry_date)
+
+  return (
+    <div className={`border rounded-xl p-4 transition-all ${STATUS_COLORS[status]}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-text">{item.name}</span>
+            <span className="text-xs text-muted">{LOCATION_ICONS[item.location]} {item.category}</span>
+          </div>
+
+          {(item.quantity || item.unit) && (
+            <p className="text-sm text-muted mt-0.5">
+              {item.quantity} {item.unit}
+            </p>
+          )}
+
+          {label && (
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[status]}`} />
+              <span className={`text-xs font-medium ${
+                status === 'expired' || status === 'critical' ? 'text-red-600' :
+                status === 'warning' ? 'text-yellow-700' : 'text-muted'
+              }`}>{label}</span>
+            </div>
+          )}
+
+          {item.conservation_tip && (
+            <button onClick={() => setShowTip(v => !v)}
+              className="text-xs text-accent mt-1.5 hover:underline">
+              {showTip ? '▲ Ocultar tip' : '💡 Ver tip de conservación'}
+            </button>
+          )}
+          {showTip && item.conservation_tip && (
+            <p className="text-xs text-muted mt-1 italic">{item.conservation_tip}</p>
+          )}
+        </div>
+
+        <button onClick={() => onDelete(item.id)}
+          className="text-muted hover:text-error transition-colors text-lg leading-none flex-shrink-0">
+          ×
+        </button>
+      </div>
+    </div>
+  )
+}
