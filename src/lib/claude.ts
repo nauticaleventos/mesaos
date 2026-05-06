@@ -17,6 +17,40 @@ async function callClaude(messages: object[], maxTokens = 1024): Promise<string>
   return data.content[0].text
 }
 
+// ── Lista rápida de alimentos ─────────────────────────────────────────────────
+export async function parseQuickList(list: string): Promise<FoodFromPhoto[]> {
+  const text = await callClaude([{
+    role: 'user',
+    content: `Tengo esta lista de alimentos de mi nevera. Para cada ítem:
+1. Identifica el nombre comercial, cantidad y unidad
+2. Busca en tu conocimiento la información nutricional real del producto (calorías/100g, proteína, carbos, grasa)
+3. Asigna categoría y un tip de conservación en español colombiano
+
+Lista:
+${list}
+
+Responde SOLO con un JSON array válido (sin markdown):
+[
+  {
+    "name": "nombre del producto",
+    "quantity": número o null,
+    "unit": "unidades|bolsa|kg|g|L|ml|caja|frasco|null",
+    "category": "proteína|lácteos|frutas y verduras|granos y cereales|salsas y condimentos|bebidas|snacks|congelados|otros",
+    "expiry_date": null,
+    "calories_per_100g": número o null,
+    "protein_g": número o null,
+    "carbs_g": número o null,
+    "fat_g": número o null,
+    "conservation_tip": "tip corto"
+  }
+]`,
+  }], 2000)
+
+  const match = text.match(/\[[\s\S]*\]/)
+  if (!match) throw new Error('Claude no devolvió JSON válido')
+  return JSON.parse(match[0]) as FoodFromPhoto[]
+}
+
 // ── Tip de conservación ───────────────────────────────────────────────────────
 export async function getConservationTip(foodName: string): Promise<string> {
   const text = await callClaude([{

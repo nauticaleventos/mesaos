@@ -4,8 +4,9 @@ import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore, expiryStatus, expiryLabel, type FridgeItem, type NewFridgeItem } from '../../store/fridgeStore'
 import AddItemForm from '../../components/fridge/AddItemForm'
 import PhotoScan from '../../components/fridge/PhotoScan'
+import QuickList from '../../components/fridge/QuickList'
 
-type Modal = null | 'manual' | 'photo' | 'edit'
+type Modal = null | 'manual' | 'photo' | 'edit' | 'quick'
 type Filter = 'todos' | 'nevera' | 'congelador' | 'despensa'
 
 const STATUS_COLORS = {
@@ -80,7 +81,8 @@ export default function FridgePage() {
         </button>
         <h2 className="text-xl font-serif font-semibold text-text mb-4">
           {modal === 'manual' ? 'Agregar alimento'
-          : modal === 'edit' ? `Editar: ${editingItem?.name}`
+          : modal === 'edit'  ? `Editar: ${editingItem?.name}`
+          : modal === 'quick' ? 'Lista rápida'
           : 'Agregar por foto'}
         </h2>
         {modal === 'manual' && <AddItemForm onSave={handleSave} onCancel={() => setModal(null)} />}
@@ -91,6 +93,7 @@ export default function FridgePage() {
             onCancel={() => { setModal(null); setEditingItem(null) }}
           />
         )}
+        {modal === 'quick' && <QuickList onSave={handleSave} onEdit={handleEdit} onDone={handlePhotoDone} />}
         {modal === 'photo' && <PhotoScan onSave={handleSave} onCancel={() => setModal(null)} onDone={handlePhotoDone} onEdit={handleEdit} />}
       </div>
     )
@@ -108,13 +111,17 @@ export default function FridgePage() {
             <span className="text-muted text-sm">({items.length})</span>
           </div>
           <div className="flex gap-2">
+            <button onClick={() => setModal('quick')}
+              className="px-3 py-1.5 rounded-xl bg-accent-light text-accent text-sm font-medium hover:bg-accent hover:text-white transition-all">
+              📝 Lista
+            </button>
             <button onClick={() => setModal('photo')}
               className="px-3 py-1.5 rounded-xl bg-accent-light text-accent text-sm font-medium hover:bg-accent hover:text-white transition-all">
               📷 Foto
             </button>
             <button onClick={() => setModal('manual')}
               className="px-3 py-1.5 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-all">
-              + Agregar
+              +
             </button>
           </div>
         </div>
