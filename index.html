@@ -8,6 +8,25 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="fallback" style="font-family:sans-serif;padding:2rem;text-align:center;background:#f7faf5;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;">
+      <p style="font-size:2rem">🥗</p>
+      <p style="color:#4a7c59;font-size:1.2rem;font-weight:bold">mesa.os</p>
+      <p style="color:#6b8573;font-size:0.9rem" id="fallback-msg">Cargando...</p>
+    </div>
+    <script>
+      // Se oculta cuando React monta exitosamente
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+          var root = document.getElementById('root');
+          var fb = document.getElementById('fallback');
+          if (root && root.children.length > 0) {
+            fb.style.display = 'none';
+          } else {
+            document.getElementById('fallback-msg').textContent = 'Error al cargar. JS bloqueado o no compatible.';
+          }
+        }, 3000);
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
