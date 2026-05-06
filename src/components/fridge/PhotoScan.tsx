@@ -1,16 +1,22 @@
 import { useRef, useState } from 'react'
 import { scanFoodPhoto, scanFoodPhotoGroup, type FoodFromPhoto } from '../../lib/claude'
-import type { NewFridgeItem } from '../../store/fridgeStore'
+import type { FridgeItem, NewFridgeItem } from '../../store/fridgeStore'
 
-interface SavedResult { name: string; success: boolean; error?: string }
-
-interface Props {
-  onSave:   (item: NewFridgeItem) => Promise<void>
-  onCancel: () => void
-  onDone:   () => void
+interface SavedResult {
+  name:    string
+  success: boolean
+  error?:  string
+  item?:   FridgeItem   // item guardado — para editar
 }
 
-export default function PhotoScan({ onSave, onDone }: Props) {
+interface Props {
+  onSave:   (item: NewFridgeItem) => Promise<FridgeItem | null>
+  onCancel: () => void
+  onDone:   () => void
+  onEdit:   (item: FridgeItem) => void
+}
+
+export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
   const batchRef  = useRef<HTMLInputElement>(null)  // productos distintos
   const groupRef  = useRef<HTMLInputElement>(null)   // mismo producto, varias fotos
 
@@ -59,6 +65,11 @@ export default function PhotoScan({ onSave, onDone }: Props) {
 
   const addResult = (r: SavedResult) => setResults(prev => [...prev, r])
 
+  const saveAndTrack = async (det: FoodFromPhoto, _label: string) => {
+    const saved = await onSave(toNewItem(det))
+    addResult({ name: det.name, success: true, item: saved ?? undefined })
+  }
+
   // ── Modo batch: cada foto = un producto distinto ──────────────────────────────
   const processBatch = async (files: FileList) => {
     setError(null); setResults([]); setDone(false)
@@ -71,8 +82,7 @@ export default function PhotoScan({ onSave, onDone }: Props) {
         const raw  = await readFile(files[i])
         const comp = await compressImage(raw)
         const det  = await scanFoodPhoto(comp.split(',')[1], 'image/jpeg')
-        await onSave(toNewItem(det))
-        addResult({ name: det.name, success: true })
+        await saveAndTrack(det, `Foto ${i + 1}`)
       } catch (e) {
         addResult({ name: `Foto ${i + 1}`, success: false, error: e instanceof Error ? e.message : String(e) })
       }
@@ -96,8 +106,7 @@ export default function PhotoScan({ onSave, onDone }: Props) {
         })
       )
       const det = await scanFoodPhotoGroup(images)
-      await onSave(toNewItem(det))
-      addResult({ name: det.name, success: true })
+      await saveAndTrack(det, 'Grupo')
     } catch (e) {
       addResult({ name: 'Grupo de fotos', success: false, error: e instanceof Error ? e.message : String(e) })
     }
@@ -109,23 +118,17 @@ export default function PhotoScan({ onSave, onDone }: Props) {
     const ok   = results.filter(r => r.success).length
     const fail = results.filter(r => !r.success).length
     return (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4">
         <div className="text-center">
           <p className="text-4xl mb-2">{ok > 0 ? '✅' : '❌'}</p>
           <p className="font-semibold text-text text-lg">
-            {ok} alimento{ok !== 1 ? 's' : ''} guardado{ok !== 1 ? 's' : ''}
+            {ok} guardado{ok !== 1 ? 's' : ''}
             {fail > 0 ? `, ${fail} sin leer` : ''}
           </p>
-          <p className="text-muted text-sm mt-1">Ya están en tu nevera.</p>
+          <p className="text-muted text-sm mt-1">Toca ✏️ para corregir cualquier dato.</p>
         </div>
-        <div className="flex flex-col gap-1.5 max-h-60 overflow-y-auto">
-          {results.map((r, i) => (
-            <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm
-              ${r.success ? 'bg-green-50 text-text' : 'bg-red-50 text-error'}`}>
-              <span>{r.success ? '✓' : '✗'}</span>
-              <span className="flex-1">{r.name}</span>
-            </div>
-          ))}
+        <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+          {results.map((r, i) => <ResultRow key={i} result={r} onEdit={onEdit} />)}
         </div>
         <button onClick={onDone} className="btn-primary">Ver mi nevera</button>
       </div>
@@ -136,20 +139,18 @@ export default function PhotoScan({ onSave, onDone }: Props) {
   if (scanning) {
     const pct = total > 0 ? Math.round((current / total) * 100) : 0
     return (
-      <div className="flex flex-col items-center gap-5 py-6 w-full">
-        <p className="text-text font-medium text-center">{progress}</p>
+      <div className="flex flex-col gap-4 w-full">
+        <div className="flex items-center justify-between">
+          <p className="text-text font-medium text-sm">{progress}</p>
+          <button onClick={onDone} className="text-accent text-xs font-medium">Ver nevera →</button>
+        </div>
         <div className="w-full bg-border rounded-full h-2">
           <div className="bg-accent h-2 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
         </div>
-        <p className="text-muted text-sm">{current} de {total} — {pct}%</p>
+        <p className="text-muted text-xs text-center">{current} de {total} — {pct}%</p>
         {results.length > 0 && (
-          <div className="w-full flex flex-col gap-1 max-h-40 overflow-y-auto">
-            {results.map((r, i) => (
-              <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs
-                ${r.success ? 'bg-green-50 text-text' : 'bg-red-50 text-error'}`}>
-                <span>{r.success ? '✓' : '✗'}</span><span>{r.name}</span>
-              </div>
-            ))}
+          <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto">
+            {results.map((r, i) => <ResultRow key={i} result={r} onEdit={onEdit} />)}
           </div>
         )}
         <p className="text-xs text-muted text-center px-4">
@@ -195,6 +196,27 @@ export default function PhotoScan({ onSave, onDone }: Props) {
           Seleccionar fotos del mismo producto
         </button>
       </div>
+    </div>
+  )
+}
+
+function ResultRow({ result, onEdit }: { result: SavedResult; onEdit: (item: FridgeItem) => void }) {
+  return (
+    <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm
+      ${result.success ? 'bg-green-50' : 'bg-red-50'}`}>
+      <span className={result.success ? 'text-success' : 'text-error'}>
+        {result.success ? '✓' : '✗'}
+      </span>
+      <span className="flex-1 text-text truncate">{result.name}</span>
+      {result.success && result.item && (
+        <button onClick={() => onEdit(result.item!)}
+          className="text-accent text-xs font-medium hover:underline whitespace-nowrap">
+          ✏️ Editar
+        </button>
+      )}
+      {!result.success && result.error && (
+        <span className="text-error text-xs truncate max-w-24">{result.error}</span>
+      )}
     </div>
   )
 }

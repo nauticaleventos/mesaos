@@ -48,11 +48,13 @@ export default function FridgePage() {
     return s === 'expired' || s === 'critical'
   })
 
-  const handleSave = async (item: NewFridgeItem) => {
-    if (!family?.id) return
+  const handleSave = async (item: NewFridgeItem): Promise<FridgeItem | null> => {
+    if (!family?.id) return null
     await addItem(item, family.id)
-    // Para foto: no cerrar el modal — PhotoScan gestiona su propio flujo
     if (modal === 'manual') setModal(null)
+    // Devolver el item recién guardado (último en el store)
+    const saved = useFridgeStore.getState().items.find(i => i.name === item.name) ?? null
+    return saved
   }
 
   const handlePhotoDone = () => setModal(null)
@@ -89,7 +91,7 @@ export default function FridgePage() {
             onCancel={() => { setModal(null); setEditingItem(null) }}
           />
         )}
-        {modal === 'photo' && <PhotoScan onSave={handleSave} onCancel={() => setModal(null)} onDone={handlePhotoDone} />}
+        {modal === 'photo' && <PhotoScan onSave={handleSave} onCancel={() => setModal(null)} onDone={handlePhotoDone} onEdit={handleEdit} />}
       </div>
     )
   }

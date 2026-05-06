@@ -61,6 +61,7 @@ export const useFridgeStore = create<FridgeState>((set) => ({
       })
     }))
     return null
+    return null
   },
 
   updateItem: async (id, data) => {
