@@ -8,44 +8,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <div id="fallback" style="font-family:sans-serif;padding:2rem;text-align:center;background:#f7faf5;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;">
-      <p style="font-size:2rem">🥗</p>
-      <p style="color:#4a7c59;font-size:1.2rem;font-weight:bold">mesa.os</p>
-      <p style="color:#6b8573;font-size:0.9rem" id="fallback-msg">Cargando...</p>
-    </div>
-    <script>
-      var msg = document.getElementById('fallback-msg');
-      msg.textContent = 'Paso 1: HTML OK';
-
-      // Verificar soporte de módulos
-      if (!('noModule' in HTMLScriptElement.prototype)) {
-        msg.textContent = 'Error: navegador no soporta ES modules';
-      } else {
-        msg.textContent = 'Paso 2: módulos OK — cargando app...';
-      }
-
-      // Verificar si React montó
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          var root = document.getElementById('root');
-          var fb = document.getElementById('fallback');
-          if (root && root.children.length > 0) {
-            fb.style.display = 'none';
-          } else {
-            msg.textContent = 'Paso 3: app no montó. Revisa consola. User agent: ' + navigator.userAgent.substring(0, 80);
-          }
-        }, 4000);
-      });
-
-      // Capturar errores globales
-      window.onerror = function(e, src, line) {
-        msg.textContent = 'Error JS: ' + String(e).substring(0, 120);
-      };
-      // Capturar errores en Promises (async/await)
-      window.addEventListener('unhandledrejection', function(e) {
-        msg.textContent = 'Promise error: ' + String(e.reason).substring(0, 120);
-      });
-    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
