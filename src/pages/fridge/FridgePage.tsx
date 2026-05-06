@@ -141,33 +141,37 @@ export default function FridgePage() {
           ))}
         </div>
 
-        {/* Nivel de nevera */}
-        {items.length > 0 && (
-          <div className="bg-white border border-border rounded-xl px-3 py-2.5 flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-text font-medium">{nivel.resumen}</span>
-              <span className="text-xs text-muted font-medium">{nivel.porcentaje}%</span>
-            </div>
-            <div className="w-full bg-border rounded-full h-1.5">
-              <div className="h-1.5 rounded-full transition-all duration-500"
-                style={{
-                  width: `${nivel.porcentaje}%`,
-                  backgroundColor: nivel.porcentaje >= 75 ? '#22c55e'
-                    : nivel.porcentaje >= 50 ? '#4a7c59'
-                    : nivel.porcentaje >= 25 ? '#e8a020'
-                    : '#ef4444'
-                }} />
-            </div>
-            {nivel.categoriasFaltantes.length > 0 && (
-              <p className="text-xs text-muted">
-                Faltan: {nivel.categoriasFaltantes.join(', ')}
-              </p>
-            )}
-          </div>
-        )}
       </div>
 
       <div className="px-4 flex flex-col gap-3 mt-2">
+
+        {/* Nivel de nevera */}
+        <div className="card flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-text">{nivel.resumen}</span>
+            <span className="text-sm font-semibold text-accent">{nivel.porcentaje}%</span>
+          </div>
+          <div className="w-full bg-border rounded-full h-2">
+            <div className="h-2 rounded-full transition-all duration-500"
+              style={{
+                width: `${nivel.porcentaje}%`,
+                backgroundColor: nivel.porcentaje >= 75 ? '#22c55e'
+                  : nivel.porcentaje >= 50 ? '#4a7c59'
+                  : nivel.porcentaje >= 25 ? '#e8a020'
+                  : '#ef4444'
+              }} />
+          </div>
+          {nivel.categoriasFaltantes.length > 0 && (
+            <p className="text-xs text-muted">
+              Faltan: <span className="text-text">{nivel.categoriasFaltantes.join(', ')}</span>
+            </p>
+          )}
+          {nivel.alertasVencimiento > 0 && (
+            <p className="text-xs text-error">
+              ⚠️ {nivel.alertasVencimiento} alimento{nivel.alertasVencimiento > 1 ? 's' : ''} por vencer pronto
+            </p>
+          )}
+        </div>
 
         {/* Alerta de vencimiento próximo */}
         {expiringSoon.length > 0 && (
