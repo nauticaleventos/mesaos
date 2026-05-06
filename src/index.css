@@ -6,8 +6,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background-color: #0c0b09;
-    color: #f0ebe0;
+    background-color: #f7faf5;
+    color: #1c2b22;
     font-family: 'Palatino Linotype', 'Palatino', 'Book Antiqua', Georgia, serif;
     -webkit-font-smoothing: antialiased;
     min-height: 100dvh;
@@ -18,46 +18,48 @@
   }
 
   input, textarea, select {
-    background-color: #161412;
-    color: #f0ebe0;
-    border: 1px solid #252220;
-    border-radius: 0.5rem;
+    background-color: #ffffff;
+    color: #1c2b22;
+    border: 1.5px solid #dde8d5;
+    border-radius: 0.625rem;
     padding: 0.75rem 1rem;
     width: 100%;
     outline: none;
     font-family: inherit;
     font-size: 1rem;
-    transition: border-color 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
 
   input:focus, textarea:focus, select:focus {
-    border-color: #e8a020;
+    border-color: #4a7c59;
+    box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.12);
   }
 
   input::placeholder, textarea::placeholder {
-    color: #7a7060;
+    color: #a0b8a8;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-accent text-bg font-semibold px-6 py-3 rounded-lg
+    @apply bg-accent text-white font-semibold px-6 py-3 rounded-xl
            hover:bg-accent-hover active:scale-95
            transition-all duration-150 w-full text-center
-           disabled:opacity-50 disabled:cursor-not-allowed;
+           disabled:opacity-50 disabled:cursor-not-allowed
+           shadow-sm;
   }
 
   .btn-ghost {
-    @apply border border-border text-text px-6 py-3 rounded-lg
+    @apply border-2 border-border text-text px-6 py-3 rounded-xl
            hover:border-accent hover:text-accent
-           transition-all duration-150 w-full text-center;
+           transition-all duration-150 w-full text-center bg-white;
   }
 
   .card {
-    @apply bg-card border border-border rounded-xl p-4;
+    @apply bg-card border border-border rounded-2xl p-5 shadow-sm;
   }
 
   .input-label {
-    @apply block text-sm text-muted mb-1;
+    @apply block text-sm text-muted mb-1.5 font-medium;
   }
 }

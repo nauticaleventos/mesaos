@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore'
 export default function LoginPage() {
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
+  const [showPwd, setShowPwd]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
   const [loading, setLoading]   = useState(false)
   const signIn                  = useAuthStore(s => s.signIn)
@@ -16,23 +17,28 @@ export default function LoginPage() {
     setLoading(true)
     const err = await signIn(email, password)
     setLoading(false)
-    if (err) return setError(err)
+    if (err) return setError('Correo o contraseña incorrectos.')
     navigate('/')
   }
 
   return (
-    <div className="min-h-dvh flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-dvh flex flex-col items-center justify-center px-4 py-10"
+         style={{ background: 'linear-gradient(160deg, #f0f7ec 0%, #f7faf5 60%, #eef5f0 100%)' }}>
 
-        {/* Logo / marca */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-serif text-accent tracking-wide">mesa.os</h1>
-          <p className="text-muted text-sm mt-2">Tu cocina familiar, organizada.</p>
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent-light mb-4">
+          <span className="text-3xl">🥗</span>
         </div>
+        <h1 className="text-3xl font-serif text-accent font-semibold tracking-wide">mesa.os</h1>
+        <p className="text-muted text-sm mt-1">Tu cocina familiar, organizada.</p>
+      </div>
 
+      <div className="w-full max-w-sm">
         <form onSubmit={handleSubmit} className="card flex flex-col gap-5">
+          <h2 className="text-text text-lg font-semibold text-center">Bienvenido de vuelta</h2>
+
           <div>
-            <label className="input-label">Correo</label>
+            <label className="input-label">Correo electrónico</label>
             <input
               type="email"
               placeholder="hola@ejemplo.com"
@@ -45,18 +51,31 @@ export default function LoginPage() {
 
           <div>
             <label className="input-label">Contraseña</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
+            <div className="relative">
+              <input
+                type={showPwd ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                style={{ paddingRight: '3rem' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-text transition-colors text-lg"
+                tabIndex={-1}
+              >
+                {showPwd ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
 
           {error && (
-            <p className="text-error text-sm text-center">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+              <p className="text-error text-sm text-center">{error}</p>
+            </div>
           )}
 
           <button type="submit" className="btn-primary" disabled={loading}>
@@ -65,12 +84,11 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-muted">
             ¿No tienes cuenta?{' '}
-            <Link to="/signup" className="text-accent hover:text-accent-hover transition-colors">
-              Regístrate
+            <Link to="/signup" className="text-accent hover:text-accent-hover font-medium transition-colors">
+              Regístrate gratis
             </Link>
           </p>
         </form>
-
       </div>
     </div>
   )

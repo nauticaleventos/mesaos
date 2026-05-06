@@ -2,45 +2,63 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { useAuthStore } from './store/authStore'
-import LoginPage  from './pages/auth/LoginPage'
-import SignupPage from './pages/auth/SignupPage'
-import HomePage   from './pages/HomePage'
+import { useFamilyStore } from './store/familyStore'
+import LoginPage      from './pages/auth/LoginPage'
+import SignupPage     from './pages/auth/SignupPage'
+import OnboardingPage from './pages/onboarding/OnboardingPage'
+import HomePage       from './pages/HomePage'
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuthStore()
-  if (loading) return (
-    <div className="min-h-dvh flex items-center justify-center">
-      <p className="text-muted text-sm">Cargando...</p>
-    </div>
+function AppRoutes() {
+  const { session, loading: authLoading } = useAuthStore()
+  const { family, loading: familyLoading } = useFamilyStore()
+
+  if (authLoading || (session && familyLoading)) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center">
+        <p className="text-muted text-sm">Cargando...</p>
+      </div>
+    )
+  }
+
+  return (
+    <Routes>
+      <Route path="/login"  element={!session ? <LoginPage />  : <Navigate to="/" replace />} />
+      <Route path="/signup" element={!session ? <SignupPage /> : <Navigate to="/" replace />} />
+      <Route path="/onboarding" element={
+        !session ? <Navigate to="/login" replace />
+        : family  ? <Navigate to="/" replace />
+        : <OnboardingPage />
+      } />
+      <Route path="/" element={
+        !session ? <Navigate to="/login" replace />
+        : !family ? <Navigate to="/onboarding" replace />
+        : <HomePage />
+      } />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
-  return session ? <>{children}</> : <Navigate to="/login" replace />
-}
-
-function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuthStore()
-  if (loading) return null
-  return session ? <Navigate to="/" replace /> : <>{children}</>
 }
 
 export default function App() {
-  const setSession = useAuthStore(s => s.setSession)
+  const setSession  = useAuthStore(s => s.setSession)
+  const loadFamily  = useFamilyStore(s => s.loadFamily)
+  const { session } = useAuthStore()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s)
     })
     return () => subscription.unsubscribe()
   }, [setSession])
 
+  useEffect(() => {
+    if (session?.user) loadFamily(session.user.id)
+  }, [session, loadFamily])
+
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login"  element={<PublicRoute><LoginPage /></PublicRoute>} />
-        <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
-        <Route path="/"       element={<PrivateRoute><HomePage /></PrivateRoute>} />
-        <Route path="*"       element={<Navigate to="/" replace />} />
-      </Routes>
+      <AppRoutes />
     </BrowserRouter>
   )
 }

@@ -4,15 +4,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg:             '#0c0b09',
-        card:           '#161412',
-        border:         '#252220',
-        accent:         '#e8a020',
-        'accent-hover': '#f0b030',
-        text:           '#f0ebe0',
-        muted:          '#7a7060',
+        bg:             '#f7faf5',
+        card:           '#ffffff',
+        border:         '#dde8d5',
+        accent:         '#4a7c59',
+        'accent-hover': '#3a6349',
+        'accent-light': '#eaf3e4',
+        text:           '#1c2b22',
+        muted:          '#6b8573',
         success:        '#22c55e',
-        error:          '#ef4444',
+        error:          '#dc2626',
       },
       fontFamily: {
         serif: ['Palatino Linotype', 'Palatino', 'Book Antiqua', 'Georgia', 'serif'],
