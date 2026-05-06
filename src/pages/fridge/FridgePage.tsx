@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore, expiryStatus, expiryLabel, type FridgeItem, type NewFridgeItem } from '../../store/fridgeStore'
+import { calcularNivelNevera } from '../../lib/nivelNevera'
 import AddItemForm from '../../components/fridge/AddItemForm'
 import PhotoScan from '../../components/fridge/PhotoScan'
 import QuickList from '../../components/fridge/QuickList'
@@ -42,7 +43,8 @@ export default function FridgePage() {
     if (family?.id) loadItems(family.id)
   }, [family?.id, loadItems])
 
-  const filtered = filter === 'todos' ? items : items.filter(i => i.location === filter)
+  const filtered  = filter === 'todos' ? items : items.filter(i => i.location === filter)
+  const nivel     = calcularNivelNevera(items)
 
   const expiringSoon = items.filter(i => {
     const s = expiryStatus(i.expiry_date)
@@ -138,6 +140,31 @@ export default function FridgePage() {
             </button>
           ))}
         </div>
+
+        {/* Nivel de nevera */}
+        {items.length > 0 && (
+          <div className="bg-white border border-border rounded-xl px-3 py-2.5 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-text font-medium">{nivel.resumen}</span>
+              <span className="text-xs text-muted font-medium">{nivel.porcentaje}%</span>
+            </div>
+            <div className="w-full bg-border rounded-full h-1.5">
+              <div className="h-1.5 rounded-full transition-all duration-500"
+                style={{
+                  width: `${nivel.porcentaje}%`,
+                  backgroundColor: nivel.porcentaje >= 75 ? '#22c55e'
+                    : nivel.porcentaje >= 50 ? '#4a7c59'
+                    : nivel.porcentaje >= 25 ? '#e8a020'
+                    : '#ef4444'
+                }} />
+            </div>
+            {nivel.categoriasFaltantes.length > 0 && (
+              <p className="text-xs text-muted">
+                Faltan: {nivel.categoriasFaltantes.join(', ')}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="px-4 flex flex-col gap-3 mt-2">
