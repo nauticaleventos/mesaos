@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { scanFoodPhoto, scanFoodPhotoGroup, type FoodFromPhoto } from '../../lib/claude'
-import type { FridgeItem, NewFridgeItem } from '../../store/fridgeStore'
+import { useFridgeStore, type FridgeItem, type NewFridgeItem } from '../../store/fridgeStore'
 
 interface SavedResult {
   name:    string
@@ -17,8 +17,8 @@ interface Props {
 }
 
 export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
-  const batchRef  = useRef<HTMLInputElement>(null)  // productos distintos
-  const groupRef  = useRef<HTMLInputElement>(null)   // mismo producto, varias fotos
+  const batchRef  = useRef<HTMLInputElement>(null)
+  const groupRef  = useRef<HTMLInputElement>(null)
 
   const [scanning,  setScanning]  = useState(false)
   const [progress,  setProgress]  = useState('')
@@ -27,6 +27,23 @@ export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
   const [results,   setResults]   = useState<SavedResult[]>([])
   const [done,      setDone]      = useState(false)
   const [error,     setError]     = useState<string | null>(null)
+
+  // Estado para confirmación de duplicado
+  const [dupConfirm, setDupConfirm] = useState<{
+    detected: FoodFromPhoto
+    existing: FridgeItem
+    resolve: (action: 'save' | 'skip') => void
+  } | null>(null)
+
+  // Detecta si ya existe un ítem similar en la nevera
+  const findDuplicate = useCallback((name: string): FridgeItem | null => {
+    const items = useFridgeStore.getState().items
+    const n = name.toLowerCase().trim()
+    return items.find(i => {
+      const existing = i.name.toLowerCase().trim()
+      return existing === n || existing.includes(n) || n.includes(existing)
+    }) ?? null
+  }, [])
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
   const readFile = (file: File): Promise<string> =>
@@ -66,6 +83,18 @@ export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
   const addResult = (r: SavedResult) => setResults(prev => [...prev, r])
 
   const saveAndTrack = async (det: FoodFromPhoto, _label: string) => {
+    // Verificar duplicado
+    const dup = findDuplicate(det.name)
+    if (dup) {
+      const action = await new Promise<'save' | 'skip'>(resolve => {
+        setDupConfirm({ detected: det, existing: dup, resolve })
+      })
+      setDupConfirm(null)
+      if (action === 'skip') {
+        addResult({ name: det.name, success: false, error: 'Saltado — ya existía' })
+        return
+      }
+    }
     const saved = await onSave(toNewItem(det))
     addResult({ name: det.name, success: true, item: saved ?? undefined })
   }
@@ -131,6 +160,32 @@ export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
           {results.map((r, i) => <ResultRow key={i} result={r} onEdit={onEdit} />)}
         </div>
         <button onClick={onDone} className="btn-primary">Ver mi nevera</button>
+      </div>
+    )
+  }
+
+  // ── Modal de duplicado ────────────────────────────────────────────────────────
+  if (dupConfirm) {
+    return (
+      <div className="flex flex-col gap-5 py-2">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex flex-col gap-3">
+          <p className="font-semibold text-text text-sm">⚠️ Posible duplicado</p>
+          <p className="text-sm text-text">
+            Claude identificó <strong>"{dupConfirm.detected.name}"</strong> pero ya tienes{' '}
+            <strong>"{dupConfirm.existing.name}"</strong> en la nevera.
+          </p>
+          <p className="text-muted text-xs">¿Es el mismo producto o son diferentes?</p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <button onClick={() => dupConfirm.resolve('skip')}
+            className="btn-ghost">
+            Es el mismo — Saltar (no duplicar)
+          </button>
+          <button onClick={() => dupConfirm.resolve('save')}
+            className="btn-primary">
+            Son diferentes — Guardar igual
+          </button>
+        </div>
       </div>
     )
   }
