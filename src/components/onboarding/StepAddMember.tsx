@@ -99,16 +99,54 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
   const removeTag = (field: 'allergies' | 'prohibited' | 'dislikes', val: string) =>
     setForm(f => ({ ...f, [field]: f[field].filter((x: string) => x !== val) }))
 
+  const [savedName, setSavedName] = useState<string | null>(null)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim()) return setError('El nombre es obligatorio.')
     setError(null)
     setLoading(true)
+    const name = form.name.trim()
     const err = await addMember(form as FamilyMember)
     setLoading(false)
     if (err) return setError(err)
-    setForm(emptyMember())
-    onAdded()
+    setSavedName(name)
+    setTimeout(() => {
+      setSavedName(null)
+      setForm(emptyMember())
+      onAdded()
+    }, 1800)
+  }
+
+  if (savedName) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-5 py-16 text-center"
+           style={{ animation: 'fadeInUp 0.3s ease' }}>
+        <style>{`
+          @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes pop {
+            0%   { transform: scale(0.5); opacity: 0; }
+            60%  { transform: scale(1.2); }
+            100% { transform: scale(1);   opacity: 1; }
+          }
+        `}</style>
+        <div style={{ animation: 'pop 0.4s ease' }} className="text-6xl">✅</div>
+        <div>
+          <p className="text-2xl font-serif font-semibold text-text">
+            ¡{savedName} agregado!
+          </p>
+          <p className="text-muted text-sm mt-1">Preparando el formulario...</p>
+        </div>
+        <div className="flex gap-1.5 mt-2">
+          <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '0ms' }} />
+          <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '150ms' }} />
+          <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
+      </div>
+    )
   }
 
   return (
