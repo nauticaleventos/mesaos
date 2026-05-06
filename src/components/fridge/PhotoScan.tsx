@@ -184,6 +184,9 @@ export default function PhotoScan({ onSave, onCancel }: Props) {
             <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '150ms' }} />
             <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
+          <p className="text-xs text-muted text-center px-4">
+            🔒 No cierres esta ventana mientras carga — perderías el proceso.
+          </p>
         </div>
       )}
 
