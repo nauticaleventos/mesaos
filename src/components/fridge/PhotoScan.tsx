@@ -1,38 +1,34 @@
 import { useRef, useState } from 'react'
-import { scanFoodPhoto, type FoodFromPhoto } from '../../lib/claude'
+import { scanFoodPhoto, scanFoodPhotoGroup, type FoodFromPhoto } from '../../lib/claude'
 import type { NewFridgeItem } from '../../store/fridgeStore'
 
-interface SavedResult {
-  name:    string
-  success: boolean
-  error?:  string
-}
+interface SavedResult { name: string; success: boolean; error?: string }
 
 interface Props {
-  onSave:  (item: NewFridgeItem) => void
+  onSave:   (item: NewFridgeItem) => Promise<void>
   onCancel: () => void
-  onDone:  () => void
+  onDone:   () => void
 }
 
-export default function PhotoScan({ onSave, onCancel: _onCancel, onDone }: Props) {
-  const inputRef                        = useRef<HTMLInputElement>(null)
-  const galleryRef                      = useRef<HTMLInputElement>(null)
-  const [scanning, setScanning]         = useState(false)
-  const [progress, setProgress]         = useState('')
-  const [current, setCurrent]           = useState(0)
-  const [total, setTotal]               = useState(0)
-  const [results, setResults]           = useState<SavedResult[]>([])
-  const [done, setDone]                 = useState(false)
-  const [error, setError]               = useState<string | null>(null)
+export default function PhotoScan({ onSave, onDone }: Props) {
+  const batchRef  = useRef<HTMLInputElement>(null)  // productos distintos
+  const groupRef  = useRef<HTMLInputElement>(null)   // mismo producto, varias fotos
 
-  const toNewItem = (f: FoodFromPhoto): NewFridgeItem => ({
-    name: f.name, quantity: f.quantity, unit: f.unit,
-    category: f.category, expiry_date: f.expiry_date,
-    conservation_tip: f.conservation_tip,
-    calories_per_100g: f.calories_per_100g,
-    protein_g: f.protein_g, carbs_g: f.carbs_g, fat_g: f.fat_g,
-    added_by_photo: true, location: 'nevera', notes: null,
-  })
+  const [scanning,  setScanning]  = useState(false)
+  const [progress,  setProgress]  = useState('')
+  const [current,   setCurrent]   = useState(0)
+  const [total,     setTotal]     = useState(0)
+  const [results,   setResults]   = useState<SavedResult[]>([])
+  const [done,      setDone]      = useState(false)
+  const [error,     setError]     = useState<string | null>(null)
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  const readFile = (file: File): Promise<string> =>
+    new Promise(resolve => {
+      const r = new FileReader()
+      r.onload = () => resolve(r.result as string)
+      r.readAsDataURL(file)
+    })
 
   const compressImage = (dataUrl: string): Promise<string> =>
     new Promise(resolve => {
@@ -52,47 +48,63 @@ export default function PhotoScan({ onSave, onCancel: _onCancel, onDone }: Props
       img.src = dataUrl
     })
 
-  const readFile = (file: File): Promise<string> =>
-    new Promise(resolve => {
-      const r = new FileReader()
-      r.onload = () => resolve(r.result as string)
-      r.readAsDataURL(file)
-    })
+  const toNewItem = (f: FoodFromPhoto): NewFridgeItem => ({
+    name: f.name, quantity: f.quantity, unit: f.unit,
+    category: f.category, expiry_date: f.expiry_date,
+    conservation_tip: f.conservation_tip,
+    calories_per_100g: f.calories_per_100g,
+    protein_g: f.protein_g, carbs_g: f.carbs_g, fat_g: f.fat_g,
+    added_by_photo: true, location: 'nevera', notes: null,
+  })
 
-  const processFiles = async (files: FileList) => {
-    setError(null)
-    setResults([])
-    setDone(false)
-    setScanning(true)
-    setTotal(files.length)
-    setCurrent(0)
+  const addResult = (r: SavedResult) => setResults(prev => [...prev, r])
+
+  // ── Modo batch: cada foto = un producto distinto ──────────────────────────────
+  const processBatch = async (files: FileList) => {
+    setError(null); setResults([]); setDone(false)
+    setScanning(true); setTotal(files.length); setCurrent(0)
 
     for (let i = 0; i < files.length; i++) {
       setCurrent(i + 1)
       setProgress(`Analizando foto ${i + 1} de ${files.length}...`)
-
       try {
-        const rawUrl      = await readFile(files[i])
-        const compressed  = await compressImage(rawUrl)
-        const base64      = compressed.split(',')[1]
-        const detected    = await scanFoodPhoto(base64, 'image/jpeg')
-        const item        = toNewItem(detected)
-
-        // Guardar inmediatamente — no esperar confirmación del usuario
-        await onSave(item)
-
-        setResults(prev => [...prev, { name: detected.name, success: true }])
+        const raw  = await readFile(files[i])
+        const comp = await compressImage(raw)
+        const det  = await scanFoodPhoto(comp.split(',')[1], 'image/jpeg')
+        await onSave(toNewItem(det))
+        addResult({ name: det.name, success: true })
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e)
-        setResults(prev => [...prev, { name: `Foto ${i + 1}`, success: false, error: msg }])
+        addResult({ name: `Foto ${i + 1}`, success: false, error: e instanceof Error ? e.message : String(e) })
       }
     }
-
-    setScanning(false)
-    setDone(true)
+    setScanning(false); setDone(true)
   }
 
-  // Pantalla de resultados finales
+  // ── Modo grupo: varias fotos = UN mismo producto ──────────────────────────────
+  const processGroup = async (files: FileList) => {
+    if (files.length < 2) return processBatch(files)
+    setError(null); setResults([]); setDone(false)
+    setScanning(true); setTotal(1); setCurrent(1)
+    setProgress(`Combinando ${files.length} fotos del mismo producto...`)
+
+    try {
+      const images = await Promise.all(
+        Array.from(files).map(async f => {
+          const raw  = await readFile(f)
+          const comp = await compressImage(raw)
+          return { base64: comp.split(',')[1], mime: 'image/jpeg' }
+        })
+      )
+      const det = await scanFoodPhotoGroup(images)
+      await onSave(toNewItem(det))
+      addResult({ name: det.name, success: true })
+    } catch (e) {
+      addResult({ name: 'Grupo de fotos', success: false, error: e instanceof Error ? e.message : String(e) })
+    }
+    setScanning(false); setDone(true)
+  }
+
+  // ── Pantalla de resultados ────────────────────────────────────────────────────
   if (done) {
     const ok   = results.filter(r => r.success).length
     const fail = results.filter(r => !r.success).length
@@ -106,7 +118,6 @@ export default function PhotoScan({ onSave, onCancel: _onCancel, onDone }: Props
           </p>
           <p className="text-muted text-sm mt-1">Ya están en tu nevera.</p>
         </div>
-
         <div className="flex flex-col gap-1.5 max-h-60 overflow-y-auto">
           {results.map((r, i) => (
             <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm
@@ -116,83 +127,74 @@ export default function PhotoScan({ onSave, onCancel: _onCancel, onDone }: Props
             </div>
           ))}
         </div>
-
-        <button onClick={onDone} className="btn-primary">
-          Ver mi nevera
-        </button>
+        <button onClick={onDone} className="btn-primary">Ver mi nevera</button>
       </div>
     )
   }
 
-  // Pantalla de carga
+  // ── Pantalla de carga ─────────────────────────────────────────────────────────
   if (scanning) {
     const pct = total > 0 ? Math.round((current / total) * 100) : 0
     return (
       <div className="flex flex-col items-center gap-5 py-6 w-full">
         <p className="text-text font-medium text-center">{progress}</p>
-
-        {/* Barra de progreso */}
         <div className="w-full bg-border rounded-full h-2">
-          <div className="bg-accent h-2 rounded-full transition-all duration-300"
-            style={{ width: `${pct}%` }} />
+          <div className="bg-accent h-2 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
         </div>
         <p className="text-muted text-sm">{current} de {total} — {pct}%</p>
-
-        {/* Resultados en tiempo real */}
         {results.length > 0 && (
           <div className="w-full flex flex-col gap-1 max-h-40 overflow-y-auto">
             {results.map((r, i) => (
               <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs
                 ${r.success ? 'bg-green-50 text-text' : 'bg-red-50 text-error'}`}>
-                <span>{r.success ? '✓' : '✗'}</span>
-                <span>{r.name}</span>
+                <span>{r.success ? '✓' : '✗'}</span><span>{r.name}</span>
               </div>
             ))}
           </div>
         )}
-
         <p className="text-xs text-muted text-center px-4">
-          🔒 No cierres esta ventana — cada foto se guarda automáticamente al procesarse.
+          🔒 No cierres esta ventana — cada foto se guarda automáticamente.
         </p>
       </div>
     )
   }
 
-  // Pantalla inicial
+  // ── Pantalla inicial ──────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-5 items-center py-4">
-      <input ref={inputRef} type="file" accept="image/*" capture="environment"
-        multiple className="hidden"
-        onChange={e => { if (e.target.files?.length) processFiles(e.target.files) }}
-      />
-      <input ref={galleryRef} type="file" accept="image/*"
-        multiple className="hidden"
-        onChange={e => { if (e.target.files?.length) processFiles(e.target.files) }}
-      />
-
-      <div className="w-24 h-24 rounded-full bg-accent-light flex items-center justify-center text-5xl">
-        📷
-      </div>
-      <div className="text-center">
-        <p className="font-semibold text-text">Foto del alimento</p>
-        <p className="text-muted text-sm mt-1">
-          Selecciona una o varias fotos. Claude las analiza y las guarda automáticamente en tu nevera.
-        </p>
-      </div>
-      <div className="flex flex-col gap-3 w-full">
-        <button type="button" onClick={() => inputRef.current?.click()} className="btn-primary">
-          📷 Tomar foto
-        </button>
-        <button type="button" onClick={() => galleryRef.current?.click()} className="btn-ghost">
-          🖼️ Elegir de galería (una o varias)
-        </button>
-      </div>
+    <div className="flex flex-col gap-5 py-2">
+      <input ref={batchRef} type="file" accept="image/*" multiple className="hidden"
+        onChange={e => { if (e.target.files?.length) processBatch(e.target.files) }} />
+      <input ref={groupRef} type="file" accept="image/*" multiple className="hidden"
+        onChange={e => { if (e.target.files?.length) processGroup(e.target.files) }} />
 
       {error && (
-        <div className="w-full bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-error text-center">
-          {error}
-        </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-error">{error}</div>
       )}
+
+      {/* Modo 1 — Productos distintos */}
+      <div className="card flex flex-col gap-3">
+        <div>
+          <p className="font-semibold text-text text-sm">📦 Productos distintos</p>
+          <p className="text-muted text-xs mt-0.5">Cada foto es un alimento diferente. Claude los procesa uno por uno y los guarda.</p>
+        </div>
+        <button type="button" onClick={() => batchRef.current?.click()} className="btn-primary">
+          Seleccionar fotos (1 o varias)
+        </button>
+      </div>
+
+      {/* Modo 2 — Mismo producto */}
+      <div className="card flex flex-col gap-3">
+        <div>
+          <p className="font-semibold text-text text-sm">🔍 Mismo producto, varias fotos</p>
+          <p className="text-muted text-xs mt-0.5">
+            Ej: una foto tiene el nombre, otra tiene la tabla nutricional o la fecha de vencimiento.
+            Claude combina toda la información en un solo alimento.
+          </p>
+        </div>
+        <button type="button" onClick={() => groupRef.current?.click()} className="btn-ghost">
+          Seleccionar fotos del mismo producto
+        </button>
+      </div>
     </div>
   )
 }

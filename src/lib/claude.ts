@@ -41,20 +41,9 @@ export interface FoodFromPhoto {
   conservation_tip: string
 }
 
-export async function scanFoodPhoto(base64Image: string, mimeType: string): Promise<FoodFromPhoto> {
-  const text = await callClaude([{
-    role: 'user',
-    content: [
-      {
-        type: 'image',
-        source: { type: 'base64', media_type: mimeType, data: base64Image },
-      },
-      {
-        type: 'text',
-        text: `Identifica este alimento de la foto o etiqueta.
-Responde SOLO con un JSON válido (sin markdown, sin explicación):
+const FOOD_JSON_PROMPT = `Responde SOLO con un JSON válido (sin markdown, sin explicación):
 {
-  "name": "nombre en español",
+  "name": "nombre del alimento en español",
   "quantity": número o null,
   "unit": "kg|g|L|ml|unidades|null",
   "category": "proteína|lácteos|frutas y verduras|granos y cereales|salsas y condimentos|bebidas|snacks|congelados|otros",
@@ -64,7 +53,40 @@ Responde SOLO con un JSON válido (sin markdown, sin explicación):
   "carbs_g": número o null,
   "fat_g": número o null,
   "conservation_tip": "tip corto en español colombiano"
-}`,
+}`
+
+// Una sola foto
+export async function scanFoodPhoto(base64Image: string, mimeType: string): Promise<FoodFromPhoto> {
+  const text = await callClaude([{
+    role: 'user',
+    content: [
+      { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Image } },
+      { type: 'text', text: `Identifica este alimento de la foto o etiqueta.\n${FOOD_JSON_PROMPT}` },
+    ],
+  }], 1500)
+
+  const match = text.match(/\{[\s\S]*\}/)
+  if (!match) throw new Error('Claude no devolvió JSON válido')
+  return JSON.parse(match[0]) as FoodFromPhoto
+}
+
+// Varias fotos del MISMO producto (frente + tabla nutricional, etc.)
+export async function scanFoodPhotoGroup(images: { base64: string; mime: string }[]): Promise<FoodFromPhoto> {
+  const imageBlocks = images.map(img => ({
+    type: 'image' as const,
+    source: { type: 'base64' as const, media_type: img.mime as 'image/jpeg', data: img.base64 },
+  }))
+
+  const text = await callClaude([{
+    role: 'user',
+    content: [
+      ...imageBlocks,
+      {
+        type: 'text',
+        text: `Estas ${images.length} fotos son del MISMO producto visto desde ángulos distintos (frente, dorso, tabla nutricional, fecha de vencimiento, etc.).
+Combina TODA la información visible en todas las fotos y crea UN solo registro completo.
+Si una foto tiene el nombre y otra tiene la tabla nutricional, usa ambas.
+${FOOD_JSON_PROMPT}`,
       },
     ],
   }], 1500)
