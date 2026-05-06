@@ -39,12 +39,9 @@ export default function PhotoScan({ onSave, onCancel }: Props) {
         const detected = await scanFoodPhoto(base64, mime)
         newItems.push({ preview: dataUrl, detected })
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : ''
-        if (msg.includes('401') || msg.includes('403')) {
-          setError('API key de Claude no configurada. Agrega VITE_ANTHROPIC_API_KEY al .env')
-          break
-        }
-        // Si una foto falla, continuar con las demás
+        const msg = e instanceof Error ? e.message : String(e)
+        setError(`Error foto ${i + 1}: ${msg}`)
+        break
       }
     }
 
