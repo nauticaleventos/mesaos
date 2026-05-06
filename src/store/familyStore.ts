@@ -6,15 +6,15 @@ import { DEFAULT_PERMISSIONS } from '../lib/types'
 
 interface FamilyState {
   family:        Family | null
-  familyUser:    FamilyUser | null   // el usuario actual dentro de la familia
+  familyUser:    FamilyUser | null
   members:       FamilyMember[]
   loading:       boolean
 
-  loadFamily:    (userId: string) => Promise<void>
-  createFamily:  (name: string, displayName: string, userId: string) => Promise<string | null>
-  addMember:     (member: Omit<FamilyMember, 'id' | 'family_id' | 'created_at' | 'updated_at'>) => Promise<string | null>
-  updateMember:  (id: string, data: Partial<FamilyMember>) => Promise<string | null>
-  deleteMember:  (id: string) => Promise<void>
+  loadFamily:   (userId: string) => Promise<void>
+  createFamily: (name: string, displayName: string, userId: string) => Promise<string | null>
+  addMember:    (member: Omit<FamilyMember, 'id' | 'family_id' | 'created_at' | 'updated_at'>) => Promise<string | null>
+  updateMember: (id: string, data: Partial<FamilyMember>) => Promise<string | null>
+  deleteMember: (id: string) => Promise<void>
 }
 
 export const useFamilyStore = create<FamilyState>((set, get) => ({
@@ -26,13 +26,12 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
   loadFamily: async (userId) => {
     set({ loading: true })
 
-    // Buscar si el usuario pertenece a alguna familia
     const { data: fu } = await supabase
       .from('family_users')
       .select('*, families(*)')
       .eq('user_id', userId)
       .eq('is_active', true)
-      .single()
+      .maybeSingle()                     // maybeSingle: no lanza error si no hay fila
 
     if (!fu) {
       set({ family: null, familyUser: null, members: [], loading: false })
@@ -56,6 +55,21 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
   },
 
   createFamily: async (name, displayName, userId) => {
+    // GUARD: verificar si ya existe una familia para este usuario
+    const { data: existing } = await supabase
+      .from('family_users')
+      .select('family_id, families(id, name)')
+      .eq('user_id', userId)
+      .eq('base_role', 'owner')
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (existing) {
+      // Ya tiene familia — recargar en vez de crear otra
+      await get().loadFamily(userId)
+      return null
+    }
+
     // 1. Crear familia
     const { data: family, error: e1 } = await supabase
       .from('families')
@@ -63,7 +77,7 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
       .select()
       .single()
 
-    if (e1 || !family) return e1?.message ?? 'Error creando familia'
+    if (e1 || !family) return 'No se pudo crear la familia. Intentá de nuevo.'
 
     // 2. Agregar al owner como family_user
     const { data: fu, error: e2 } = await supabase
@@ -78,28 +92,38 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
       .select()
       .single()
 
-    if (e2 || !fu) return e2?.message ?? 'Error creando usuario de familia'
+    if (e2 || !fu) return 'No se pudo registrar el usuario en la familia.'
 
-    // 3. Crear config de notificaciones con defaults
+    // 3. Crear config de notificaciones — UPSERT para evitar duplicados
     await supabase
       .from('notifications_config')
-      .insert({ family_id: family.id })
+      .upsert({ family_id: family.id }, { onConflict: 'family_id' })
 
     set({ family: family as Family, familyUser: fu as FamilyUser, members: [] })
     return null
   },
 
   addMember: async (member) => {
-    const { family } = get()
-    if (!family) return 'No hay familia creada'
+    const { family, members } = get()
+    if (!family) return 'No hay familia creada.'
+
+    // GUARD: verificar nombre duplicado (case-insensitive) en memoria primero
+    const nameLower = member.name.trim().toLowerCase()
+    const exists = members.some(m => m.name.toLowerCase() === nameLower)
+    if (exists) return `Ya existe un miembro llamado "${member.name}" en tu familia.`
 
     const { data, error } = await supabase
       .from('family_members')
-      .insert({ ...member, family_id: family.id })
+      .insert({ ...member, name: member.name.trim(), family_id: family.id })
       .select()
       .single()
 
-    if (error) return error.message
+    // El índice único en BD también lo bloquea si hay race condition
+    if (error) {
+      if (error.code === '23505') return `Ya existe un miembro llamado "${member.name}" en tu familia.`
+      return 'No se pudo guardar el miembro. Intentá de nuevo.'
+    }
+
     set(s => ({ members: [...s.members, data as FamilyMember] }))
     return null
   },

@@ -106,10 +106,11 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim()) return setError('El nombre es obligatorio.')
+    if (loading) return                         // bloqueo extra anti-doble-click
     setError(null)
     setLoading(true)
     const name = form.name.trim()
-    const err = await addMember(form as FamilyMember)
+    const err = await addMember({ ...form, name } as FamilyMember)
     setLoading(false)
     if (err) return setError(err)
     setSavedName(name)

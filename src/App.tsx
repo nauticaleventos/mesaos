@@ -26,9 +26,11 @@ function AppRoutes() {
       <Route path="/login"  element={!session ? <LoginPage />  : <Navigate to="/" replace />} />
       <Route path="/signup" element={!session ? <SignupPage /> : <Navigate to="/" replace />} />
 
-      {/* Onboarding: accesible siempre que haya sesión */}
+      {/* Onboarding: solo si no tiene familia aún */}
       <Route path="/onboarding" element={
-        !session ? <Navigate to="/login" replace /> : <OnboardingPage />
+        !session ? <Navigate to="/login" replace />
+        : family  ? <Navigate to="/" replace />
+        : <OnboardingPage />
       } />
 
       <Route path="/" element={
