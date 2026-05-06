@@ -326,6 +326,9 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
           </div>
         </div>
 
+        {/* Calorías y macros personalizados */}
+        <CustomMacros form={form} set={set} />
+
         {/* Condiciones médicas */}
         <div>
           <label className="input-label">Condiciones médicas
@@ -430,6 +433,86 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
           className="w-full py-3 rounded-xl border-2 border-accent text-accent font-semibold text-sm hover:bg-accent-light transition-all">
           Listo, ya están todos ({memberCount}) →
         </button>
+      )}
+    </div>
+  )
+}
+
+// ── Sección de calorías y macros personalizados ──────────────────────────────
+interface MacroForm {
+  calories_default:  number | null
+  protein_g_default: number | null
+  carbs_g_default:   number | null
+  fat_g_default:     number | null
+}
+
+function CustomMacros({ form, set }: { form: MacroForm; set: (f: string, v: unknown) => void }) {
+  const [open, setOpen] = useState(false)
+  const hasCustom = form.calories_default || form.protein_g_default || form.carbs_g_default || form.fat_g_default
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-text">Calorías y macros propios</span>
+          {hasCustom && (
+            <span className="px-2 py-0.5 bg-accent-light text-accent text-xs rounded-full">Configurado</span>
+          )}
+        </div>
+        <span className="text-muted text-sm">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-2 bg-white flex flex-col gap-4">
+          <p className="text-xs text-muted">
+            Opcional. Si lo dejás vacío, la app calcula los valores según tu objetivo y nivel de actividad.
+            Si los ponés vos, se usan estos directamente.
+          </p>
+
+          <div>
+            <label className="input-label">Calorías diarias (kcal)</label>
+            <input
+              type="number" placeholder="Ej: 1800" min={500} max={6000}
+              value={form.calories_default ?? ''}
+              onChange={e => set('calories_default', e.target.value ? +e.target.value : null)}
+            />
+          </div>
+
+          <div>
+            <label className="input-label">Proteína (g/día)</label>
+            <input
+              type="number" placeholder="Ej: 140" min={0} max={500}
+              value={form.protein_g_default ?? ''}
+              onChange={e => set('protein_g_default', e.target.value ? +e.target.value : null)}
+            />
+          </div>
+
+          <div>
+            <label className="input-label">Carbohidratos (g/día)</label>
+            <input
+              type="number" placeholder="Ej: 200" min={0} max={800}
+              value={form.carbs_g_default ?? ''}
+              onChange={e => set('carbs_g_default', e.target.value ? +e.target.value : null)}
+            />
+          </div>
+
+          <div>
+            <label className="input-label">Grasas (g/día)</label>
+            <input
+              type="number" placeholder="Ej: 60" min={0} max={400}
+              value={form.fat_g_default ?? ''}
+              onChange={e => set('fat_g_default', e.target.value ? +e.target.value : null)}
+            />
+          </div>
+
+          <p className="text-xs text-muted bg-accent-light rounded-lg px-3 py-2">
+            💡 Si ponés calorías sin macros (o al revés), la app completa el resto automáticamente.
+          </p>
+        </div>
       )}
     </div>
   )
