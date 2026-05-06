@@ -39,7 +39,7 @@ export default function PhotoScan({ onSave, onCancel }: Props) {
 
       try {
         const detected = await scanFoodPhoto(base64, mime)
-        newItems.push({ preview: dataUrl, detected })
+        newItems.push({ preview: compressedUrl, detected })
       } catch (e: unknown) {
         localError = e instanceof Error ? e.message : String(e)
         setError(localError)
