@@ -6,6 +6,7 @@ import { calcularNivelNevera } from '../../lib/nivelNevera'
 import AddItemForm from '../../components/fridge/AddItemForm'
 import PhotoScan from '../../components/fridge/PhotoScan'
 import QuickList from '../../components/fridge/QuickList'
+import EnrichFromPhoto from '../../components/fridge/EnrichFromPhoto'
 
 type Modal = null | 'manual' | 'photo' | 'edit' | 'quick'
 type Filter = 'todos' | 'nevera' | 'congelador' | 'despensa'
@@ -233,17 +234,35 @@ export default function FridgePage() {
 }
 
 function FridgeItemCard({ item, onDelete, onEdit }: {
-  item: FridgeItem
+  item:     FridgeItem
   onDelete: (id: string) => void
-  onEdit: (item: FridgeItem) => void
+  onEdit:   (item: FridgeItem) => void
 }) {
-  const [showTip, setShowTip] = useState(false)
+  const [showTip,   setShowTip]   = useState(false)
+  const [enriching, setEnriching] = useState(false)
+  const { updateItem }            = useFridgeStore()
   const status = expiryStatus(item.expiry_date)
   const label  = expiryLabel(item.expiry_date)
 
+  const handleEnrich = async (data: import('../../lib/claude').EnrichmentFromPhoto) => {
+    await updateItem(item.id, {
+      expiry_date:       data.expiry_date,
+      calories_per_100g: data.calories_per_100g,
+      protein_g:         data.protein_g,
+      carbs_g:           data.carbs_g,
+      fat_g:             data.fat_g,
+      conservation_tip:  data.conservation_tip ?? item.conservation_tip,
+    })
+    setEnriching(false)
+  }
+
   return (
     <div className={`border rounded-xl p-4 transition-all ${STATUS_COLORS[status]}`}>
+
+      {/* Fila principal: info + botones */}
       <div className="flex items-start justify-between gap-3">
+
+        {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-text">{item.name}</span>
@@ -251,9 +270,7 @@ function FridgeItemCard({ item, onDelete, onEdit }: {
           </div>
 
           {(item.quantity || item.unit) && (
-            <p className="text-sm text-muted mt-0.5">
-              {item.quantity} {item.unit}
-            </p>
+            <p className="text-sm text-muted mt-0.5">{item.quantity} {item.unit}</p>
           )}
 
           {label && (
@@ -277,7 +294,13 @@ function FridgeItemCard({ item, onDelete, onEdit }: {
           )}
         </div>
 
+        {/* Botones */}
         <div className="flex flex-col gap-2 flex-shrink-0">
+          <button onClick={() => setEnriching(e => !e)}
+            className={`text-sm leading-none transition-colors ${enriching ? 'text-accent' : 'text-muted hover:text-accent'}`}
+            title="Foto del producto para agregar nutrición y vencimiento">
+            📷
+          </button>
           <button onClick={() => onEdit(item)}
             className="text-muted hover:text-accent transition-colors text-sm leading-none">
             ✏️
@@ -288,6 +311,17 @@ function FridgeItemCard({ item, onDelete, onEdit }: {
           </button>
         </div>
       </div>
+
+      {/* Panel de enriquecimiento */}
+      {enriching && (
+        <div className="mt-3 pt-3 border-t border-border">
+          <EnrichFromPhoto
+            foodName={item.name}
+            onEnrich={handleEnrich}
+            onCancel={() => setEnriching(false)}
+          />
+        </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from 'react'
 import { scanFoodPhoto, scanFoodPhotoGroup, scanReceiptPhoto, type FoodFromPhoto } from '../../lib/claude'
 import { useFridgeStore, type FridgeItem, type NewFridgeItem } from '../../store/fridgeStore'
+import EnrichFromPhoto from './EnrichFromPhoto'
 
 interface SavedResult {
   name:    string
@@ -302,21 +303,52 @@ export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
 }
 
 function ResultRow({ result, onEdit }: { result: SavedResult; onEdit: (item: FridgeItem) => void }) {
+  const [enriching, setEnriching] = useState(false)
+  const updateItem = useFridgeStore(s => s.updateItem)
+
+  const handleEnrich = async (data: import('../../lib/claude').EnrichmentFromPhoto) => {
+    if (!result.item) return
+    await updateItem(result.item.id, {
+      expiry_date:       data.expiry_date,
+      calories_per_100g: data.calories_per_100g,
+      protein_g:         data.protein_g,
+      carbs_g:           data.carbs_g,
+      fat_g:             data.fat_g,
+      conservation_tip:  data.conservation_tip ?? result.item.conservation_tip,
+    })
+    setEnriching(false)
+  }
+
   return (
-    <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm
+    <div className={`flex flex-col gap-2 px-3 py-2.5 rounded-xl
       ${result.success ? 'bg-green-50' : 'bg-red-50'}`}>
-      <span className={result.success ? 'text-success' : 'text-error'}>
-        {result.success ? '✓' : '✗'}
-      </span>
-      <span className="flex-1 text-text truncate">{result.name}</span>
-      {result.success && result.item && (
-        <button onClick={() => onEdit(result.item!)}
-          className="text-accent text-xs font-medium hover:underline whitespace-nowrap">
-          ✏️ Editar
-        </button>
-      )}
-      {!result.success && result.error && (
-        <span className="text-error text-xs truncate max-w-24">{result.error}</span>
+      <div className="flex items-center gap-2">
+        <span className={result.success ? 'text-success' : 'text-error'}>
+          {result.success ? '✓' : '✗'}
+        </span>
+        <span className="flex-1 text-text text-sm truncate">{result.name}</span>
+        {result.success && result.item && (
+          <div className="flex gap-2">
+            <button onClick={() => setEnriching(e => !e)}
+              className="text-muted text-xs hover:text-accent transition-colors whitespace-nowrap">
+              📷 Foto
+            </button>
+            <button onClick={() => onEdit(result.item!)}
+              className="text-accent text-xs font-medium hover:underline whitespace-nowrap">
+              ✏️
+            </button>
+          </div>
+        )}
+        {!result.success && result.error && (
+          <span className="text-error text-xs truncate max-w-24">{result.error}</span>
+        )}
+      </div>
+      {enriching && result.item && (
+        <EnrichFromPhoto
+          foodName={result.item.name}
+          onEnrich={handleEnrich}
+          onCancel={() => setEnriching(false)}
+        />
       )}
     </div>
   )

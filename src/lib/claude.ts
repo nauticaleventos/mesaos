@@ -171,6 +171,43 @@ Responde SOLO con un JSON array (sin markdown):
   return JSON.parse(match[0]) as FoodFromPhoto[]
 }
 
+// ── Enriquecer alimento existente con foto (nutrición + vencimiento) ──────────
+export interface EnrichmentFromPhoto {
+  expiry_date:       string | null
+  calories_per_100g: number | null
+  protein_g:         number | null
+  carbs_g:           number | null
+  fat_g:             number | null
+  conservation_tip:  string | null
+}
+
+export async function enrichFromPhoto(base64Image: string, foodName: string): Promise<EnrichmentFromPhoto> {
+  const text = await callClaude([{
+    role: 'user',
+    content: [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64Image } },
+      {
+        type: 'text',
+        text: `Esta foto es del producto "${foodName}". Extrae SOLO la información nutricional y la fecha de vencimiento si están visibles.
+
+Responde SOLO con un JSON (sin markdown):
+{
+  "expiry_date": "YYYY-MM-DD o null",
+  "calories_per_100g": número o null,
+  "protein_g": número o null,
+  "carbs_g": número o null,
+  "fat_g": número o null,
+  "conservation_tip": "tip corto en español colombiano o null"
+}`,
+      },
+    ],
+  }], 800)
+
+  const match = text.match(/\{[\s\S]*\}/)
+  if (!match) throw new Error('No se pudo leer la información del producto')
+  return JSON.parse(match[0]) as EnrichmentFromPhoto
+}
+
 // ── Tip de conservación ───────────────────────────────────────────────────────
 export async function getConservationTip(foodName: string): Promise<string> {
   const text = await callClaude([{
