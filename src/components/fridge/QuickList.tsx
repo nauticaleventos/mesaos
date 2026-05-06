@@ -43,10 +43,12 @@ export default function QuickList({ onSave, onEdit, onDone }: Props) {
     const lines = text.trim().split('\n').filter(l => l.trim())
     if (!lines.length) return
     setError(null); setLoading(true); setResults([]); setDone(false)
-    setProgress('Claude está identificando y buscando información nutricional...')
+    setProgress('Paso 1: identificando alimentos en tu lista...')
 
     try {
       const detected = await parseQuickList(text.trim())
+      setProgress(`Paso 2: buscando información nutricional...`)
+      await new Promise(r => setTimeout(r, 100)) // flush UI
       setProgress(`Guardando ${detected.length} alimento${detected.length > 1 ? 's' : ''}...`)
 
       const saved: SavedResult[] = []
