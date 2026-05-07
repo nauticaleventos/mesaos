@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 
 export default function SignupPage() {
@@ -12,6 +12,8 @@ export default function SignupPage() {
   const [loading, setLoading]     = useState(false)
   const signUp                    = useAuthStore(s => s.signUp)
   const navigate                  = useNavigate()
+  const [searchParams]            = useSearchParams()
+  const returnTo                  = searchParams.get('return') ?? '/'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,7 +24,7 @@ export default function SignupPage() {
     const err = await signUp(email, password)
     setLoading(false)
     if (err) return setError(err)
-    navigate('/')
+    navigate(returnTo, { replace: true })
   }
 
   return (
@@ -111,7 +113,8 @@ export default function SignupPage() {
 
           <p className="text-center text-sm text-muted">
             ¿Ya tienes cuenta?{' '}
-            <Link to="/login" className="text-accent hover:text-accent-hover font-medium transition-colors">
+            <Link to={`/login${returnTo !== '/' ? `?return=${encodeURIComponent(returnTo)}` : ''}`}
+              className="text-accent hover:text-accent-hover font-medium transition-colors">
               Entra aquí
             </Link>
           </p>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../store/authStore'
 import { useRecipesStore, type Recipe } from '../../store/recipesStore'
 import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore, type FridgeItem } from '../../store/fridgeStore'
@@ -29,6 +30,7 @@ export default function RecetaPage() {
   const memberId                  = searchParams.get('m') ?? undefined
   const navigate                  = useNavigate()
 
+  const { session }                       = useAuthStore()
   const { recipes, loadRecipes }          = useRecipesStore()
   const { family }                        = useFamilyStore()
   const { items: fridgeItems, loadItems } = useFridgeStore()
@@ -117,6 +119,59 @@ export default function RecetaPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted text-sm">Cargando receta...</p>
+      </div>
+    )
+  }
+
+  // ── Vista pública (sin sesión) ────────────────────────────────────────────
+  if (!session) {
+    const returnUrl = encodeURIComponent(`/receta/${id}`)
+    return (
+      <div className="min-h-screen max-w-lg mx-auto">
+        <div className="relative h-56 bg-accent-light overflow-hidden">
+          <img
+            src={`https://source.unsplash.com/featured/800x500/?${encodeURIComponent(recipe.nombre + ' food')}`}
+            alt={recipe.nombre}
+            className="w-full h-full object-cover"
+            onError={e => (e.currentTarget.style.display = 'none')}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="absolute bottom-4 left-4 right-4">
+            <p className="text-white text-2xl font-semibold leading-tight">{recipe.nombre}</p>
+            {recipe.origen && <p className="text-white/80 text-sm mt-0.5">🌎 {recipe.origen}</p>}
+          </div>
+        </div>
+
+        <div className="px-4 py-6 flex flex-col gap-5">
+          {recipe.descripcion_corta && (
+            <p className="text-muted text-sm">{recipe.descripcion_corta}</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {recipe.tiempo_total_min && <Chip>⏱ {recipe.tiempo_total_min}min</Chip>}
+            {recipe.dificultad && (
+              <span className={`px-2 py-0.5 rounded-full border text-xs ${DIFICULTAD_COLOR[recipe.dificultad]}`}>
+                {recipe.dificultad}
+              </span>
+            )}
+            {recipe.porciones && <Chip>👥 {recipe.porciones} porciones</Chip>}
+          </div>
+
+          <div className="card flex flex-col gap-4 text-center py-6">
+            <span className="text-4xl">🍽️</span>
+            <div>
+              <p className="font-semibold text-text">Ver receta completa</p>
+              <p className="text-muted text-sm mt-1">
+                Ingredientes, preparación y más — crea tu cuenta gratis.
+              </p>
+            </div>
+            <button onClick={() => navigate(`/signup?return=${returnUrl}`)} className="btn-primary">
+              Crear cuenta gratis
+            </button>
+            <button onClick={() => navigate(`/login?return=${returnUrl}`)} className="btn-ghost">
+              Ya tengo cuenta — Entrar
+            </button>
+          </div>
+        </div>
       </div>
     )
   }

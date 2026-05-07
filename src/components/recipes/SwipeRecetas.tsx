@@ -53,9 +53,10 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
   useEffect(() => {
     if (effectiveMemberId) loadQueue(effectiveMemberId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveMemberId])
+  }, [effectiveMemberId, recipes.length])
 
   const loadQueue = async (memberId: string) => {
+    if (recipes.length === 0) return  // esperar a que carguen las recetas
     const { data: rated } = await supabase
       .from('recipe_reactions')
       .select('recipe_id')

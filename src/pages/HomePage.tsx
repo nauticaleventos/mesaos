@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useFamilyStore } from '../store/familyStore'
 import { useFridgeStore } from '../store/fridgeStore'
+import { supabase } from '../lib/supabase'
 import { calcularNivelNevera } from '../lib/nivelNevera'
 import type { FamilyMember } from '../lib/types'
 import StepAddMember from '../components/onboarding/StepAddMember'
 
 export default function HomePage() {
   const navigate                          = useNavigate()
-  const { signOut }                     = useAuthStore()
+  const { signOut, session }            = useAuthStore()
   const { family, members, deleteMember } = useFamilyStore()
   const { items, loadItems }            = useFridgeStore()
 
@@ -21,6 +22,35 @@ export default function HomePage() {
   const [addingMember, setAddingMember]   = useState(false)
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [inviteUrl, setInviteUrl]         = useState<string | null>(null)
+  const [inviteLoading, setInviteLoading] = useState(false)
+
+  const isOwner = family?.owner_user_id === session?.user?.id
+
+  const generateInvite = async () => {
+    if (!family?.id || !session?.user?.id) return
+    setInviteLoading(true)
+    const token = crypto.randomUUID()
+    await supabase.from('invitations').insert({
+      family_id:           family.id,
+      invited_by_user_id:  session.user.id,
+      token,
+      base_role:           'contributor',
+      expires_at:          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+    const url = `${window.location.origin}/unirse/${token}`
+    setInviteUrl(url)
+    setInviteLoading(false)
+  }
+
+  const copyInvite = async () => {
+    if (!inviteUrl) return
+    if (navigator.share) {
+      await navigator.share({ title: `Únete a ${family?.name} en mesa.os`, url: inviteUrl })
+    } else {
+      await navigator.clipboard.writeText(inviteUrl)
+    }
+  }
 
   const goalLabel: Record<string, string> = {
     deficit: 'Bajar de peso', deficit_agresivo: 'Bajar rápido',
@@ -56,12 +86,22 @@ export default function HomePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-serif text-accent font-semibold">mesa.os</h1>
+          <h1 className="text-2xl font-semibold text-accent">mesa.os</h1>
           <p className="text-muted text-sm">{family?.name}</p>
         </div>
-        <button onClick={signOut} className="text-muted text-sm hover:text-text transition-colors">
-          Salir
-        </button>
+        <div className="flex items-center gap-2">
+          {isOwner && (
+            <button
+              onClick={generateInvite}
+              disabled={inviteLoading}
+              className="px-3 py-1.5 rounded-xl border border-border text-muted text-xs font-medium hover:border-accent hover:text-accent transition-all disabled:opacity-50">
+              {inviteLoading ? '...' : '+ Invitar'}
+            </button>
+          )}
+          <button onClick={signOut} className="text-muted text-sm hover:text-text transition-colors">
+            Salir
+          </button>
+        </div>
       </div>
 
       {/* Miembros */}
@@ -228,6 +268,28 @@ export default function HomePage() {
           <span className="text-xs font-medium text-text text-center">Mercado</span>
         </div>
       </div>
+
+      {/* Modal invitación */}
+      {inviteUrl && (
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-4 pb-8"
+          onClick={e => e.target === e.currentTarget && setInviteUrl(null)}>
+          <div className="card w-full max-w-sm flex flex-col gap-4">
+            <div>
+              <p className="font-semibold text-text">Link de invitación listo</p>
+              <p className="text-muted text-xs mt-0.5">Válido por 7 días. Úsalo una vez.</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl px-3 py-2.5 border border-border">
+              <p className="text-xs text-muted break-all font-mono">{inviteUrl}</p>
+            </div>
+            <button onClick={copyInvite} className="btn-primary">
+              Compartir link ↗
+            </button>
+            <button onClick={() => setInviteUrl(null)} className="btn-ghost">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   )

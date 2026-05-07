@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { supabase } from '../../lib/supabase'
 
@@ -13,6 +13,8 @@ export default function LoginPage() {
   const [resetting, setResetting]   = useState(false)
   const signIn                      = useAuthStore(s => s.signIn)
   const navigate                    = useNavigate()
+  const [searchParams]              = useSearchParams()
+  const returnTo                    = searchParams.get('return') ?? '/'
 
   const handleReset = async () => {
     if (!email.trim()) return setError('Escribe tu correo primero para recuperar la contraseña.')
@@ -31,7 +33,7 @@ export default function LoginPage() {
     const err = await signIn(email, password)
     setLoading(false)
     if (err) return setError('Correo o contraseña incorrectos.')
-    navigate('/')
+    navigate(returnTo, { replace: true })
   }
 
   return (
@@ -108,7 +110,8 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-muted">
             ¿No tienes cuenta?{' '}
-            <Link to="/signup" className="text-accent hover:text-accent-hover font-medium transition-colors">
+            <Link to={`/signup${returnTo !== '/' ? `?return=${encodeURIComponent(returnTo)}` : ''}`}
+              className="text-accent hover:text-accent-hover font-medium transition-colors">
               Regístrate gratis
             </Link>
           </p>
