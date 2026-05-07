@@ -176,8 +176,8 @@ export default function RecetaPage() {
     )
   }
 
-  const query  = encodeURIComponent(recipe.nombre.split(' ').slice(0, 3).join(' ') + ' food')
-  const imgSrc = `https://source.unsplash.com/featured/800x500/?${query}`
+  const imgSrc = recipe.imagen_url
+    ?? `https://source.unsplash.com/featured/800x500/?${encodeURIComponent(recipe.nombre.split(' ').slice(0,3).join(' ') + ' food')}`
   const nut    = recipe.info_nutricional_aprox
   const totalMacros = nut ? nut.proteina_g + nut.carbohidratos_g + nut.grasa_g : 1
 
@@ -215,6 +215,18 @@ export default function RecetaPage() {
           </div>
         )}
       </div>
+
+      {/* Crédito Unsplash */}
+      {recipe.imagen_credito && imgLoaded && (
+        <p className="text-right px-3 py-1 text-[11px] text-muted">
+          Foto:{' '}
+          <a href={recipe.imagen_credito.perfil_url} target="_blank" rel="noopener noreferrer"
+            className="underline hover:text-text transition-colors">
+            {recipe.imagen_credito.fotografo}
+          </a>
+          {' '}en Unsplash
+        </p>
+      )}
 
       {/* Info principal */}
       <div className="px-4 pt-4 pb-3">

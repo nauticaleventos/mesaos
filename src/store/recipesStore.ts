@@ -36,6 +36,8 @@ export interface Recipe {
   info_nutricional_aprox: NutricionAprox | null
   is_base_recipe:         boolean
   rating_promedio:        number | null
+  imagen_url:             string | null
+  imagen_credito:         { fotografo: string; perfil_url: string } | null
   created_at:             string
 }
 

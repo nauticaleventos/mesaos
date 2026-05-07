@@ -37,8 +37,8 @@ export default function RecipeCard({ recipe, fridgeItems, dragX = 0, dragY = 0, 
   const [selectedStars, setSelectedStars] = useState(0)
   const [poppingStar, setPoppingStar]   = useState<number | null>(null)
 
-  const query  = encodeURIComponent(recipe.nombre.split(' ').slice(0, 3).join(' ') + ' food')
-  const imgSrc = `https://source.unsplash.com/featured/800x400/?${query}`
+  const imgSrc = recipe.imagen_url
+    ?? `https://source.unsplash.com/featured/800x400/?${encodeURIComponent(recipe.nombre.split(' ').slice(0,3).join(' ') + ' food')}`
   const dif    = recipe.dificultad ? DIFICULTAD_MAP[recipe.dificultad] : null
   const nut    = recipe.info_nutricional_aprox
   const { have, total } = countMatches(recipe, fridgeItems)
@@ -114,6 +114,19 @@ export default function RecipeCard({ recipe, fridgeItems, dragX = 0, dragY = 0, 
           <div className="absolute bottom-2 right-2 bg-accent/90 text-white text-xs px-2 py-0.5 rounded-full">
             base
           </div>
+        )}
+
+        {/* Crédito Unsplash (requerido por sus términos) */}
+        {recipe.imagen_credito && imgLoaded && (
+          <a
+            href={recipe.imagen_credito.perfil_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="absolute bottom-2 left-2 text-white/60 text-[9px] hover:text-white/90 transition-colors"
+            style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
+            📷 {recipe.imagen_credito.fotografo}
+          </a>
         )}
       </div>
 
