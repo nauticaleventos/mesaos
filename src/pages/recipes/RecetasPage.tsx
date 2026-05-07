@@ -4,11 +4,10 @@ import { supabase } from '../../lib/supabase'
 import { useFamilyStore } from '../../store/familyStore'
 import { useRecipesStore, type Recipe } from '../../store/recipesStore'
 import ImportarReceta from '../../components/recipes/ImportarReceta'
-import RecetaDetalle from '../../components/recipes/RecetaDetalle'
 import SwipeRecetas from '../../components/recipes/SwipeRecetas'
 
 type Tab   = 'mis' | 'guardadas' | 'descubrir'
-type Vista = 'tabs' | 'detalle' | 'importar'
+type Vista = 'tabs' | 'importar'
 
 const TIPO_ICONS: Record<string, string> = {
   desayuno: '☀️', almuerzo: '🍽️', cena: '🌙',
@@ -31,7 +30,6 @@ export default function RecetasPage() {
   const [vista, setVista]         = useState<Vista>('tabs')
   const [tab, setTab]             = useState<Tab>('descubrir')
   const [memberIdx, setMemberIdx] = useState(0)
-  const [selected, setSelected]   = useState<Recipe | null>(null)
   const [busqueda, setBusqueda]   = useState('')
   const [reactions, setReactions] = useState<Record<string, ReactionData>>({})
 
@@ -66,9 +64,11 @@ export default function RecetasPage() {
       r.tags.some(t => t.toLowerCase().includes(busqueda.toLowerCase()))
     )
 
-  const openRecipe = (r: Recipe) => { setSelected(r); setVista('detalle') }
+  const openRecipe = (r: Recipe) => {
+    navigate(`/receta/${r.id}${member?.id ? `?m=${member.id}` : ''}`)
+  }
 
-  // ── Vistas secundarias ──────────────────────────────────────────────────
+  // ── Vista importar ──────────────────────────────────────────────────────
 
   if (vista === 'importar') {
     return (
@@ -84,18 +84,6 @@ export default function RecetasPage() {
           onCancel={() => setVista('tabs')}
         />
       </div>
-    )
-  }
-
-  if (vista === 'detalle' && selected) {
-    return (
-      <RecetaDetalle
-        receta={selected}
-        memberId={member?.id}
-        memberRating={reactions[selected.id]?.rating}
-        onBack={() => { setSelected(null); setVista('tabs') }}
-        onRated={() => member?.id && loadReactions(member.id)}
-      />
     )
   }
 
@@ -179,6 +167,7 @@ export default function RecetasPage() {
           memberId={member?.id ?? ''}
           onReacted={() => member?.id && loadReactions(member.id)}
           onClose={() => setTab('mis')}
+          onCardTap={openRecipe}
         />
       )}
 

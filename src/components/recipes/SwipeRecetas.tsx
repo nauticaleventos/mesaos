@@ -7,22 +7,21 @@ import RecipeCard from './RecipeCard'
 import StarRatingModal from './StarRatingModal'
 
 interface Props {
-  onClose:    () => void
-  // Modo embebido (dentro de RecetasPage)
-  embedded?:  boolean
-  memberId?:  string
-  onReacted?: () => void
+  onClose:     () => void
+  embedded?:   boolean
+  memberId?:   string
+  onReacted?:  () => void
+  onCardTap?:  (recipe: Recipe) => void
 }
 
 type Reaction  = 'like' | 'dislike' | 'bookmark'
 type Direction = 'left' | 'right' | 'up'
 
-export default function SwipeRecetas({ onClose, embedded = false, memberId: externalMemberId, onReacted }: Props) {
+export default function SwipeRecetas({ onClose, embedded = false, memberId: externalMemberId, onReacted, onCardTap }: Props) {
   const { recipes }            = useRecipesStore()
   const { members }            = useFamilyStore()
   const { items: fridgeItems } = useFridgeStore()
 
-  // Standalone: miembro manejado internamente
   const [memberIdx, setMemberIdx] = useState(0)
   const standaloneMember          = members[memberIdx]
   const effectiveMemberId         = embedded ? externalMemberId : standaloneMember?.id
@@ -33,7 +32,7 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
   const [saving, setSaving]       = useState(false)
   const [showModal, setShowModal] = useState(false)
 
-  // Drag refs
+  // Drag
   const startX   = useRef(0)
   const startY   = useRef(0)
   const currentX = useRef(0)
@@ -43,6 +42,10 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
   const [dragX, setDragX]     = useState(0)
   const [dragY, setDragY]     = useState(0)
   const [leaving, setLeaving] = useState<Direction | null>(null)
+
+  // Star rating pending
+  const ratingTimerRef              = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [pendingRating, setPendingRating] = useState<number | null>(null)
 
   const recipe: Recipe | undefined = queue[index]
   const progress = queue.length > 0 ? Math.round((index / queue.length) * 100) : 0
@@ -57,7 +60,6 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
       .from('recipe_reactions')
       .select('recipe_id')
       .eq('member_id', memberId)
-
     const ratedIds = new Set((rated ?? []).map((r: { recipe_id: string }) => r.recipe_id))
     const pending  = recipes.filter(r => !ratedIds.has(r.id))
     setQueue(pending)
@@ -68,6 +70,8 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
 
   const resetDrag = () => {
     setDragX(0); setDragY(0); setLeaving(null); setShowModal(false)
+    setPendingRating(null)
+    if (ratingTimerRef.current) { clearTimeout(ratingTimerRef.current); ratingTimerRef.current = null }
   }
 
   const advance = () => {
@@ -81,11 +85,7 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
   const saveReaction = async (reaction: Reaction, rating?: number) => {
     if (!effectiveMemberId || !recipe || saving) return
     setSaving(true)
-    const payload: Record<string, unknown> = {
-      recipe_id: recipe.id,
-      member_id: effectiveMemberId,
-      reaction,
-    }
+    const payload: Record<string, unknown> = { recipe_id: recipe.id, member_id: effectiveMemberId, reaction }
     if (rating) payload.rating = rating
     await supabase.from('recipe_reactions').upsert(payload, { onConflict: 'recipe_id,member_id' })
     setSaving(false)
@@ -95,42 +95,65 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
   const triggerLeave = (dir: Direction) => {
     if (saving || leaving) return
     if (dir === 'right') {
-      setShowModal(true)
-      setDragX(0); setDragY(0)
+      // Swipe right = like sin rating (flujo rápido)
+      setLeaving('right')
+      setTimeout(() => saveReaction('like'), 320)
       return
     }
     setLeaving(dir)
     setTimeout(() => saveReaction(dir === 'left' ? 'dislike' : 'bookmark'), 320)
   }
 
-  const handleRate      = (rating: number) => { setLeaving('right'); setTimeout(() => saveReaction('like', rating), 320) }
-  const handleNotTried  = () => { setLeaving('up'); setTimeout(() => saveReaction('bookmark'), 320) }
+  // Star tap: fill estrellas → 400ms → guardar como ya_probada
+  const handleStarTap = (stars: number) => {
+    if (saving || leaving) return
+    if (ratingTimerRef.current) clearTimeout(ratingTimerRef.current)
+    setPendingRating(stars)
+    ratingTimerRef.current = setTimeout(() => {
+      setLeaving('right')
+      setTimeout(() => saveReaction('like', stars), 320)
+      setPendingRating(null)
+      ratingTimerRef.current = null
+    }, 400)
+  }
 
-  // ── Drag handlers ────────────────────────────────────────────────────────
+  // Swipe handlers
   const onStart = (x: number, y: number) => {
     if (leaving || showModal) return
     startX.current = x; startY.current = y
     currentX.current = x; currentY.current = y
     dragging.current = true
   }
+
   const onMove = (x: number, y: number) => {
     if (!dragging.current) return
     currentX.current = x; currentY.current = y
     setDragX(x - startX.current)
     setDragY(y - startY.current)
   }
+
   const onEnd = () => {
     if (!dragging.current) return
     dragging.current = false
-    const diffX = currentX.current - startX.current
-    const diffY = currentY.current - startY.current
-    if (diffY < -80 && Math.abs(diffY) > Math.abs(diffX)) triggerLeave('up')
-    else if (diffX > 100) triggerLeave('right')
-    else if (diffX < -100) triggerLeave('left')
+    const adX = Math.abs(currentX.current - startX.current)
+    const adY = Math.abs(currentY.current - startY.current)
+
+    // Tap simple → abrir detalle
+    if (adX < 8 && adY < 8) {
+      if (recipe) onCardTap?.(recipe)
+      setDragX(0); setDragY(0)
+      return
+    }
+
+    const sdX = currentX.current - startX.current
+    const sdY = currentY.current - startY.current
+    if (sdY < -80 && Math.abs(sdY) > Math.abs(sdX)) triggerLeave('up')
+    else if (sdX > 100) triggerLeave('right')
+    else if (sdX < -100) triggerLeave('left')
     else { setDragX(0); setDragY(0) }
   }
 
-  // ── Card style ───────────────────────────────────────────────────────────
+  // Card style
   const cardStyle: React.CSSProperties = leaving
     ? {
         transform:
@@ -146,10 +169,10 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
         cursor:     'grab',
       }
 
-  // ── Sin miembros ─────────────────────────────────────────────────────────
   if (members.length === 0) return null
 
-  const cardAndButtons = (
+  // ── Contenido compartido entre modos ────────────────────────────────────
+  const cardContent = (
     <>
       {/* Progreso */}
       {queue.length > 0 && (
@@ -168,7 +191,7 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
           <div>
             <p className="text-xl font-serif font-semibold text-text">¡Ya valoraste todo!</p>
             <p className="text-muted text-sm mt-1">
-              {embedded ? 'Revisa tus recetas favoritas en la pestaña ❤️' : 'Ya valoraste todas las recetas disponibles.'}
+              {embedded ? 'Revisa tus favoritas en la pestaña ❤️' : 'Ya valoraste todas las recetas disponibles.'}
             </p>
           </div>
           <button onClick={onClose} className="btn-primary max-w-xs">
@@ -177,9 +200,17 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
         </div>
       )}
 
-      {/* Card */}
+      {/* Card + botones */}
       {!done && recipe && (
         <div className="flex flex-col items-center gap-5">
+          {/* Feedback de pendingRating */}
+          {pendingRating !== null && (
+            <p className="text-xs text-accent font-medium animate-pulse">
+              {'★'.repeat(pendingRating)}{'☆'.repeat(5 - pendingRating)} — guardando...
+            </p>
+          )}
+
+          {/* Tarjeta draggable */}
           <div
             style={cardStyle}
             className="w-full active:cursor-grabbing"
@@ -191,20 +222,30 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
             onTouchMove={e  => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY) }}
             onTouchEnd={onEnd}
           >
-            <RecipeCard recipe={recipe} fridgeItems={fridgeItems} dragX={dragX} dragY={dragY} />
+            <RecipeCard
+              recipe={recipe}
+              fridgeItems={fridgeItems}
+              dragX={dragX}
+              dragY={dragY}
+              onStarTap={handleStarTap}
+            />
           </div>
 
-          {/* Botones */}
-          <div className="flex items-center justify-center gap-6">
+          {/* Botones: solo X y Bookmark */}
+          <div className="flex items-center justify-center gap-8">
             <ActionBtn onClick={() => triggerLeave('left')} disabled={saving} size="lg"
-              className="border-red-400 text-red-500 hover:bg-red-50">✗</ActionBtn>
-            <ActionBtn onClick={() => triggerLeave('up')} disabled={saving} size="md"
-              className="border-blue-300 text-blue-500 hover:bg-blue-50">🔖</ActionBtn>
-            <ActionBtn onClick={() => triggerLeave('right')} disabled={saving} size="lg"
-              className="border-green-400 text-green-500 hover:bg-green-50">❤️</ActionBtn>
+              className="border-red-400 text-red-500 hover:bg-red-50">
+              ✗
+            </ActionBtn>
+            <ActionBtn onClick={() => triggerLeave('up')} disabled={saving} size="lg"
+              className="border-blue-300 text-blue-500 hover:bg-blue-50">
+              🔖
+            </ActionBtn>
           </div>
 
-          <p className="text-xs text-muted text-center">← no me gusta · 🔖 guardar · me gusta →</p>
+          <p className="text-xs text-muted text-center">
+            ← no me gusta · 🔖 guardar para probar · ⭐ toca las estrellas de la tarjeta
+          </p>
         </div>
       )}
     </>
@@ -214,61 +255,51 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
   if (embedded) {
     return (
       <div className="px-4 pt-3 pb-6 flex flex-col gap-3">
-        {cardAndButtons}
+        {cardContent}
         {showModal && recipe && (
-          <StarRatingModal recipe={recipe} onRate={handleRate} onNotTried={handleNotTried}
+          <StarRatingModal recipe={recipe}
+            onRate={r => { setLeaving('right'); setTimeout(() => saveReaction('like', r), 320) }}
+            onNotTried={() => { setLeaving('up'); setTimeout(() => saveReaction('bookmark'), 320) }}
             onClose={() => { setShowModal(false); setDragX(0); setDragY(0) }} />
         )}
       </div>
     )
   }
 
-  // ── Modo standalone (pantalla completa) ──────────────────────────────────
+  // ── Modo standalone ──────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col max-w-lg mx-auto px-4 py-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-serif font-semibold text-text">¿Qué te gusta?</h2>
         <button onClick={onClose} className="text-muted hover:text-text transition-colors text-sm">✕ Cerrar</button>
       </div>
-
-      {/* Selector de miembro */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {members.map((m, i) => (
           <button key={m.id} onClick={() => setMemberIdx(i)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-all
               ${memberIdx === i ? 'bg-accent text-white' : 'bg-white border border-border text-muted hover:border-accent'}`}>
-            <span>{m.emoji}</span>
-            <span>{m.name}</span>
+            <span>{m.emoji}</span><span>{m.name}</span>
           </button>
         ))}
       </div>
-
-      <div className="flex-1 flex flex-col justify-center gap-5">
-        {cardAndButtons}
-      </div>
-
+      <div className="flex-1 flex flex-col justify-center gap-5">{cardContent}</div>
       {showModal && recipe && (
-        <StarRatingModal recipe={recipe} onRate={handleRate} onNotTried={handleNotTried}
+        <StarRatingModal recipe={recipe}
+          onRate={r => { setLeaving('right'); setTimeout(() => saveReaction('like', r), 320) }}
+          onNotTried={() => { setLeaving('up'); setTimeout(() => saveReaction('bookmark'), 320) }}
           onClose={() => { setShowModal(false); setDragX(0); setDragY(0) }} />
       )}
     </div>
   )
 }
 
-// ── ActionBtn ────────────────────────────────────────────────────────────────
 function ActionBtn({ onClick, disabled, size, className, children }: {
-  onClick:   () => void
-  disabled?: boolean
-  size:      'md' | 'lg'
-  className: string
-  children:  React.ReactNode
+  onClick: () => void; disabled?: boolean; size: 'md' | 'lg'; className: string; children: React.ReactNode
 }) {
   const dim = size === 'lg' ? 'w-16 h-16 text-2xl' : 'w-11 h-11 text-lg'
   return (
     <button onClick={onClick} disabled={disabled}
-      className={`${dim} rounded-full bg-white border-2 flex items-center justify-center
-        shadow-md transition-all active:scale-90 disabled:opacity-40 ${className}`}>
+      className={`${dim} rounded-full bg-white border-2 flex items-center justify-center shadow-md transition-all active:scale-90 disabled:opacity-40 ${className}`}>
       {children}
     </button>
   )

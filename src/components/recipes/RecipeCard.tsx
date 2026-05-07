@@ -7,6 +7,7 @@ interface Props {
   fridgeItems: FridgeItem[]
   dragX?:      number
   dragY?:      number
+  onStarTap?:  (stars: number) => void
 }
 
 const TIPO_ICONS: Record<string, string> = {
@@ -30,9 +31,11 @@ function countMatches(recipe: Recipe, items: FridgeItem[]) {
   return { have, total: essential.length }
 }
 
-export default function RecipeCard({ recipe, fridgeItems, dragX = 0, dragY = 0 }: Props) {
-  const [imgLoaded, setImgLoaded] = useState(false)
-  const [imgError, setImgError]   = useState(false)
+export default function RecipeCard({ recipe, fridgeItems, dragX = 0, dragY = 0, onStarTap }: Props) {
+  const [imgLoaded, setImgLoaded]       = useState(false)
+  const [imgError, setImgError]         = useState(false)
+  const [selectedStars, setSelectedStars] = useState(0)
+  const [poppingStar, setPoppingStar]   = useState<number | null>(null)
 
   const query  = encodeURIComponent(recipe.nombre.split(' ').slice(0, 3).join(' ') + ' food')
   const imgSrc = `https://source.unsplash.com/featured/800x400/?${query}`
@@ -47,6 +50,15 @@ export default function RecipeCard({ recipe, fridgeItems, dragX = 0, dragY = 0 }
   const showLike     = dragX > 40
   const showDislike  = dragX < -40
   const showBookmark = dragY < -40
+
+  const handleStarInteract = (e: React.MouseEvent | React.TouchEvent, n: number) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setSelectedStars(n)
+    setPoppingStar(n)
+    setTimeout(() => setPoppingStar(null), 150)
+    onStarTap?.(n)
+  }
 
   return (
     <div className="card overflow-hidden p-0 w-full select-none shadow-lg">
@@ -87,7 +99,7 @@ export default function RecipeCard({ recipe, fridgeItems, dragX = 0, dragY = 0 }
           <span className="text-white text-xl font-black border-[3px] border-white rounded-xl px-3 py-1 drop-shadow-lg">🔖 GUARDAR</span>
         </div>
 
-        {/* Badges superpuestos */}
+        {/* Badges */}
         {dif && (
           <div className={`absolute top-2 left-2 ${dif.cls} text-white text-xs font-semibold px-2 py-1 rounded-lg`}>
             {dif.icon} {dif.label}
@@ -108,7 +120,7 @@ export default function RecipeCard({ recipe, fridgeItems, dragX = 0, dragY = 0 }
       {/* 4–7. Contenido */}
       <div className="px-4 py-3 flex flex-col gap-3">
 
-        {/* 4. Descripción corta */}
+        {/* 4. Descripción */}
         {recipe.descripcion_corta && (
           <p className="text-muted text-sm leading-snug">{recipe.descripcion_corta}</p>
         )}
@@ -139,26 +151,51 @@ export default function RecipeCard({ recipe, fridgeItems, dragX = 0, dragY = 0 }
           </div>
         )}
 
-        {/* 7. Rating + fridge match */}
+        {/* 7. Rating community + fridge match */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
             <div className="flex gap-0.5 text-sm">
               {[1,2,3,4,5].map(s => (
-                <span key={s} className={s <= Math.round(recipe.rating_promedio ?? 0) ? 'text-yellow-400' : 'text-gray-200'}>
-                  ★
-                </span>
+                <span key={s} className={s <= Math.round(recipe.rating_promedio ?? 0) ? 'text-yellow-400' : 'text-gray-200'}>★</span>
               ))}
             </div>
             <span className="text-xs text-muted">
               {recipe.rating_promedio ? recipe.rating_promedio.toFixed(1) : 'Sin valoraciones'}
             </span>
           </div>
-
           {total > 0 && (
             <span className="text-xs text-muted whitespace-nowrap">
               {have >= total ? '✅' : have > 0 ? '🟡' : '🛒'} {have}/{total} ingredientes
             </span>
           )}
+        </div>
+
+        {/* Separador */}
+        <div className="border-t border-border pt-3">
+          {/* Texto guía */}
+          <p className="text-xs text-muted text-center mb-2.5">
+            Toca para puntuar si ya la probaste
+          </p>
+
+          {/* 5 estrellas tappables */}
+          <div className="flex justify-center gap-3">
+            {[1,2,3,4,5].map(s => (
+              <button
+                key={s}
+                onMouseDown={e => handleStarInteract(e, s)}
+                onTouchStart={e => handleStarInteract(e, s)}
+                style={{
+                  transform:  poppingStar === s ? 'scale(1.35)' : 'scale(1)',
+                  transition: 'transform 0.15s ease-out',
+                  color:      s <= selectedStars ? '#EF9F27' : '#E5E7EB',
+                  fontSize:   '2rem',
+                  lineHeight: 1,
+                }}
+                className="leading-none">
+                ★
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

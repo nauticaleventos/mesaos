@@ -9,6 +9,7 @@ import OnboardingPage from './pages/onboarding/OnboardingPage'
 import HomePage       from './pages/HomePage'
 import FridgePage     from './pages/fridge/FridgePage'
 import RecetasPage    from './pages/recipes/RecetasPage'
+import RecetaPage     from './pages/recipes/RecetaPage'
 
 function AppRoutes() {
   const { session, loading: authLoading }   = useAuthStore()
@@ -44,6 +45,9 @@ function AppRoutes() {
       } />
       <Route path="/recetas" element={
         !session ? <Navigate to="/login" replace /> : <RecetasPage />
+      } />
+      <Route path="/receta/:id" element={
+        !session ? <Navigate to="/login" replace /> : <RecetaPage />
       } />
 
       <Route path="*" element={<Navigate to="/" replace />} />
