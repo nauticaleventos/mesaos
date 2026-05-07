@@ -2,44 +2,46 @@ import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRecipesStore, type Recipe } from '../../store/recipesStore'
 import { useFamilyStore } from '../../store/familyStore'
+import { useFridgeStore } from '../../store/fridgeStore'
 import type { FamilyMember } from '../../lib/types'
+import RecipeCard from './RecipeCard'
+import StarRatingModal from './StarRatingModal'
 
-interface Props {
-  onClose: () => void
-}
+interface Props { onClose: () => void }
 
-type Reaction = 'like' | 'dislike' | 'not_tried'
-
-const TIPO_ICONS: Record<string, string> = {
-  desayuno: '☀️', almuerzo: '🍽️', cena: '🌙',
-  snack: '🍎', postre: '🍰', brunch: '🥞',
-}
+type Reaction  = 'like' | 'dislike' | 'bookmark'
+type Direction = 'left' | 'right' | 'up'
 
 export default function SwipeRecetas({ onClose }: Props) {
-  const { recipes }  = useRecipesStore()
-  const { members }  = useFamilyStore()
+  const { recipes }            = useRecipesStore()
+  const { members }            = useFamilyStore()
+  const { items: fridgeItems } = useFridgeStore()
+
   const [memberIdx, setMemberIdx] = useState(0)
   const [queue, setQueue]         = useState<Recipe[]>([])
   const [index, setIndex]         = useState(0)
   const [done, setDone]           = useState(false)
   const [saving, setSaving]       = useState(false)
+  const [showModal, setShowModal] = useState(false)
 
-  // Swipe state
-  const cardRef    = useRef<HTMLDivElement>(null)
-  const startX     = useRef(0)
-  const currentX   = useRef(0)
-  const dragging   = useRef(false)
+  // Drag refs (no re-render during drag)
+  const startX   = useRef(0)
+  const startY   = useRef(0)
+  const currentX = useRef(0)
+  const currentY = useRef(0)
+  const dragging = useRef(false)
+
   const [dragX, setDragX]     = useState(0)
-  const [leaving, setLeaving] = useState<'left' | 'right' | null>(null)
+  const [dragY, setDragY]     = useState(0)
+  const [leaving, setLeaving] = useState<Direction | null>(null)
 
   const member: FamilyMember | undefined = members[memberIdx]
   const recipe: Recipe | undefined       = queue[index]
   const progress = queue.length > 0 ? Math.round((index / queue.length) * 100) : 0
 
-  // Cargar recetas sin valorar para este miembro
   useEffect(() => {
-    if (!member) return
-    loadQueue(member.id)
+    if (member) loadQueue(member.id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberIdx, member?.id])
 
   const loadQueue = async (memberId: string) => {
@@ -53,69 +55,104 @@ export default function SwipeRecetas({ onClose }: Props) {
     setQueue(pending)
     setIndex(0)
     setDone(pending.length === 0)
-    setDragX(0)
-    setLeaving(null)
+    resetDrag()
   }
 
-  const saveReaction = async (reaction: Reaction) => {
+  const resetDrag = () => {
+    setDragX(0); setDragY(0); setLeaving(null); setShowModal(false)
+  }
+
+  const advance = () => {
+    const next = index + 1
+    if (next >= queue.length) setDone(true)
+    else setIndex(next)
+    resetDrag()
+  }
+
+  const saveReaction = async (reaction: Reaction, rating?: number) => {
     if (!member || !recipe || saving) return
     setSaving(true)
-    await supabase.from('recipe_reactions').upsert({
+    const payload: Record<string, unknown> = {
       recipe_id: recipe.id,
       member_id: member.id,
       reaction,
-    }, { onConflict: 'recipe_id,member_id' })
-    setSaving(false)
-
-    if (index + 1 >= queue.length) {
-      setDone(true)
-    } else {
-      setIndex(i => i + 1)
     }
-    setDragX(0)
-    setLeaving(null)
+    if (rating) payload.rating = rating
+    await supabase.from('recipe_reactions').upsert(payload, { onConflict: 'recipe_id,member_id' })
+    setSaving(false)
+    advance()
   }
 
-  const triggerSwipe = (dir: 'left' | 'right') => {
+  // Trigger card leave animation then save
+  const triggerLeave = (dir: Direction) => {
+    if (saving || leaving) return
+    if (dir === 'right') {
+      // Show modal before saving — card stays until modal responds
+      setShowModal(true)
+      setDragX(0); setDragY(0)
+      return
+    }
     setLeaving(dir)
     setTimeout(() => {
-      saveReaction(dir === 'right' ? 'like' : 'dislike')
-    }, 300)
+      saveReaction(dir === 'left' ? 'dislike' : 'bookmark')
+    }, 320)
   }
 
-  // Touch / mouse events
-  const onStart = (x: number) => {
-    startX.current   = x
-    currentX.current = x
+  const handleRate = (rating: number) => {
+    setLeaving('right')
+    setTimeout(() => saveReaction('like', rating), 320)
+  }
+
+  const handleNotTried = () => {
+    setLeaving('up')
+    setTimeout(() => saveReaction('bookmark'), 320)
+  }
+
+  // ── Drag / Touch handlers ────────────────────────────────────────────────
+  const onStart = (x: number, y: number) => {
+    if (leaving || showModal) return
+    startX.current   = x; startY.current   = y
+    currentX.current = x; currentY.current = y
     dragging.current = true
   }
 
-  const onMove = (x: number) => {
+  const onMove = (x: number, y: number) => {
     if (!dragging.current) return
-    currentX.current = x
+    currentX.current = x; currentY.current = y
     setDragX(x - startX.current)
+    setDragY(y - startY.current)
   }
 
   const onEnd = () => {
     if (!dragging.current) return
     dragging.current = false
-    const diff = currentX.current - startX.current
-    if (diff > 100)       triggerSwipe('right')
-    else if (diff < -100) triggerSwipe('left')
-    else                  setDragX(0)
+    const diffX = currentX.current - startX.current
+    const diffY = currentY.current - startY.current
+    if (diffY < -80 && Math.abs(diffY) > Math.abs(diffX)) {
+      triggerLeave('up')
+    } else if (diffX > 100) {
+      triggerLeave('right')
+    } else if (diffX < -100) {
+      triggerLeave('left')
+    } else {
+      setDragX(0); setDragY(0)
+    }
   }
 
-  // Card style durante arrastre
-  const rotation = dragX * 0.08
+  // ── Card style ───────────────────────────────────────────────────────────
   const cardStyle: React.CSSProperties = leaving
     ? {
-        transform: `translateX(${leaving === 'right' ? 400 : -400}px) rotate(${leaving === 'right' ? 20 : -20}deg)`,
-        transition: 'transform 0.3s ease',
-        opacity: 0,
+        transform:
+          leaving === 'right' ? 'translateX(160%) rotate(20deg)' :
+          leaving === 'left'  ? 'translateX(-160%) rotate(-20deg)' :
+                                'translateY(-150%) rotate(-6deg)',
+        transition: 'transform 0.35s ease, opacity 0.35s ease',
+        opacity:    0,
       }
     : {
-        transform: `translateX(${dragX}px) rotate(${rotation}deg)`,
-        transition: dragging.current ? 'none' : 'transform 0.2s ease',
+        transform:  `translateX(${dragX}px) translateY(${dragY < 0 ? dragY * 0.3 : 0}px) rotate(${dragX * 0.06}deg)`,
+        transition: dragging.current ? 'none' : 'transform 0.22s ease',
+        cursor:     'grab',
       }
 
   if (members.length === 0) return null
@@ -126,22 +163,28 @@ export default function SwipeRecetas({ onClose }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-serif font-semibold text-text">¿Qué te gusta?</h2>
-        <button onClick={onClose} className="text-muted hover:text-text transition-colors text-sm">✕ Cerrar</button>
+        <button onClick={onClose} className="text-muted hover:text-text transition-colors text-sm">
+          ✕ Cerrar
+        </button>
       </div>
 
-      {/* Selector de miembro */}
+      {/* Member selector */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {members.map((m, i) => (
-          <button key={m.id} onClick={() => setMemberIdx(i)}
+          <button
+            key={m.id}
+            onClick={() => setMemberIdx(i)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-all
-              ${memberIdx === i ? 'bg-accent text-white' : 'bg-white border border-border text-muted'}`}>
+              ${memberIdx === i
+                ? 'bg-accent text-white'
+                : 'bg-white border border-border text-muted hover:border-accent'}`}>
             <span>{m.emoji}</span>
             <span>{m.name}</span>
           </button>
         ))}
       </div>
 
-      {/* Progreso */}
+      {/* Progress */}
       {queue.length > 0 && (
         <div className="flex flex-col gap-1 mb-4">
           <div className="w-full bg-border rounded-full h-1.5">
@@ -163,92 +206,95 @@ export default function SwipeRecetas({ onClose }: Props) {
         </div>
       )}
 
-      {/* Card de receta */}
+      {/* Card + buttons */}
       {!done && recipe && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-6">
+        <div className="flex-1 flex flex-col items-center justify-center gap-5">
 
-          {/* Indicadores de swipe */}
-          <div className="flex justify-between w-full px-4">
-            <div className={`text-2xl font-bold text-error transition-opacity ${dragX < -30 ? 'opacity-100' : 'opacity-20'}`}>
-              ✗
-            </div>
-            <div className={`text-2xl font-bold text-success transition-opacity ${dragX > 30 ? 'opacity-100' : 'opacity-20'}`}>
-              ❤️
-            </div>
-          </div>
-
-          {/* Card */}
+          {/* Draggable wrapper */}
           <div
-            ref={cardRef}
             style={cardStyle}
-            className="card w-full cursor-grab active:cursor-grabbing select-none"
-            onMouseDown={e => onStart(e.clientX)}
-            onMouseMove={e => onMove(e.clientX)}
+            className="w-full active:cursor-grabbing"
+            onMouseDown={e  => onStart(e.clientX, e.clientY)}
+            onMouseMove={e  => onMove(e.clientX, e.clientY)}
             onMouseUp={onEnd}
             onMouseLeave={onEnd}
-            onTouchStart={e => onStart(e.touches[0].clientX)}
-            onTouchMove={e => { e.preventDefault(); onMove(e.touches[0].clientX) }}
+            onTouchStart={e => onStart(e.touches[0].clientX, e.touches[0].clientY)}
+            onTouchMove={e  => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY) }}
             onTouchEnd={onEnd}
           >
-            <div className="flex flex-col gap-3 pointer-events-none">
-              <div>
-                <p className="font-serif text-xl font-semibold text-text">{recipe.nombre}</p>
-                {recipe.descripcion_corta && (
-                  <p className="text-muted text-sm mt-1">{recipe.descripcion_corta}</p>
-                )}
-              </div>
-
-              <div className="flex flex-wrap gap-2 text-xs text-muted">
-                {recipe.tipo_comida.slice(0,2).map(t => (
-                  <span key={t}>{TIPO_ICONS[t] ?? ''} {t}</span>
-                ))}
-                {recipe.tiempo_total_min && <span>⏱ {recipe.tiempo_total_min}min</span>}
-                {recipe.dificultad && <span>• {recipe.dificultad}</span>}
-                {recipe.origen && <span>🌎 {recipe.origen}</span>}
-              </div>
-
-              {/* Ingredientes principales */}
-              <div>
-                <p className="text-xs text-muted font-medium mb-1">Ingredientes principales:</p>
-                <div className="flex flex-wrap gap-1">
-                  {recipe.ingredientes.filter(i => i.esencial).slice(0,6).map((ing, i) => (
-                    <span key={i} className="px-2 py-0.5 bg-accent-light text-accent text-xs rounded-full">
-                      {ing.nombre}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {recipe.info_nutricional_aprox && (
-                <p className="text-xs text-muted">
-                  {recipe.info_nutricional_aprox.calorias_porcion} kcal · {recipe.info_nutricional_aprox.proteina_g}g proteína
-                </p>
-              )}
-            </div>
+            <RecipeCard
+              recipe={recipe}
+              fridgeItems={fridgeItems}
+              dragX={dragX}
+              dragY={dragY}
+            />
           </div>
 
-          {/* Botones */}
-          <div className="flex items-center gap-6">
-            <button onClick={() => triggerSwipe('left')}
-              className="w-14 h-14 rounded-full bg-white border-2 border-error text-error text-2xl flex items-center justify-center shadow-sm hover:bg-red-50 transition-all active:scale-95">
+          {/* Action buttons */}
+          <div className="flex items-center justify-center gap-6">
+            {/* Dislike */}
+            <ActionBtn
+              onClick={() => triggerLeave('left')}
+              disabled={saving}
+              size="lg"
+              className="border-red-400 text-red-500 hover:bg-red-50">
               ✗
-            </button>
-            <button onClick={() => saveReaction('not_tried')}
-              className="w-10 h-10 rounded-full bg-white border border-border text-muted text-sm flex items-center justify-center shadow-sm hover:bg-gray-50 transition-all active:scale-95"
-              title="No lo he probado">
-              ?
-            </button>
-            <button onClick={() => triggerSwipe('right')}
-              className="w-14 h-14 rounded-full bg-white border-2 border-success text-success text-2xl flex items-center justify-center shadow-sm hover:bg-green-50 transition-all active:scale-95">
+            </ActionBtn>
+            {/* Bookmark */}
+            <ActionBtn
+              onClick={() => triggerLeave('up')}
+              disabled={saving}
+              size="md"
+              className="border-blue-300 text-blue-500 hover:bg-blue-50">
+              🔖
+            </ActionBtn>
+            {/* Like */}
+            <ActionBtn
+              onClick={() => triggerLeave('right')}
+              disabled={saving}
+              size="lg"
+              className="border-green-400 text-green-500 hover:bg-green-50">
               ❤️
-            </button>
+            </ActionBtn>
           </div>
 
           <p className="text-xs text-muted text-center">
-            Desliza → me gusta · ← no me gusta · ? no lo he probado
+            ← no me gusta · 🔖 guardar · me gusta →
           </p>
         </div>
       )}
+
+      {/* Rating modal */}
+      {showModal && recipe && (
+        <StarRatingModal
+          recipe={recipe}
+          onRate={handleRate}
+          onNotTried={handleNotTried}
+          onClose={() => { setShowModal(false); setDragX(0); setDragY(0) }}
+        />
+      )}
     </div>
+  )
+}
+
+// ── ActionBtn ────────────────────────────────────────────────────────────────
+interface ActionBtnProps {
+  onClick:    () => void
+  disabled?:  boolean
+  size:       'md' | 'lg'
+  className:  string
+  children:   React.ReactNode
+}
+
+function ActionBtn({ onClick, disabled, size, className, children }: ActionBtnProps) {
+  const dim = size === 'lg' ? 'w-16 h-16 text-2xl' : 'w-11 h-11 text-lg'
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`${dim} rounded-full bg-white border-2 flex items-center justify-center
+        shadow-md transition-all active:scale-90 disabled:opacity-40 ${className}`}>
+      {children}
+    </button>
   )
 }
