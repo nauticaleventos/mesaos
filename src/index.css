@@ -2,64 +2,109 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Paleta "Mantel" — variables CSS globales ──────────────────────────────── */
+:root {
+  --coral:             #E76F51;
+  --coral-oscuro:      #B84E33;
+  --coral-claro:       #FFCDB2;
+  --oliva:             #6B7F39;
+  --oliva-oscuro:      #4A5A26;
+  --oliva-claro:       #DDE5C2;
+  --lino:              #FBF5E5;
+  --lino-oscuro:       #854F0B;
+  --texto-principal:   #2C2C2A;
+  --texto-secundario:  #5F5E5A;
+  --texto-terciario:   #888780;
+  --fondo-principal:   #FFFFFF;
+  --fondo-app:         #FBF5E5;
+  --borde:             rgba(44, 44, 42, 0.08);
+  --exito:             #6B7F39;
+  --advertencia:       #E8B547;
+  --error:             #C84B31;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────────── */
 @layer base {
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background-color: #f7faf5;
-    color: #1c2b22;
-    font-family: 'Palatino Linotype', 'Palatino', 'Book Antiqua', Georgia, serif;
+    background-color: var(--fondo-app);
+    color: var(--texto-principal);
+    font-family: 'Sora', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-feature-settings: 'ss01', 'ss02';
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     min-height: 100dvh;
   }
 
-  #root {
-    min-height: 100dvh;
-  }
+  #root { min-height: 100dvh; }
 
   input, textarea, select {
-    background-color: #ffffff;
-    color: #1c2b22;
-    border: 1.5px solid #dde8d5;
-    border-radius: 0.625rem;
-    padding: 0.75rem 1rem;
+    background-color: var(--fondo-principal);
+    color: var(--texto-principal);
+    border: 1px solid rgba(44, 44, 42, 0.14);
+    border-radius: 12px;
+    padding: 12px 14px;
     width: 100%;
     outline: none;
-    font-family: inherit;
-    font-size: 1rem;
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 14px;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
 
   input:focus, textarea:focus, select:focus {
-    border-color: #4a7c59;
-    box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.12);
+    border-color: var(--coral);
+    box-shadow: 0 0 0 3px rgba(231, 111, 81, 0.15);
   }
 
   input::placeholder, textarea::placeholder {
-    color: #a0b8a8;
+    color: var(--texto-terciario);
   }
 }
 
+/* ── Componentes ────────────────────────────────────────────────────────────── */
 @layer components {
+
+  /* Botón primario — coral */
   .btn-primary {
-    @apply bg-accent text-white font-semibold px-6 py-3 rounded-xl
-           hover:bg-accent-hover active:scale-95
-           transition-all duration-150 w-full text-center
-           disabled:opacity-50 disabled:cursor-not-allowed
-           shadow-sm;
+    @apply w-full text-center rounded-xl font-semibold
+           transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--coral);
+    color: white;
+    font-size: 14px;
+    padding: 12px 18px;
+    border: none;
+    cursor: pointer;
   }
+  .btn-primary:not(:disabled):hover  { background-color: var(--coral-oscuro); }
+  .btn-primary:not(:disabled):active { transform: scale(0.97); }
 
+  /* Botón secundario — oliva */
   .btn-ghost {
-    @apply border-2 border-border text-text px-6 py-3 rounded-xl
-           hover:border-accent hover:text-accent
-           transition-all duration-150 w-full text-center bg-white;
+    @apply w-full text-center rounded-xl bg-white
+           transition-all duration-150;
+    border: 1.5px solid var(--oliva);
+    color: var(--oliva);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 18px;
+    cursor: pointer;
   }
+  .btn-ghost:hover  { border-color: var(--oliva-oscuro); color: var(--oliva-oscuro); }
+  .btn-ghost:active { transform: scale(0.97); }
 
+  /* Tarjeta */
   .card {
-    @apply bg-card border border-border rounded-2xl p-5 shadow-sm;
+    @apply bg-white rounded-2xl p-5;
+    border: 0.5px solid var(--borde);
+    box-shadow: 0 1px 3px rgba(44, 44, 42, 0.04);
   }
 
+  /* Label de input */
   .input-label {
-    @apply block text-sm text-muted mb-1.5 font-medium;
+    @apply block text-sm mb-1.5;
+    font-weight: 500;
+    color: var(--texto-secundario);
   }
 }
