@@ -1,0 +1,14 @@
+{
+  "name": "recetas-app",
+  "version": "1.0.0",
+  "description": "Generador de recetas para mesa.os",
+  "type": "module",
+  "main": "generar-recetas.js",
+  "scripts": {
+    "generar": "node generar-recetas.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.0",
+    "@supabase/supabase-js": "^2.105.3"
+  }
+}

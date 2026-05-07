@@ -1,0 +1,846 @@
+```json
+{
+  "recetas": [
+    {
+      "nombre": "Arepas Venezolanas con Queso",
+      "descripcion_corta": "Arepas doradas rellenas de queso blanco derretido",
+      "origen": "Venezuela",
+      "tipo_comida": ["desayuno", "cena"],
+      "ocasion": ["entre_semana", "rapida"],
+      "tiempo_total_min": 25,
+      "tiempo_preparacion_min": 10,
+      "tiempo_coccion_min": 15,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "harina de maíz precocida",
+          "categoria": "grano",
+          "cantidad": 2,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "agua tibia",
+          "categoria": "bebida",
+          "cantidad": 2.5,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "queso blanco",
+          "categoria": "lacteo",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "mantequilla",
+          "categoria": "lacteo",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Mezclar la harina de maíz con sal en un bowl",
+        "Agregar agua tibia gradualmente y amasar hasta obtener masa suave",
+        "Formar 8 bolitas y aplanar en discos de 1 cm de grosor",
+        "Cocinar en sartén o plancha 5-7 minutos por lado hasta dorar",
+        "Abrir por la mitad y rellenar con queso blanco",
+        "Servir calientes con mantequilla opcional"
+      ],
+      "tags": ["sin_gluten", "vegetariano", "tradicional", "economico"],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 320,
+        "proteina_g": 12,
+        "carbohidratos_g": 45,
+        "grasa_g": 10
+      }
+    },
+    {
+      "nombre": "Tacos al Pastor",
+      "descripcion_corta": "Tacos de cerdo marinado con piña y cilantro",
+      "origen": "México",
+      "tipo_comida": ["almuerzo", "cena"],
+      "ocasion": ["fin_semana", "reunion"],
+      "tiempo_total_min": 150,
+      "tiempo_preparacion_min": 30,
+      "tiempo_coccion_min": 120,
+      "dificultad": "media",
+      "porciones": 6,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "carne de cerdo",
+          "categoria": "proteina_animal",
+          "cantidad": 800,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "chile guajillo",
+          "categoria": "condimento",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "piña",
+          "categoria": "fruta",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "cebolla",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "cilantro",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "porcion",
+          "esencial": false
+        },
+        {
+          "nombre": "tortilla de maíz",
+          "categoria": "grano",
+          "cantidad": 18,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "vinagre",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Hidratar los chiles guajillo en agua caliente 15 minutos",
+        "Licuar chiles con ajo, vinagre, sal y especias hasta obtener salsa",
+        "Marinar la carne cortada en tiras finas con la salsa por 2 horas",
+        "Cocinar la carne en sartén o plancha hasta dorar bien",
+        "Picar cebolla y cilantro finamente, cortar piña en cubos pequeños",
+        "Calentar tortillas y armar tacos con carne, piña, cebolla y cilantro"
+      ],
+      "tags": ["picante", "tradicional", "festivo", "popular"],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 420,
+        "proteina_g": 32,
+        "carbohidratos_g": 38,
+        "grasa_g": 15
+      }
+    },
+    {
+      "nombre": "Ceviche Peruano",
+      "descripcion_corta": "Pescado fresco marinado en limón con cebolla y cilantro",
+      "origen": "Perú",
+      "tipo_comida": ["almuerzo"],
+      "ocasion": ["fin_semana", "especial"],
+      "tiempo_total_min": 30,
+      "tiempo_preparacion_min": 25,
+      "tiempo_coccion_min": 5,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "pescado blanco",
+          "categoria": "proteina_animal",
+          "cantidad": 600,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "limón",
+          "categoria": "fruta",
+          "cantidad": 10,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "cebolla morada",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "ají limo",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "cilantro",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "porcion",
+          "esencial": false
+        },
+        {
+          "nombre": "camote",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "choclo",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Cortar el pescado en cubos de 2 cm y refrigerar",
+        "Cortar cebolla en juliana fina y enjuagar con agua fría",
+        "Exprimir limones y mezclar jugo con ají picado y sal",
+        "Mezclar pescado con jugo de limón y dejar marinar 5 minutos",
+        "Hervir camote y choclo hasta cocinar completamente",
+        "Servir ceviche con cebolla, cilantro, camote y choclo"
+      ],
+      "tags": ["fresco", "saludable", "sin_coccion", "tradicional"],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 280,
+        "proteina_g": 35,
+        "carbohidratos_g": 25,
+        "grasa_g": 5
+      }
+    },
+    {
+      "nombre": "Empanadas Argentinas de Carne",
+      "descripcion_corta": "Empanadas horneadas rellenas de carne picada especiada",
+      "origen": "Argentina",
+      "tipo_comida": ["almuerzo", "cena", "snack"],
+      "ocasion": ["fin_semana", "reunion"],
+      "tiempo_total_min": 90,
+      "tiempo_preparacion_min": 45,
+      "tiempo_coccion_min": 45,
+      "dificultad": "media",
+      "porciones": 12,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "carne molida",
+          "categoria": "proteina_animal",
+          "cantidad": 500,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "cebolla",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "aceituna verde",
+          "categoria": "vegetal",
+          "cantidad": 12,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "pimentón",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "comino",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "masa para empanadas",
+          "categoria": "grano",
+          "cantidad": 12,
+          "unidad": "unidades",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Picar cebolla finamente y rehogar hasta transparentar",
+        "Agregar carne molida y cocinar con pimentón, comino y sal",
+        "Hervir huevos, enfriar y picar en trozos pequeños",
+        "Rellenar discos de masa con carne, huevo y aceitunas",
+        "Cerrar empanadas con repulgue tradicional",
+        "Hornear a 200°C por 25-30 minutos hasta dorar",
+        "Dejar reposar 5 minutos antes de servir"
+      ],
+      "tags": ["tradicional", "festivo", "horneado", "rendidor"],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 245,
+        "proteina_g": 12,
+        "carbohidratos_g": 22,
+        "grasa_g": 12
+      }
+    },
+    {
+      "nombre": "Bandeja Paisa",
+      "descripcion_corta": "Plato tradicional colombiano con frijoles, carne, arroz y huevo",
+      "origen": "Colombia",
+      "tipo_comida": ["almuerzo"],
+      "ocasion": ["fin_semana", "especial"],
+      "tiempo_total_min": 180,
+      "tiempo_preparacion_min": 30,
+      "tiempo_coccion_min": 150,
+      "dificultad": "media",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "frijol rojo",
+          "categoria": "legumbre",
+          "cantidad": 500,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "carne molida",
+          "categoria": "proteina_animal",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "chicharrón",
+          "categoria": "embutido",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "chorizo",
+          "categoria": "embutido",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "arroz",
+          "categoria": "grano",
+          "cantidad": 2,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "plátano maduro",
+          "categoria": "fruta",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "arepa",
+          "categoria": "grano",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "aguacate",
+          "categoria": "fruta",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Cocinar frijoles en olla con agua y sal hasta ablandar completamente",
+        "Preparar hogao con cebolla y tomate, mezclar con carne molida",
+        "Cocinar arroz blanco tradicional",
+        "Freír chicharrón, chorizo y plátano maduro en rodajas",
+        "Freír huevos al gusto",
+        "Montar bandeja con todos los componentes y servir con aguacate"
+      ],
+      "tags": ["tradicional", "abundante", "festivo", "completo"],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 780,
+        "proteina_g": 45,
+        "carbohidratos_g": 72,
+        "grasa_g": 35
+      }
+    },
+    {
+      "nombre": "Pasta Carbonara",
+      "descripcion_corta": "Pasta cremosa con panceta, huevo y queso parmesano",
+      "origen": "Italia",
+      "tipo_comida": ["almuerzo", "cena"],
+      "ocasion": ["entre_semana", "rapida"],
+      "tiempo_total_min": 25,
+      "tiempo_preparacion_min": 10,
+      "tiempo_coccion_min": 15,
+      "dificultad": "media",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "pasta",
+          "categoria": "grano",
+          "cantidad": 400,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "panceta",
+          "categoria": "embutido",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "queso parmesano",
+          "categoria": "lacteo",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "pimienta negra",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Cocinar pasta en agua con sal según instrucciones del paquete",
+        "Cortar panceta en cubos y dorar en sartén sin aceite",
+        "Batir huevos con queso parmesano rallado y pimienta",
+        "Escurrir pasta reservando 1 taza de agua de cocción",
+        "Mezclar pasta caliente con panceta fuera del fuego",
+        "Agregar mezcla de huevo removiendo rápido, añadir agua si necesita",
+        "Servir inmediatamente con más parmesano y pimienta"
+      ],
+      "tags": ["italiano", "cremoso", "rapido", "clasico"],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 520,
+        "proteina_g": 28,
+        "carbohidratos_g": 58,
+        "grasa_g": 20
+      }
+    },
+    {
+      "nombre": "Pollo Teriyaki",
+      "descripcion_corta": "Pollo glaseado con salsa teriyaki casera y vegetales",
+      "origen": "Japón",
+      "tipo_comida": ["almuerzo", "cena"],
+      "ocasion": ["entre_semana", "rapida"],
+      "tiempo_total_min": 35,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 20,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "pechuga de pollo",
+          "categoria": "proteina_animal",
+          "cantidad": 600,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "salsa de soja",
+          "categoria": "condimento",
+          "cantidad": 4,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "miel",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "jengibre",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "brócoli",
+          "categoria": "vegetal",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "arroz",
+          "categoria": "grano",
+          "cantidad": 2,
+          "unidad": "taza",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Cortar pollo en trozos medianos y sazonar ligeramente",
+        "Mezclar salsa de soja, miel, jengibre rallado y ajo picado",
+        "Cocinar pollo en sartén caliente hasta dorar",
+        "Agregar salsa teriyaki y cocinar hasta espesar y glasear",
+        "Cocinar brócoli al vapor hasta tierno",
+        "Servir pollo glaseado sobre arroz con brócoli al lado"
+      ],
+      "tags": ["asiatico", "saludable", "facil", "familiar"],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 380,
+        "proteina_g": 42,
+        "carbohidratos_g": 35,
+        "grasa_g": 8
+      }
+    },
+    {
+      "nombre": "Pizza Margarita Casera",
+      "descripcion_corta": "Pizza clásica con tomate, mozzarella y albahaca fresca",
+      "origen": "Italia",
+      "tipo_comida": ["cena"],
+      "ocasion": ["fin_semana", "reunion"],
+      "tiempo_total_min": 120,
+      "tiempo_preparacion_min": 30,
+      "tiempo_coccion_min": 90,
+      "dificultad": "media",
+      "porciones": 4,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "harina de trigo",
+          "categoria": "grano",
+          "cantidad": 500,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "levadura",
+          "categoria": "otro",
+          "cantidad": 7,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "tomate triturado",
+          "categoria": "vegetal",
+          "cantidad": 400,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "queso mozzarella",
+          "categoria": "lacteo",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "albahaca",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "porcion",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de oliva",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Mezclar harina, levadura, agua tibia, sal y aceite hasta formar masa",
+        "Amasar 10 minutos y dejar reposar 1 hora hasta duplicar tamaño",
+        "Estirar masa en círculo sobre superficie enharinada",
+        "Esparcir tomate triturado con sal y orégano",
+        "Distribuir mozzarella en trozos sobre la salsa",
+        "Hornear a 250°C por 12-15 minutos hasta dorar",
+        "Decorar con albahaca fresca y aceite de oliva al servir"
+      ],
+      "tags": ["italiano", "vegetariano", "casero", "clasico"],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 450,
+        "proteina_g": 18,
+        "carbohidratos_g": 62,
+        "grasa_g": 15
+      }
+    },
+    {
+      "nombre": "Arroz con Pollo",
+      "descripcion_corta": "Arroz amarillo con pollo, vegetales y especias",
+      "origen": "Latinoamérica",
+      "tipo_comida": ["almuerzo", "cena"],
+      "ocasion": ["entre_semana", "familiar"],
+      "tiempo_total_min": 60,
+      "tiempo_preparacion_min": 20,
+      "tiempo_coccion_min": 40,
+      "dificultad": "facil",
+      "porciones": 6,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "pollo",
+          "categoria": "proteina_animal",
+          "cantidad": 800,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "arroz",
+          "categoria": "grano",
+          "cantidad": 3,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "zanahoria",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "arveja",
+          "categoria": "legumbre",
+          "cantidad": 150,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "pimiento rojo",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "cebolla",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "caldo de pollo",
+          "categoria": "otro",
+          "cantidad": 6,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "azafrán",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Dorar piezas de pollo sazonadas en olla grande",
+        "Retirar pollo y sofreír cebolla, ajo y pimiento picados",
+        "Agregar arroz y tostar 2 minutos removiendo",
+        "Incorporar caldo, azafrán, zanahoria y arvejas",
+        "Colocar pollo encima, tapar y cocinar 30 minutos a fuego bajo",
+        "Dejar reposar 5 minutos antes de servir"
+      ],
+      "tags": ["tradicional", "familiar", "completo", "economico"],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 420,
+        "proteina_g": 32,
+        "carbohidratos_g": 52,
+        "grasa_g": 10
+      }
+    },
+    {
+      "nombre": "Guacamole con Totopos",
+      "descripcion_corta": "Dip cremoso de aguacate con chips de tortilla crujientes",
+      "origen": "México",
+      "tipo_comida": ["snack"],
+      "ocasion": ["reunion", "rapida"],
+      "tiempo_total_min": 15,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 0,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "aguacate",
+          "categoria": "fruta",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "tomate",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "cebolla",
+          "categoria": "vegetal",
+          "cantidad": 0.5,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "cilantro",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "porcion",
+          "esencial": true
+        },
+        {
+          "nombre": "limón",
+          "categoria": "fruta",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "chile jalapeño",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "totopos",
+          "categoria": "snack",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Machacar aguacates maduros en bowl dejando textura rústica",
+        "Picar finamente tomate, cebolla, cilantro y chile",
+        "Mezclar vegetales con aguacate",
+        "Agregar jugo de limón, sal y ajustar sazón",
+        "Servir inmediatamente con totopos crujientes"
+      ],
+      "tags": ["vegetariano", "fresco", "mexicano", "rapido"],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 280,
+        "proteina_g": 5,
+        "carbohidratos_g": 28,
+        "grasa_g": 18
+      }
+    },
+    {
+      "nombre": "Hamburguesa Casera Clásica",
+      "descripcion_corta": "Hamburguesa jugosa con queso, lechuga, tomate y salsas",
+      "origen": "Estados Unidos",
+      "tipo_comida": ["almuerzo", "cena"],
+      "ocasion": ["fin_semana", "rapida"],
+      "tiempo_total_min": 30,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 15,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "carne molida",
+          "categoria": "proteina_animal",
+          "cantidad": 600,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "pan de hamburguesa",
+          "categoria": "grano",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "queso cheddar",
+          "categoria": "lacteo",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "lechuga",
+          "categoria": "vegetal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "tomate",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "cebolla",
+          "

@@ -1,0 +1,139 @@
+import { useState } from 'react'
+import { useRecipesStore, type Recipe } from '../../store/recipesStore'
+
+interface Props {
+  familyId: string
+  onSaved:  () => void
+  onCancel: () => void
+}
+
+type Modo = 'elegir' | 'url' | 'manual'
+
+export default function ImportarReceta({ familyId, onSaved, onCancel }: Props) {
+  const [modo, setModo]       = useState<Modo>('elegir')
+  const [url, setUrl]         = useState('')
+  const [loading, setLoading] = useState(false)
+  const [preview, setPreview] = useState<Partial<Recipe> | null>(null)
+  const [error, setError]     = useState<string | null>(null)
+  const addRecipe             = useRecipesStore(s => s.addRecipe)
+
+  const importarDesdeUrl = async () => {
+    if (!url.trim()) return
+    setError(null); setLoading(true); setPreview(null)
+    try {
+      const res  = await fetch('/api/importar-receta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Error al importar')
+      setPreview({ ...data.recipe, is_base_recipe: false, family_id: familyId })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
+    setLoading(false)
+  }
+
+  const guardar = async () => {
+    if (!preview) return
+    setLoading(true)
+    const err = await addRecipe({
+      ...preview,
+      family_id:      familyId,
+      is_base_recipe: false,
+    } as Omit<Recipe, 'id' | 'created_at'>)
+    setLoading(false)
+    if (err) return setError(err)
+    onSaved()
+  }
+
+  // Elegir modo
+  if (modo === 'elegir') {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="card flex flex-col gap-3">
+          <div>
+            <p className="font-semibold text-text text-sm">🔗 Importar desde link</p>
+            <p className="text-muted text-xs mt-0.5">
+              Pega un link de TikTok, Instagram, YouTube o cualquier blog de recetas.
+              Claude extrae el nombre, ingredientes y pasos automáticamente.
+            </p>
+          </div>
+          <button onClick={() => setModo('url')} className="btn-primary">
+            Pegar link de receta
+          </button>
+        </div>
+
+        <button onClick={onCancel} className="btn-ghost">Cancelar</button>
+      </div>
+    )
+  }
+
+  // Importar por URL
+  if (modo === 'url') {
+    return (
+      <div className="flex flex-col gap-4">
+        <div>
+          <label className="input-label">Link de la receta</label>
+          <input
+            type="url"
+            placeholder="https://www.tiktok.com/... o https://..."
+            value={url}
+            onChange={e => setUrl(e.target.value)}
+            autoFocus
+          />
+          <p className="text-xs text-muted mt-1">
+            Funciona con TikTok, Instagram, YouTube, blogs de cocina, etc.
+          </p>
+        </div>
+
+        {error && <p className="text-error text-sm">{error}</p>}
+
+        {loading && (
+          <div className="flex items-center gap-3 text-muted text-sm">
+            <div className="flex gap-1">
+              <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            Claude está leyendo la receta...
+          </div>
+        )}
+
+        {/* Preview */}
+        {preview && (
+          <div className="card flex flex-col gap-3 border-accent">
+            <p className="text-xs text-accent font-medium">✓ Receta detectada — revisa y guarda</p>
+            <p className="font-semibold text-text">{preview.nombre}</p>
+            {preview.descripcion_corta && <p className="text-muted text-xs">{preview.descripcion_corta}</p>}
+            <div className="flex gap-2 flex-wrap text-xs text-muted">
+              {preview.tiempo_total_min && <span>⏱ {preview.tiempo_total_min}min</span>}
+              {preview.dificultad && <span>• {preview.dificultad}</span>}
+              {preview.porciones && <span>• {preview.porciones} porciones</span>}
+            </div>
+            <p className="text-xs text-muted">
+              {(preview.ingredientes as { nombre: string }[] ?? []).length} ingredientes · {(preview.pasos as string[] ?? []).length} pasos
+            </p>
+            <button onClick={guardar} className="btn-primary" disabled={loading}>
+              {loading ? 'Guardando...' : 'Guardar en mi recetario'}
+            </button>
+          </div>
+        )}
+
+        {!preview && !loading && (
+          <button onClick={importarDesdeUrl} className="btn-primary" disabled={!url.trim()}>
+            Importar receta
+          </button>
+        )}
+
+        <button onClick={() => { setModo('elegir'); setPreview(null); setError(null) }}
+          className="btn-ghost">
+          Volver
+        </button>
+      </div>
+    )
+  }
+
+  return null
+}

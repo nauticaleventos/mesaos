@@ -214,10 +214,11 @@ export default function HomePage() {
 
       {/* Otros módulos */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="card flex flex-col items-center gap-2 py-4 opacity-40 cursor-not-allowed">
+        <button onClick={() => navigate('/recetas')}
+          className="card flex flex-col items-center gap-2 py-4 hover:border-accent hover:bg-accent-light transition-all active:scale-95">
           <span className="text-2xl">📖</span>
           <span className="text-xs font-medium text-text text-center">Recetario</span>
-        </div>
+        </button>
         <div className="card flex flex-col items-center gap-2 py-4 opacity-40 cursor-not-allowed">
           <span className="text-2xl">🍽️</span>
           <span className="text-xs font-medium text-text text-center">Menú semanal</span>

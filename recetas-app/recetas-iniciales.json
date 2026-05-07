@@ -1,0 +1,3897 @@
+{
+  "generado_en": "2026-05-07T00:17:06.717Z",
+  "total_recetas": 39,
+  "modelo": "claude-sonnet-4-5",
+  "recetas": [
+    {
+      "nombre": "Arepas Venezolanas con Queso",
+      "descripcion_corta": "Arepas doradas rellenas de queso derretido, perfectas para desayuno",
+      "origen": "venezolana",
+      "tipo_comida": [
+        "desayuno",
+        "cena"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "rapida"
+      ],
+      "tiempo_total_min": 25,
+      "tiempo_preparacion_min": 10,
+      "tiempo_coccion_min": 15,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "harina de maíz precocida",
+          "categoria": "grano",
+          "cantidad": 2,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "agua tibia",
+          "categoria": "bebida",
+          "cantidad": 2.5,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "queso blanco",
+          "categoria": "lacteo",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Mezclar la harina de maíz con sal en un bowl grande",
+        "Agregar agua tibia gradualmente y amasar hasta obtener una masa suave y manejable",
+        "Dividir la masa en 8 porciones y formar bolas, luego aplastar para crear discos de 1 cm de grosor",
+        "Calentar un sartén o budare a fuego medio y cocinar las arepas 5-7 minutos por lado hasta dorar",
+        "Abrir las arepas por la mitad con cuidado y rellenar con queso blanco",
+        "Servir calientes para que el queso se derrita con el calor de la arepa"
+      ],
+      "tags": [
+        "sin_gluten",
+        "vegetariano",
+        "tradicional",
+        "economico",
+        "desayuno"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 285,
+        "proteina_g": 9,
+        "carbohidratos_g": 42,
+        "grasa_g": 8
+      }
+    },
+    {
+      "nombre": "Pad Thai de Camarones",
+      "descripcion_corta": "Fideos de arroz salteados con camarones, cacahuates y salsa agridulce",
+      "origen": "tailandesa",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial"
+      ],
+      "tiempo_total_min": 35,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 20,
+      "dificultad": "media",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "fideos de arroz",
+          "categoria": "grano",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "camarón",
+          "categoria": "proteina_animal",
+          "cantidad": 400,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "salsa de soya",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar morena",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "cacahuate",
+          "categoria": "snack",
+          "cantidad": 60,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "cebollín",
+          "categoria": "vegetal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "limón",
+          "categoria": "fruta",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Remojar los fideos de arroz en agua caliente durante 15 minutos hasta que estén suaves, luego escurrir",
+        "Mezclar salsa de soya, azúcar morena y jugo de limón para preparar la salsa",
+        "Calentar aceite en un wok a fuego alto y saltear los camarones con ajo picado por 3 minutos",
+        "Apartar los camarones, agregar huevos batidos y revolver hasta que cuajen",
+        "Incorporar los fideos escurridos y la salsa, saltear por 3-4 minutos mezclando constantemente",
+        "Agregar los camarones nuevamente y el cebollín picado, mezclar bien",
+        "Servir caliente decorado con cacahuates triturados y rodajas de limón"
+      ],
+      "tags": [
+        "asiatico",
+        "mariscos",
+        "picante_opcional",
+        "exotico"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 485,
+        "proteina_g": 28,
+        "carbohidratos_g": 58,
+        "grasa_g": 15
+      }
+    },
+    {
+      "nombre": "Empanadas Argentinas de Carne",
+      "descripcion_corta": "Empanadas horneadas con relleno jugoso de carne picada y especias",
+      "origen": "argentina",
+      "tipo_comida": [
+        "almuerzo",
+        "cena",
+        "snack"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "reunion"
+      ],
+      "tiempo_total_min": 90,
+      "tiempo_preparacion_min": 45,
+      "tiempo_coccion_min": 45,
+      "dificultad": "media",
+      "porciones": 12,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "harina de trigo",
+          "categoria": "grano",
+          "cantidad": 500,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "manteca",
+          "categoria": "lacteo",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "carne molida",
+          "categoria": "proteina_animal",
+          "cantidad": 500,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "cebolla",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "pimentón rojo",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "comino",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo duro",
+          "categoria": "proteina_animal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "aceituna verde",
+          "categoria": "vegetal",
+          "cantidad": 12,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Preparar la masa mezclando harina con manteca derretida, agua tibia con sal hasta formar una masa lisa, dejar reposar 30 minutos",
+        "Sofreír cebolla picada hasta dorar, agregar carne molida y cocinar hasta que cambie de color",
+        "Condimentar con pimentón, comino, sal y pimienta, cocinar 10 minutos más y dejar enfriar",
+        "Estirar la masa fina y cortar círculos de 12 cm de diámetro",
+        "Rellenar cada disco con carne, trozos de huevo duro y una aceituna",
+        "Cerrar formando un repulgue en el borde y pintar con huevo batido",
+        "Hornear a 200°C durante 25-30 minutos hasta que estén doradas"
+      ],
+      "tags": [
+        "tradicional",
+        "horno",
+        "carne_roja",
+        "para_compartir"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 295,
+        "proteina_g": 13,
+        "carbohidratos_g": 32,
+        "grasa_g": 12
+      }
+    },
+    {
+      "nombre": "Pasta Carbonara Clásica",
+      "descripcion_corta": "Pasta cremosa con panceta, huevo y queso parmesano al estilo romano",
+      "origen": "italiana",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "rapida"
+      ],
+      "tiempo_total_min": 20,
+      "tiempo_preparacion_min": 5,
+      "tiempo_coccion_min": 15,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "espagueti",
+          "categoria": "grano",
+          "cantidad": 400,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "panceta",
+          "categoria": "embutido",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "queso parmesano",
+          "categoria": "lacteo",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "pimienta negra",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharada",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Poner a hervir agua con sal abundante y cocinar los espaguetis según instrucciones del paquete",
+        "Mientras tanto, cortar la panceta en cubos pequeños y dorar en sartén sin aceite hasta quedar crujiente",
+        "Batir los huevos con el queso parmesano rallado y pimienta negra abundante",
+        "Reservar una taza del agua de cocción de la pasta antes de escurrir",
+        "Mezclar la pasta caliente escurrida con la panceta en la sartén fuera del fuego",
+        "Agregar la mezcla de huevos y queso revolviendo rápido, añadir agua de cocción si necesita más cremosidad",
+        "Servir inmediatamente con más parmesano y pimienta por encima"
+      ],
+      "tags": [
+        "italiano",
+        "cremoso",
+        "rapido",
+        "comfort_food"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 620,
+        "proteina_g": 28,
+        "carbohidratos_g": 72,
+        "grasa_g": 22
+      }
+    },
+    {
+      "nombre": "Tres Leches Colombiano",
+      "descripcion_corta": "Bizcocho esponjoso empapado en mezcla de tres leches con crema batida",
+      "origen": "colombiana",
+      "tipo_comida": [
+        "postre"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial",
+        "reunion"
+      ],
+      "tiempo_total_min": 240,
+      "tiempo_preparacion_min": 30,
+      "tiempo_coccion_min": 30,
+      "dificultad": "media",
+      "porciones": 12,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 5,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "harina de trigo",
+          "categoria": "grano",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "leche condensada",
+          "categoria": "lacteo",
+          "cantidad": 1,
+          "unidad": "lata",
+          "esencial": true
+        },
+        {
+          "nombre": "leche evaporada",
+          "categoria": "lacteo",
+          "cantidad": 1,
+          "unidad": "lata",
+          "esencial": true
+        },
+        {
+          "nombre": "crema de leche",
+          "categoria": "lacteo",
+          "cantidad": 200,
+          "unidad": "ml",
+          "esencial": true
+        },
+        {
+          "nombre": "vainilla",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        },
+        {
+          "nombre": "polvo de hornear",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Batir las claras a punto de nieve, agregar las yemas y el azúcar batiendo hasta duplicar volumen",
+        "Incorporar la harina tamizada con polvo de hornear en forma envolvente junto con la vainilla",
+        "Verter en molde engrasado y hornear a 180°C por 30 minutos hasta dorar",
+        "Mezclar leche condensada, leche evaporada y la mitad de la crema de leche para la mezcla de tres leches",
+        "Cuando el bizcocho esté tibio, pinchar con tenedor por toda la superficie y verter la mezcla de leches lentamente",
+        "Refrigerar mínimo 3 horas para que absorba todo el líquido",
+        "Batir el resto de crema de leche con azúcar y decorar el pastel antes de servir"
+      ],
+      "tags": [
+        "dulce",
+        "frio",
+        "cremoso",
+        "celebracion",
+        "tradicional"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 385,
+        "proteina_g": 10,
+        "carbohidratos_g": 52,
+        "grasa_g": 15
+      }
+    },
+    {
+      "nombre": "Pad Thai de Pollo Simplificado",
+      "descripcion_corta": "Fideos de arroz salteados con pollo, vegetales y salsa de tamarindo",
+      "origen": "Tailandia",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "fin_semana"
+      ],
+      "tiempo_total_min": 35,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 20,
+      "dificultad": "media",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "fideos de arroz",
+          "categoria": "grano",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "pechuga de pollo",
+          "categoria": "proteina_animal",
+          "cantidad": 400,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "salsa de soja",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "cebollín",
+          "categoria": "vegetal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "zanahoria",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "maní",
+          "categoria": "snack",
+          "cantidad": 50,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "aceite vegetal",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "vegetal",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Remojar los fideos de arroz en agua caliente durante 15 minutos hasta que estén suaves, luego escurrir",
+        "Cortar el pollo en tiras pequeñas y la zanahoria en juliana fina",
+        "Calentar aceite en un wok o sartén grande a fuego alto y saltear el ajo picado",
+        "Agregar el pollo y cocinar hasta que esté dorado, apartar a un lado del wok",
+        "Batir los huevos y cocinarlos en el mismo wok, revolviendo constantemente",
+        "Añadir los fideos escurridos, salsa de soja, azúcar y mezclar todo junto con el pollo",
+        "Incorporar la zanahoria y cebollín picado, saltear 2 minutos más",
+        "Servir decorando con maní triturado por encima"
+      ],
+      "tags": [
+        "asiatico",
+        "tailandes",
+        "salteado",
+        "fideos",
+        "completo"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 485,
+        "proteina_g": 32,
+        "carbohidratos_g": 58,
+        "grasa_g": 14
+      }
+    },
+    {
+      "nombre": "Caprese con Pesto",
+      "descripcion_corta": "Ensalada fresca de tomate, mozzarella y albahaca con pesto casero",
+      "origen": "Italia",
+      "tipo_comida": [
+        "almuerzo",
+        "snack"
+      ],
+      "ocasion": [
+        "rapida",
+        "entre_semana",
+        "fin_semana"
+      ],
+      "tiempo_total_min": 15,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 0,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "tomate",
+          "categoria": "vegetal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "mozzarella fresca",
+          "categoria": "lacteo",
+          "cantidad": 250,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "albahaca fresca",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de oliva",
+          "categoria": "condimento",
+          "cantidad": 4,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "piñón",
+          "categoria": "snack",
+          "cantidad": 30,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "queso parmesano",
+          "categoria": "lacteo",
+          "cantidad": 30,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "pimienta negra",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Preparar el pesto mezclando en procesadora albahaca, ajo, piñones, parmesano y aceite de oliva hasta obtener pasta suave",
+        "Lavar y cortar los tomates en rodajas de medio centímetro",
+        "Cortar la mozzarella en rodajas del mismo grosor que los tomates",
+        "Alternar en un plato rodajas de tomate y mozzarella formando un círculo",
+        "Rociar generosamente con el pesto preparado",
+        "Decorar con hojas de albahaca fresca",
+        "Sazonar con sal y pimienta al gusto y servir inmediatamente"
+      ],
+      "tags": [
+        "italiano",
+        "vegetariano",
+        "fresco",
+        "sin_coccion",
+        "mediterraneo",
+        "rapido"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 315,
+        "proteina_g": 15,
+        "carbohidratos_g": 8,
+        "grasa_g": 25
+      }
+    },
+    {
+      "nombre": "Tacos al Pastor",
+      "descripcion_corta": "Tacos de cerdo marinado con piña, cilantro y cebolla",
+      "origen": "México",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "reunion"
+      ],
+      "tiempo_total_min": 150,
+      "tiempo_preparacion_min": 30,
+      "tiempo_coccion_min": 120,
+      "dificultad": "media",
+      "porciones": 6,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "carne de cerdo",
+          "categoria": "proteina_animal",
+          "cantidad": 1,
+          "unidad": "kg",
+          "esencial": true
+        },
+        {
+          "nombre": "chile guajillo",
+          "categoria": "condimento",
+          "cantidad": 6,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "piña",
+          "categoria": "fruta",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "cebolla blanca",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "cilantro",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "porcion",
+          "esencial": false
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "vegetal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "vinagre blanco",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "comino",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "orégano",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        },
+        {
+          "nombre": "tortilla de maíz",
+          "categoria": "grano",
+          "cantidad": 18,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "limón",
+          "categoria": "fruta",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Hidratar los chiles guajillo en agua caliente 15 minutos, licuar con ajo, vinagre, comino, orégano y sal",
+        "Cortar la carne de cerdo en láminas delgadas y marinar con la salsa de chile durante 2 horas mínimo",
+        "Asar la piña y cortarla en cubos pequeños, picar cebolla y cilantro finamente",
+        "Calentar un sartén o comal grande a fuego medio-alto",
+        "Cocinar la carne marinada en el sartén hasta que esté dorada y ligeramente crujiente en los bordes",
+        "Calentar las tortillas en el comal",
+        "Armar los tacos colocando carne, piña, cebolla y cilantro sobre cada tortilla",
+        "Servir con limón al lado"
+      ],
+      "tags": [
+        "mexicano",
+        "callejero",
+        "especiado",
+        "marinado",
+        "festivo"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 485,
+        "proteina_g": 38,
+        "carbohidratos_g": 42,
+        "grasa_g": 18
+      }
+    },
+    {
+      "nombre": "Alfajores de Maicena",
+      "descripcion_corta": "Galletas suaves rellenas de dulce de leche, clásico argentino",
+      "origen": "Argentina",
+      "tipo_comida": [
+        "postre",
+        "snack"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial"
+      ],
+      "tiempo_total_min": 45,
+      "tiempo_preparacion_min": 20,
+      "tiempo_coccion_min": 25,
+      "dificultad": "media",
+      "porciones": 12,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "maicena",
+          "categoria": "grano",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "harina de trigo",
+          "categoria": "grano",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "mantequilla",
+          "categoria": "lacteo",
+          "cantidad": 150,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "polvo de hornear",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "esencia de vainilla",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        },
+        {
+          "nombre": "dulce de leche",
+          "categoria": "otro",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "coco rallado",
+          "categoria": "otro",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Batir la mantequilla con el azúcar hasta obtener una crema suave y esponjosa",
+        "Agregar los huevos uno a uno y la esencia de vainilla, mezclar bien",
+        "Incorporar la maicena, harina y polvo de hornear tamizados, formar una masa suave",
+        "Refrigerar la masa 15 minutos, luego estirar con rodillo a 5 mm de grosor",
+        "Cortar círculos de 5 cm de diámetro y colocar en bandeja con papel mantequilla",
+        "Hornear a 180°C durante 10-12 minutos hasta que apenas doren los bordes, enfriar",
+        "Unir las galletas de a pares con dulce de leche en el medio",
+        "Pasar los bordes por coco rallado si se desea"
+      ],
+      "tags": [
+        "postre",
+        "tradicional",
+        "dulce",
+        "horneado",
+        "galletas"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 285,
+        "proteina_g": 4,
+        "carbohidratos_g": 38,
+        "grasa_g": 13
+      }
+    },
+    {
+      "nombre": "Ensalada Caprese",
+      "descripcion_corta": "Ensalada italiana fresca de tomate, mozzarella y albahaca",
+      "origen": "italiana",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "rapida",
+        "entre_semana"
+      ],
+      "tiempo_total_min": 10,
+      "tiempo_preparacion_min": 10,
+      "tiempo_coccion_min": 0,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "tomate",
+          "categoria": "vegetal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "queso mozzarella",
+          "categoria": "lacteo",
+          "cantidad": 250,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "albahaca fresca",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "paquete",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de oliva",
+          "categoria": "condimento",
+          "cantidad": 4,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "vinagre balsámico",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 0.5,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "pimienta negra",
+          "categoria": "condimento",
+          "cantidad": 0.25,
+          "unidad": "cucharadita",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Lavar y cortar los tomates en rodajas de medio centímetro de grosor",
+        "Cortar la mozzarella en rodajas del mismo grosor que los tomates",
+        "Alternar en un plato rodajas de tomate y mozzarella formando un círculo",
+        "Colocar hojas de albahaca fresca entre las rodajas",
+        "Rociar con aceite de oliva y vinagre balsámico al gusto",
+        "Sazonar con sal y pimienta negra recién molida y servir inmediatamente"
+      ],
+      "tags": [
+        "vegetariano",
+        "sin cocción",
+        "fresco",
+        "verano",
+        "saludable"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 245,
+        "proteina_g": 12,
+        "carbohidratos_g": 8,
+        "grasa_g": 19
+      }
+    },
+    {
+      "nombre": "Ensalada Caprese con Pesto",
+      "descripcion_corta": "Ensalada italiana fresca de tomate, mozzarella y albahaca",
+      "origen": "italiana",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "rapida"
+      ],
+      "tiempo_total_min": 10,
+      "tiempo_preparacion_min": 10,
+      "tiempo_coccion_min": 0,
+      "dificultad": "facil",
+      "porciones": 2,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "tomate",
+          "categoria": "vegetal",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "mozzarella fresca",
+          "categoria": "lacteo",
+          "cantidad": 250,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "albahaca fresca",
+          "categoria": "vegetal",
+          "cantidad": 15,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de oliva",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "vinagre balsámico",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharada",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "pimienta negra",
+          "categoria": "condimento",
+          "cantidad": 0.5,
+          "unidad": "cucharadita",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Lavar y cortar tomates en rodajas de medio centímetro",
+        "Cortar mozzarella en rodajas del mismo grosor que los tomates",
+        "Intercalar rodajas de tomate y mozzarella en un plato",
+        "Colocar hojas de albahaca fresca entre las rodajas",
+        "Rociar con aceite de oliva, vinagre balsámico, sal y pimienta al gusto"
+      ],
+      "tags": [
+        "vegetariano",
+        "sin_cocción",
+        "fresco",
+        "mediterráneo",
+        "saludable"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 380,
+        "proteina_g": 22,
+        "carbohidratos_g": 12,
+        "grasa_g": 28
+      }
+    },
+    {
+      "nombre": "Tres Leches Tradicional",
+      "descripcion_corta": "Bizcocho empapado en mezcla de tres leches con crema batida",
+      "origen": "nicaragüense",
+      "tipo_comida": [
+        "postre"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial",
+        "reunion"
+      ],
+      "tiempo_total_min": 180,
+      "tiempo_preparacion_min": 30,
+      "tiempo_coccion_min": 30,
+      "dificultad": "media",
+      "porciones": 10,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 5,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "harina de trigo",
+          "categoria": "grano",
+          "cantidad": 1.5,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "leche evaporada",
+          "categoria": "lacteo",
+          "cantidad": 1,
+          "unidad": "lata",
+          "esencial": true
+        },
+        {
+          "nombre": "leche condensada",
+          "categoria": "lacteo",
+          "cantidad": 1,
+          "unidad": "lata",
+          "esencial": true
+        },
+        {
+          "nombre": "crema de leche",
+          "categoria": "lacteo",
+          "cantidad": 200,
+          "unidad": "ml",
+          "esencial": true
+        },
+        {
+          "nombre": "polvo de hornear",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "vainilla",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Batir huevos con azúcar hasta punto letra, agregar vainilla",
+        "Incorporar harina cernida con polvo de hornear en forma envolvente",
+        "Verter en molde engrasado y hornear a 180°C por 30 minutos",
+        "Mezclar leche evaporada, condensada y mitad de la crema de leche",
+        "Pinchar el bizcocho frío con tenedor y bañar con la mezcla de leches",
+        "Refrigerar mínimo 2 horas para que absorba bien",
+        "Batir crema restante y decorar el pastel antes de servir"
+      ],
+      "tags": [
+        "dulce",
+        "tradicional",
+        "celebración",
+        "refrigerado"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 420,
+        "proteina_g": 11,
+        "carbohidratos_g": 58,
+        "grasa_g": 16
+      }
+    },
+    {
+      "nombre": "Bruschetta Italiana Clásica",
+      "descripcion_corta": "Tostadas crujientes con tomate fresco, albahaca y aceite de oliva",
+      "origen": "Italia",
+      "tipo_comida": [
+        "snack",
+        "brunch"
+      ],
+      "ocasion": [
+        "rapida",
+        "reunion"
+      ],
+      "tiempo_total_min": 15,
+      "tiempo_preparacion_min": 10,
+      "tiempo_coccion_min": 5,
+      "dificultad": "facil",
+      "porciones": 6,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "pan baguette",
+          "categoria": "grano",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "tomate",
+          "categoria": "vegetal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "albahaca fresca",
+          "categoria": "condimento",
+          "cantidad": 10,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de oliva",
+          "categoria": "condimento",
+          "cantidad": 4,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "pimienta negra",
+          "categoria": "condimento",
+          "cantidad": 0.5,
+          "unidad": "cucharadita",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Cortar el pan en rebanadas de 1.5 cm de grosor en diagonal",
+        "Tostar las rebanadas en el horno o parrilla hasta que estén doradas y crujientes",
+        "Cortar los tomates en cubos pequeños, picar finamente la albahaca",
+        "Mezclar tomate, albahaca, 3 cucharadas de aceite de oliva, sal y pimienta en un bowl",
+        "Frotar cada tostada con medio diente de ajo crudo",
+        "Colocar la mezcla de tomate sobre cada tostada y rociar con el aceite restante antes de servir"
+      ],
+      "tags": [
+        "vegetariano",
+        "mediterraneo",
+        "fresco",
+        "entrada",
+        "verano"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 195,
+        "proteina_g": 5,
+        "carbohidratos_g": 24,
+        "grasa_g": 9
+      }
+    },
+    {
+      "nombre": "Pad Thai Simplificado",
+      "descripcion_corta": "Fideos de arroz salteados con camarones, cacahuates y vegetales",
+      "origen": "Tailandia",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "rapida"
+      ],
+      "tiempo_total_min": 30,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 15,
+      "dificultad": "media",
+      "porciones": 3,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "fideos de arroz",
+          "categoria": "grano",
+          "cantidad": 250,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "camarón",
+          "categoria": "proteina_animal",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "salsa de soja",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "cacahuate",
+          "categoria": "snack",
+          "cantidad": 50,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "cebollín",
+          "categoria": "vegetal",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "vegetal",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "limón",
+          "categoria": "fruta",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Remojar los fideos de arroz en agua caliente durante 10 minutos hasta que estén suaves",
+        "Pelar y limpiar los camarones, picar el ajo y cortar el cebollín",
+        "Calentar aceite en un wok o sartén grande, saltear el ajo y los camarones 3 minutos",
+        "Apartar los camarones, agregar los huevos batidos y revolver hasta que cuajen",
+        "Añadir los fideos escurridos, salsa de soja, azúcar y jugo de limón",
+        "Incorporar los camarones, saltear todo junto 2 minutos a fuego alto",
+        "Servir decorado con cacahuates triturados y cebollín picado"
+      ],
+      "tags": [
+        "asiatico",
+        "tailandes",
+        "mariscos",
+        "salteado",
+        "exotico"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 485,
+        "proteina_g": 28,
+        "carbohidratos_g": 62,
+        "grasa_g": 14
+      }
+    },
+    {
+      "nombre": "Tiramisú Clásico",
+      "descripcion_corta": "Postre italiano con capas de bizcocho, café y crema de mascarpone",
+      "origen": "Italia",
+      "tipo_comida": [
+        "postre"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial",
+        "reunion"
+      ],
+      "tiempo_total_min": 240,
+      "tiempo_preparacion_min": 30,
+      "tiempo_coccion_min": 0,
+      "dificultad": "media",
+      "porciones": 8,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "queso mascarpone",
+          "categoria": "lacteo",
+          "cantidad": 500,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "café espresso",
+          "categoria": "bebida",
+          "cantidad": 300,
+          "unidad": "ml",
+          "esencial": true
+        },
+        {
+          "nombre": "bizcocho de soletilla",
+          "categoria": "grano",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "cacao en polvo",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "licor de café",
+          "categoria": "bebida",
+          "cantidad": 50,
+          "unidad": "ml",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Separar las yemas de las claras de huevo",
+        "Batir las yemas con azúcar hasta que estén cremosas y pálidas",
+        "Incorporar el mascarpone a las yemas y mezclar suavemente",
+        "Batir las claras a punto de nieve e incorporar a la mezcla anterior con movimientos envolventes",
+        "Preparar café espresso, dejar enfriar y mezclar con licor opcional",
+        "Sumergir rápidamente las soletillas en el café y formar una capa en un molde",
+        "Cubrir con la mitad de la crema de mascarpone, repetir con otra capa de soletillas y crema",
+        "Refrigerar mínimo 3 horas, espolvorear cacao en polvo antes de servir"
+      ],
+      "tags": [
+        "italiano",
+        "postre",
+        "cafe",
+        "frio",
+        "clasico"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 385,
+        "proteina_g": 9,
+        "carbohidratos_g": 32,
+        "grasa_g": 25
+      }
+    },
+    {
+      "nombre": "Bandeja Paisa",
+      "descripcion_corta": "Plato típico colombiano con frijoles, carne, chicharrón y acompañantes",
+      "origen": "Colombia",
+      "tipo_comida": [
+        "almuerzo"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial"
+      ],
+      "tiempo_total_min": 180,
+      "tiempo_preparacion_min": 30,
+      "tiempo_coccion_min": 150,
+      "dificultad": "dificil",
+      "porciones": 4,
+      "costo_estimado": "alto",
+      "ingredientes": [
+        {
+          "nombre": "frijol rojo",
+          "categoria": "legumbre",
+          "cantidad": 400,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "carne molida",
+          "categoria": "proteina_animal",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "chicharrón",
+          "categoria": "embutido",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "chorizo",
+          "categoria": "embutido",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "plátano maduro",
+          "categoria": "fruta",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "arroz",
+          "categoria": "grano",
+          "cantidad": 2,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "aguacate",
+          "categoria": "fruta",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "arepa",
+          "categoria": "grano",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "tomate",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "cebolla",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Cocinar los frijoles con agua, sal y un sofrito de cebolla y tomate hasta que estén suaves",
+        "Preparar el hogao con tomate y cebolla picados, agregar la carne molida y cocinar 15 minutos",
+        "Freír el chicharrón hasta que esté crujiente y los chorizos hasta dorar",
+        "Cocinar el arroz blanco tradicionalmente",
+        "Freír los plátanos maduros en rodajas y los huevos al gusto",
+        "Calentar o preparar las arepas",
+        "Montar el plato con todos los componentes: frijoles, arroz, carne, chicharrón, chorizo, huevo, plátano, arepa y aguacate en rodajas"
+      ],
+      "tags": [
+        "colombiano",
+        "abundante",
+        "tradicional",
+        "completo",
+        "festivo"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 780,
+        "proteina_g": 42,
+        "carbohidratos_g": 78,
+        "grasa_g": 35
+      }
+    },
+    {
+      "nombre": "Pad Thai de Pollo",
+      "descripcion_corta": "Fideos de arroz salteados con pollo, cacahuates y salsa agridulce",
+      "origen": "Tailandia",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "fin_semana"
+      ],
+      "tiempo_total_min": 30,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 15,
+      "dificultad": "media",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "fideos de arroz",
+          "categoria": "grano",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "pechuga de pollo",
+          "categoria": "proteina_animal",
+          "cantidad": 400,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "salsa de soja",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "cacahuate",
+          "categoria": "snack",
+          "cantidad": 80,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "zanahoria",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "cebollín",
+          "categoria": "vegetal",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "limón",
+          "categoria": "fruta",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Remojar los fideos de arroz en agua caliente durante 10 minutos hasta que estén suaves, luego escurrir",
+        "Cortar el pollo en tiras pequeñas y la zanahoria en juliana fina",
+        "Calentar aceite en un wok o sartén grande a fuego alto y saltear el pollo hasta dorar",
+        "Apartar el pollo, agregar los huevos batidos y revolver hasta cocinar",
+        "Añadir los fideos, salsa de soja, azúcar y jugo de limón, mezclar bien",
+        "Incorporar el pollo, zanahoria y cebollín picado, saltear 2 minutos",
+        "Servir decorando con cacahuates triturados y limón"
+      ],
+      "tags": [
+        "asiatico",
+        "salteado",
+        "completo",
+        "popular"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 520,
+        "proteina_g": 35,
+        "carbohidratos_g": 58,
+        "grasa_g": 16
+      }
+    },
+    {
+      "nombre": "Flan de Coco Colombiano",
+      "descripcion_corta": "Postre cremoso de coco con caramelo, tradicional y delicioso",
+      "origen": "colombiana",
+      "tipo_comida": [
+        "postre"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial",
+        "reunion"
+      ],
+      "tiempo_total_min": 180,
+      "tiempo_preparacion_min": 20,
+      "tiempo_coccion_min": 60,
+      "dificultad": "media",
+      "porciones": 8,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "leche de coco",
+          "categoria": "bebida",
+          "cantidad": 400,
+          "unidad": "ml",
+          "esencial": true
+        },
+        {
+          "nombre": "leche condensada",
+          "categoria": "lacteo",
+          "cantidad": 1,
+          "unidad": "lata",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 5,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "coco rallado",
+          "categoria": "fruta",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 150,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "vainilla",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Preparar el caramelo derritiendo 100g de azúcar en un molde hasta dorar, cubrir fondo y paredes",
+        "Licuar la leche de coco, leche condensada, huevos, coco rallado, vainilla y 50g de azúcar",
+        "Verter la mezcla sobre el caramelo en el molde",
+        "Colocar el molde en baño maría y hornear a 180°C durante 60 minutos",
+        "Verificar que esté cuajado insertando un palillo en el centro, debe salir limpio",
+        "Dejar enfriar a temperatura ambiente y refrigerar mínimo 2 horas",
+        "Desmoldar invirtiendo el molde sobre un plato hondo para que caiga el caramelo"
+      ],
+      "tags": [
+        "colombiano",
+        "postre",
+        "coco",
+        "flan",
+        "tradicional",
+        "dulce"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 295,
+        "proteina_g": 8,
+        "carbohidratos_g": 38,
+        "grasa_g": 13
+      }
+    },
+    {
+      "nombre": "Flan de Caramelo Colombiano",
+      "descripcion_corta": "Postre cremoso de huevo y leche con caramelo líquido",
+      "origen": "Colombia",
+      "tipo_comida": [
+        "postre"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial",
+        "reunion"
+      ],
+      "tiempo_total_min": 180,
+      "tiempo_preparacion_min": 20,
+      "tiempo_coccion_min": 60,
+      "dificultad": "media",
+      "porciones": 8,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "leche entera",
+          "categoria": "lacteo",
+          "cantidad": 1,
+          "unidad": "l",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 6,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "esencia de vainilla",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "leche condensada",
+          "categoria": "lacteo",
+          "cantidad": 200,
+          "unidad": "ml",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Preparar el caramelo derritiendo 150g de azúcar en un molde a fuego medio hasta que esté dorado, cubrir todo el fondo y dejar enfriar",
+        "Precalentar el horno a 180°C y preparar un baño maría con agua caliente",
+        "Batir los huevos con el resto del azúcar hasta integrar completamente",
+        "Calentar la leche sin hervir y agregar a los huevos batidos junto con la vainilla, mezclar suavemente",
+        "Colar la mezcla y verter sobre el caramelo en el molde",
+        "Colocar el molde en la bandeja con agua caliente y hornear a baño maría por 60 minutos",
+        "Verificar que esté cuajado insertando un palillo en el centro, debe salir limpio",
+        "Dejar enfriar completamente, refrigerar mínimo 4 horas, desmoldar invirtiendo en un plato hondo"
+      ],
+      "tags": [
+        "colombiano",
+        "postre tradicional",
+        "cremoso",
+        "para ocasiones",
+        "dulce"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 280,
+        "proteina_g": 10,
+        "carbohidratos_g": 42,
+        "grasa_g": 8
+      }
+    },
+    {
+      "nombre": "Pasta Aglio e Olio",
+      "descripcion_corta": "Pasta italiana simple con ajo, aceite de oliva y perejil fresco",
+      "origen": "Italia",
+      "tipo_comida": [
+        "cena",
+        "almuerzo"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "rapida"
+      ],
+      "tiempo_total_min": 20,
+      "tiempo_preparacion_min": 5,
+      "tiempo_coccion_min": 15,
+      "dificultad": "facil",
+      "porciones": 2,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "espagueti",
+          "categoria": "grano",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "vegetal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de oliva",
+          "categoria": "condimento",
+          "cantidad": 6,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "perejil fresco",
+          "categoria": "vegetal",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": false
+        },
+        {
+          "nombre": "hojuelas de chile",
+          "categoria": "condimento",
+          "cantidad": 0.5,
+          "unidad": "cucharadita",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": null,
+          "unidad": null,
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Cocinar el espagueti en agua con sal según instrucciones del paquete",
+        "Mientras tanto, laminar finamente los ajos",
+        "En un sartén grande, calentar el aceite de oliva a fuego medio-bajo",
+        "Agregar el ajo y las hojuelas de chile, cocinar 2 minutos sin que se queme",
+        "Escurrir la pasta reservando 1 taza del agua de cocción",
+        "Mezclar la pasta con el aceite de ajo, agregar agua de cocción si es necesario",
+        "Incorporar el perejil picado y servir inmediatamente"
+      ],
+      "tags": [
+        "vegetariano",
+        "rapida",
+        "italiana",
+        "economica"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 520,
+        "proteina_g": 12,
+        "carbohidratos_g": 62,
+        "grasa_g": 25
+      }
+    },
+    {
+      "nombre": "Ceviche Peruano Clásico",
+      "descripcion_corta": "Pescado fresco marinado en limón con cebolla, ají y cilantro",
+      "origen": "Perú",
+      "tipo_comida": [
+        "almuerzo"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial"
+      ],
+      "tiempo_total_min": 30,
+      "tiempo_preparacion_min": 25,
+      "tiempo_coccion_min": 5,
+      "dificultad": "media",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "filete de pescado blanco",
+          "categoria": "proteina_animal",
+          "cantidad": 500,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "limón",
+          "categoria": "fruta",
+          "cantidad": 12,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "cebolla morada",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "ají limo",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "cilantro",
+          "categoria": "vegetal",
+          "cantidad": 0.5,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "camote",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "choclo",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": null,
+          "unidad": null,
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Cortar el pescado en cubos de 2 cm y refrigerar",
+        "Cortar la cebolla en juliana fina y remojar en agua con sal 5 minutos, escurrir",
+        "Exprimir los limones para obtener jugo fresco suficiente",
+        "Hervir el camote y el choclo hasta que estén tiernos",
+        "En un bowl, mezclar el pescado con sal, ají picado y jugo de limón",
+        "Dejar marinar 5 minutos hasta que el pescado se torne opaco",
+        "Agregar cebolla escurrida y cilantro picado, mezclar suavemente",
+        "Servir inmediatamente acompañado de camote y choclo"
+      ],
+      "tags": [
+        "sin_gluten",
+        "fresco",
+        "peruano",
+        "saludable",
+        "verano"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 280,
+        "proteina_g": 28,
+        "carbohidratos_g": 35,
+        "grasa_g": 3
+      }
+    },
+    {
+      "nombre": "Pollo Teriyaki con Arroz",
+      "descripcion_corta": "Pollo glaseado con salsa teriyaki casera servido sobre arroz blanco",
+      "origen": "Japón",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "fin_semana"
+      ],
+      "tiempo_total_min": 35,
+      "tiempo_preparacion_min": 10,
+      "tiempo_coccion_min": 25,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "pechuga de pollo",
+          "categoria": "proteina_animal",
+          "cantidad": 600,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "salsa de soya",
+          "categoria": "condimento",
+          "cantidad": 4,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "miel",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "jengibre fresco",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "cucharada",
+          "esencial": false
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "arroz blanco",
+          "categoria": "grano",
+          "cantidad": 2,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de sésamo",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharada",
+          "esencial": false
+        },
+        {
+          "nombre": "cebollín",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Cocinar el arroz según instrucciones del paquete y reservar",
+        "Cortar el pollo en trozos medianos y sazonar con sal",
+        "Mezclar salsa de soya, miel, jengibre rallado y ajo picado para la salsa teriyaki",
+        "Calentar aceite en un sartén grande a fuego alto y sellar el pollo 3-4 minutos",
+        "Reducir el fuego a medio, agregar la salsa teriyaki y cocinar 8-10 minutos",
+        "Continuar cocinando hasta que la salsa espese y glasee el pollo",
+        "Servir el pollo sobre el arroz y decorar con cebollín picado"
+      ],
+      "tags": [
+        "asiatico",
+        "familiar",
+        "proteico",
+        "dulce_salado"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 480,
+        "proteina_g": 42,
+        "carbohidratos_g": 58,
+        "grasa_g": 8
+      }
+    },
+    {
+      "nombre": "Pad Thai de Camarones Simplificado",
+      "descripcion_corta": "Fideos de arroz salteados con camarones, vegetales y salsa agridulce",
+      "origen": "tailandesa",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "fin_semana"
+      ],
+      "tiempo_total_min": 30,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 15,
+      "dificultad": "media",
+      "porciones": 3,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "fideos de arroz",
+          "categoria": "grano",
+          "cantidad": 250,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "camarón",
+          "categoria": "proteina_animal",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "salsa de soja",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "vegetal",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "zanahoria",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "cebollín",
+          "categoria": "vegetal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "maní",
+          "categoria": "snack",
+          "cantidad": 50,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "aceite",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Remojar los fideos de arroz en agua caliente 10 minutos hasta suavizar, luego escurrir",
+        "Mezclar salsa de soja, azúcar y 2 cucharadas de agua para preparar la salsa",
+        "Calentar aceite en un wok o sartén grande, saltear ajo picado y camarones 3 minutos",
+        "Apartar los camarones, agregar huevos batidos y revolver hasta cuajar",
+        "Añadir fideos escurridos, zanahoria en juliana y la salsa preparada, saltear 3 minutos",
+        "Incorporar camarones, cebollín picado y mezclar bien a fuego alto 2 minutos",
+        "Servir caliente decorado con maní triturado por encima"
+      ],
+      "tags": [
+        "asiatico",
+        "mariscos",
+        "fideos",
+        "salteado"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 485,
+        "proteina_g": 28,
+        "carbohidratos_g": 62,
+        "grasa_g": 14
+      }
+    },
+    {
+      "nombre": "Tacos al Pastor Caseros",
+      "descripcion_corta": "Tacos de cerdo marinado con piña, cilantro y cebolla al estilo mexicano",
+      "origen": "mexicana",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "reunion"
+      ],
+      "tiempo_total_min": 150,
+      "tiempo_preparacion_min": 30,
+      "tiempo_coccion_min": 120,
+      "dificultad": "media",
+      "porciones": 6,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "lomo de cerdo",
+          "categoria": "proteina_animal",
+          "cantidad": 800,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "tortilla de maíz",
+          "categoria": "grano",
+          "cantidad": 18,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "piña",
+          "categoria": "fruta",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "chile guajillo",
+          "categoria": "vegetal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "cebolla",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "cilantro",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "porcion",
+          "esencial": false
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "vegetal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "vinagre",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "comino",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        },
+        {
+          "nombre": "limón",
+          "categoria": "fruta",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Hidratar los chiles guajillo en agua caliente 15 minutos, licuar con ajo, vinagre, comino y sal",
+        "Cortar el cerdo en láminas delgadas y marinar con la salsa de chile 2 horas o toda la noche",
+        "Precalentar horno a 180°C, colocar la carne marinada en una bandeja y hornear 90 minutos",
+        "Cortar la piña en cubos pequeños y dorar en un sartén sin aceite",
+        "Picar finamente cebolla y cilantro, mezclar y reservar",
+        "Sacar la carne del horno y desmenuzar o picar en trozos pequeños",
+        "Calentar las tortillas en un comal o sartén",
+        "Armar los tacos con carne, piña, cebolla con cilantro y jugo de limón al gusto"
+      ],
+      "tags": [
+        "mexicano",
+        "cerdo",
+        "especiado",
+        "reunion"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 420,
+        "proteina_g": 32,
+        "carbohidratos_g": 42,
+        "grasa_g": 12
+      }
+    },
+    {
+      "nombre": "Caprese de Tomate y Mozzarella",
+      "descripcion_corta": "Ensalada italiana fresca con tomate, mozzarella, albahaca y aceite",
+      "origen": "italiana",
+      "tipo_comida": [
+        "almuerzo",
+        "snack"
+      ],
+      "ocasion": [
+        "rapida",
+        "entre_semana"
+      ],
+      "tiempo_total_min": 10,
+      "tiempo_preparacion_min": 10,
+      "tiempo_coccion_min": 0,
+      "dificultad": "facil",
+      "porciones": 2,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "tomate",
+          "categoria": "vegetal",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "mozzarella fresca",
+          "categoria": "lacteo",
+          "cantidad": 250,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "albahaca",
+          "categoria": "vegetal",
+          "cantidad": 10,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de oliva",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        },
+        {
+          "nombre": "pimienta negra",
+          "categoria": "condimento",
+          "cantidad": 0.5,
+          "unidad": "cucharadita",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Lavar y cortar los tomates en rodajas de medio centímetro de grosor",
+        "Cortar la mozzarella en rodajas del mismo grosor que los tomates",
+        "Intercalar en un plato rodajas de tomate y mozzarella de forma decorativa",
+        "Colocar hojas de albahaca fresca entre las rodajas",
+        "Rociar con aceite de oliva, sal y pimienta negra recién molida al gusto"
+      ],
+      "tags": [
+        "vegetariano",
+        "fresco",
+        "sin_coccion",
+        "italiano",
+        "saludable"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 380,
+        "proteina_g": 22,
+        "carbohidratos_g": 12,
+        "grasa_g": 28
+      }
+    },
+    {
+      "nombre": "Alfajores de Maicena Argentinos",
+      "descripcion_corta": "Galletas suaves rellenas de dulce de leche y coco rallado",
+      "origen": "argentina",
+      "tipo_comida": [
+        "postre",
+        "snack"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial"
+      ],
+      "tiempo_total_min": 45,
+      "tiempo_preparacion_min": 25,
+      "tiempo_coccion_min": 20,
+      "dificultad": "media",
+      "porciones": 12,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "maicena",
+          "categoria": "grano",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "harina de trigo",
+          "categoria": "grano",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "mantequilla",
+          "categoria": "lacteo",
+          "cantidad": 150,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "dulce de leche",
+          "categoria": "lacteo",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "coco rallado",
+          "categoria": "otro",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "polvo de hornear",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "esencia de vainilla",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Batir mantequilla blanda con azúcar hasta obtener una crema suave y esponjosa",
+        "Agregar huevos y esencia de vainilla, mezclar bien",
+        "Incorporar maicena, harina y polvo de hornear tamizados, formar una masa tierna",
+        "Estirar la masa con rodillo hasta 5mm de grosor y cortar círculos de 5cm con cortante",
+        "Hornear a 170°C por 12-15 minutos hasta que apenas doren los bordes, dejar enfriar",
+        "Unir dos galletas con dulce de leche generoso en el medio",
+        "Pasar los bordes por coco rallado para decorar y servir"
+      ],
+      "tags": [
+        "postre",
+        "argentino",
+        "dulce_de_leche",
+        "tradicional",
+        "horneado"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 285,
+        "proteina_g": 4,
+        "carbohidratos_g": 38,
+        "grasa_g": 13
+      }
+    },
+    {
+      "nombre": "Bruschetta Caprese",
+      "descripcion_corta": "Tostadas italianas con tomate, mozzarella y albahaca fresca",
+      "origen": "italiana",
+      "tipo_comida": [
+        "snack",
+        "brunch"
+      ],
+      "ocasion": [
+        "rapida",
+        "reunion",
+        "fin_semana"
+      ],
+      "tiempo_total_min": 15,
+      "tiempo_preparacion_min": 10,
+      "tiempo_coccion_min": 5,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "pan baguette",
+          "categoria": "grano",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "tomate",
+          "categoria": "vegetal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "queso mozzarella",
+          "categoria": "lacteo",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "albahaca fresca",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "porcion",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de oliva",
+          "categoria": "condimento",
+          "cantidad": 4,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "vinagre balsámico",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Cortar el pan en rodajas diagonales de 2 cm de grosor",
+        "Tostar las rodajas de pan en el horno o sartén hasta que estén doradas",
+        "Frotar cada tostada con medio diente de ajo mientras están calientes",
+        "Cortar los tomates en cubos pequeños y el mozzarella en trozos",
+        "Mezclar tomate, mozzarella, albahaca picada, aceite de oliva y sal",
+        "Colocar la mezcla sobre cada tostada",
+        "Rociar con vinagre balsámico y un chorrito adicional de aceite de oliva antes de servir"
+      ],
+      "tags": [
+        "vegetariano",
+        "mediterraneo",
+        "fresco",
+        "aperitivo",
+        "facil"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 320,
+        "proteina_g": 14,
+        "carbohidratos_g": 35,
+        "grasa_g": 14
+      }
+    },
+    {
+      "nombre": "Pasta Caprese",
+      "descripcion_corta": "Pasta fresca con tomate, mozzarella y albahaca al estilo italiano",
+      "origen": "Italia",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "rapida"
+      ],
+      "tiempo_total_min": 20,
+      "tiempo_preparacion_min": 10,
+      "tiempo_coccion_min": 10,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "pasta corta",
+          "categoria": "grano",
+          "cantidad": 400,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "tomate cherry",
+          "categoria": "vegetal",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "mozzarella",
+          "categoria": "lacteo",
+          "cantidad": 250,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "albahaca fresca",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de oliva",
+          "categoria": "condimento",
+          "cantidad": 4,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "pimienta negra",
+          "categoria": "condimento",
+          "cantidad": 0.5,
+          "unidad": "cucharadita",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Cocinar la pasta en agua hirviendo con sal según instrucciones del paquete",
+        "Mientras tanto, cortar los tomates cherry por la mitad y la mozzarella en cubos",
+        "Picar el ajo finamente y saltear brevemente en aceite de oliva",
+        "Escurrir la pasta reservando media taza del agua de cocción",
+        "Mezclar la pasta caliente con tomates, mozzarella, ajo y aceite de oliva",
+        "Agregar albahaca fresca rasgada, sal y pimienta, mezclar suavemente y servir inmediatamente"
+      ],
+      "tags": [
+        "vegetariano",
+        "mediterraneo",
+        "fresco",
+        "15_minutos"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 520,
+        "proteina_g": 22,
+        "carbohidratos_g": 68,
+        "grasa_g": 18
+      }
+    },
+    {
+      "nombre": "Arepas Reina Pepiada",
+      "descripcion_corta": "Arepas venezolanas rellenas de pollo con aguacate y mayonesa",
+      "origen": "venezolana",
+      "tipo_comida": [
+        "desayuno",
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "rapida"
+      ],
+      "tiempo_total_min": 35,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 20,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "harina de maíz precocida",
+          "categoria": "grano",
+          "cantidad": 2,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "agua",
+          "categoria": "bebida",
+          "cantidad": 2.5,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "pechuga de pollo",
+          "categoria": "proteina_animal",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "aguacate",
+          "categoria": "fruta",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "mayonesa",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": false
+        },
+        {
+          "nombre": "cilantro",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Mezclar la harina de maíz con agua tibia y sal hasta formar una masa suave",
+        "Formar 8 bolitas y aplanarlas para crear discos de 1 cm de grosor",
+        "Cocinar las arepas en sartén o plancha 7 minutos por lado hasta dorar",
+        "Cocinar la pechuga de pollo en agua con sal, luego desmenuzar",
+        "Mezclar el pollo con aguacate machacado, mayonesa y cilantro picado",
+        "Cortar las arepas por la mitad y rellenar con la mezcla de reina pepiada"
+      ],
+      "tags": [
+        "venezolana",
+        "sin gluten",
+        "relleno",
+        "tradicional"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 420,
+        "proteina_g": 22,
+        "carbohidratos_g": 45,
+        "grasa_g": 16
+      }
+    },
+    {
+      "nombre": "Brownies de Chocolate",
+      "descripcion_corta": "Brownies densos y húmedos con intenso sabor a chocolate",
+      "origen": "americana",
+      "tipo_comida": [
+        "postre",
+        "snack"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial"
+      ],
+      "tiempo_total_min": 45,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 30,
+      "dificultad": "facil",
+      "porciones": 16,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "chocolate oscuro",
+          "categoria": "snack",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "mantequilla",
+          "categoria": "lacteo",
+          "cantidad": 150,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 250,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "harina de trigo",
+          "categoria": "grano",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "cacao en polvo",
+          "categoria": "condimento",
+          "cantidad": 40,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "vainilla",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 0.5,
+          "unidad": "cucharadita",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Precalentar el horno a 180°C y engrasar un molde cuadrado de 20x20 cm",
+        "Derretir el chocolate con la mantequilla en baño maría o microondas, revolviendo hasta integrar",
+        "Batir los huevos con el azúcar hasta que la mezcla esté espumosa y clara",
+        "Incorporar el chocolate derretido y la vainilla a los huevos batidos",
+        "Agregar la harina, cacao en polvo y sal tamizados, mezclar suavemente sin batir en exceso",
+        "Verter la mezcla en el molde y hornear 25-30 minutos hasta que al insertar un palillo salga con migas húmedas",
+        "Dejar enfriar completamente en el molde antes de cortar en cuadrados"
+      ],
+      "tags": [
+        "chocolate",
+        "dulce",
+        "horneado",
+        "clásico"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 245,
+        "proteina_g": 4,
+        "carbohidratos_g": 30,
+        "grasa_g": 13
+      }
+    },
+    {
+      "nombre": "Pasta Carbonara Italiana",
+      "descripcion_corta": "Pasta cremosa con panceta, huevo y queso parmesano",
+      "origen": "Italia",
+      "tipo_comida": [
+        "cena",
+        "almuerzo"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "rapida"
+      ],
+      "tiempo_total_min": 20,
+      "tiempo_preparacion_min": 5,
+      "tiempo_coccion_min": 15,
+      "dificultad": "media",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "espagueti",
+          "categoria": "grano",
+          "cantidad": 400,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "panceta",
+          "categoria": "embutido",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 4,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "queso parmesano",
+          "categoria": "lacteo",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "pimienta negra",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Poner agua con sal a hervir y cocinar la pasta según indicaciones del paquete",
+        "Cortar la panceta en tiras y dorar en sartén sin aceite hasta quedar crujiente",
+        "Batir huevos con queso parmesano rallado y pimienta negra",
+        "Reservar 1 taza de agua de cocción y escurrir la pasta",
+        "Mezclar pasta caliente con panceta fuera del fuego",
+        "Agregar mezcla de huevo y revolver rápido para crear crema sin que cuaje",
+        "Añadir agua de cocción si necesita más cremosidad",
+        "Servir inmediatamente con más parmesano y pimienta"
+      ],
+      "tags": [
+        "italiano",
+        "pasta",
+        "rapido",
+        "comfort_food"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 580,
+        "proteina_g": 28,
+        "carbohidratos_g": 72,
+        "grasa_g": 18
+      }
+    },
+    {
+      "nombre": "Pasta Caprese con Albahaca Fresca",
+      "descripcion_corta": "Pasta con tomates cherry, mozzarella y albahaca al estilo italiano",
+      "origen": "italiana",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "entre_semana",
+        "rapida"
+      ],
+      "tiempo_total_min": 20,
+      "tiempo_preparacion_min": 10,
+      "tiempo_coccion_min": 10,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "pasta corta",
+          "categoria": "grano",
+          "cantidad": 400,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "tomate cherry",
+          "categoria": "vegetal",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "mozzarella",
+          "categoria": "lacteo",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "albahaca fresca",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "taza",
+          "esencial": true
+        },
+        {
+          "nombre": "ajo",
+          "categoria": "vegetal",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de oliva",
+          "categoria": "condimento",
+          "cantidad": 4,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        },
+        {
+          "nombre": "pimienta",
+          "categoria": "condimento",
+          "cantidad": 0.5,
+          "unidad": "cucharadita",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Cocinar la pasta en agua con sal según instrucciones del paquete hasta al dente",
+        "Mientras tanto, cortar los tomates cherry por la mitad y picar el ajo finamente",
+        "Calentar aceite de oliva en una sartén grande y saltear el ajo 1 minuto",
+        "Agregar los tomates cherry y cocinar 5 minutos hasta que se ablanden",
+        "Escurrir la pasta reservando media taza del agua de cocción",
+        "Mezclar la pasta con los tomates, agregar mozzarella en cubos y albahaca fresca",
+        "Ajustar consistencia con agua de pasta si es necesario, sazonar y servir inmediatamente"
+      ],
+      "tags": [
+        "vegetariano",
+        "mediterraneo",
+        "fresco",
+        "verano"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 445,
+        "proteina_g": 18,
+        "carbohidratos_g": 58,
+        "grasa_g": 16
+      }
+    },
+    {
+      "nombre": "Brownies de Chocolate Intenso",
+      "descripcion_corta": "Brownies húmedos y densos con chocolate oscuro y nueces",
+      "origen": "americana",
+      "tipo_comida": [
+        "postre",
+        "snack"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial",
+        "reunion"
+      ],
+      "tiempo_total_min": 50,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 35,
+      "dificultad": "facil",
+      "porciones": 16,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "chocolate oscuro",
+          "categoria": "snack",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "mantequilla",
+          "categoria": "lacteo",
+          "cantidad": 150,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "harina de trigo",
+          "categoria": "grano",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "cacao en polvo",
+          "categoria": "condimento",
+          "cantidad": 30,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "nuez",
+          "categoria": "snack",
+          "cantidad": 80,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "extracto de vainilla",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 0.25,
+          "unidad": "cucharadita",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Precalentar el horno a 180°C y engrasar un molde cuadrado de 20x20 cm",
+        "Derretir el chocolate con la mantequilla a baño maría o microondas, revolver hasta suavizar",
+        "Batir los huevos con el azúcar hasta que estén espumosos y de color claro",
+        "Incorporar el chocolate derretido, vainilla y sal a la mezcla de huevos",
+        "Tamizar la harina y cacao, agregar a la mezcla con movimientos envolventes",
+        "Añadir las nueces picadas y verter la mezcla en el molde preparado",
+        "Hornear 30-35 minutos hasta que al insertar un palillo salga con migas húmedas",
+        "Dejar enfriar completamente antes de cortar en cuadrados"
+      ],
+      "tags": [
+        "postre",
+        "chocolate",
+        "horneado",
+        "comfort_food"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 245,
+        "proteina_g": 4,
+        "carbohidratos_g": 28,
+        "grasa_g": 14
+      }
+    },
+    {
+      "nombre": "Risotto de Hongos",
+      "descripcion_corta": "Arroz cremoso con hongos, parmesano y vino blanco",
+      "origen": "italiana",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial"
+      ],
+      "tiempo_total_min": 45,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 30,
+      "dificultad": "media",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "arroz arborio",
+          "categoria": "grano",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "hongo",
+          "categoria": "vegetal",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "caldo de pollo",
+          "categoria": "bebida",
+          "cantidad": 1,
+          "unidad": "l",
+          "esencial": true
+        },
+        {
+          "nombre": "vino blanco",
+          "categoria": "bebida",
+          "cantidad": 150,
+          "unidad": "ml",
+          "esencial": true
+        },
+        {
+          "nombre": "queso parmesano",
+          "categoria": "lacteo",
+          "cantidad": 80,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "cebolla",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "mantequilla",
+          "categoria": "lacteo",
+          "cantidad": 50,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de oliva",
+          "categoria": "condimento",
+          "cantidad": 2,
+          "unidad": "cucharada",
+          "esencial": true
+        },
+        {
+          "nombre": "perejil",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "porcion",
+          "esencial": false
+        }
+      ],
+      "pasos": [
+        "Calentar el caldo y mantenerlo caliente en una olla",
+        "Picar cebolla finamente y saltear en aceite hasta transparentar",
+        "Agregar arroz y tostar 2 minutos removiendo constantemente",
+        "Añadir vino blanco y cocinar hasta evaporar",
+        "Incorporar caldo caliente de a poco, removiendo constantemente",
+        "Saltear hongos laminados en mantequilla aparte",
+        "Cuando el arroz esté al dente, agregar hongos y parmesano",
+        "Mezclar bien, ajustar sal y servir con perejil picado"
+      ],
+      "tags": [
+        "vegetariano",
+        "cremoso",
+        "italiano",
+        "elegante"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 445,
+        "proteina_g": 14,
+        "carbohidratos_g": 62,
+        "grasa_g": 14
+      }
+    },
+    {
+      "nombre": "Brownies de Chocolate Caseros",
+      "descripcion_corta": "Brownies densos y húmedos con chocolate intenso, estilo americano",
+      "origen": "americana",
+      "tipo_comida": [
+        "postre",
+        "snack"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "reunion"
+      ],
+      "tiempo_total_min": 50,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 35,
+      "dificultad": "facil",
+      "porciones": 16,
+      "costo_estimado": "bajo",
+      "ingredientes": [
+        {
+          "nombre": "chocolate oscuro",
+          "categoria": "snack",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "mantequilla",
+          "categoria": "lacteo",
+          "cantidad": 150,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 250,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "harina de trigo",
+          "categoria": "grano",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "cacao en polvo",
+          "categoria": "condimento",
+          "cantidad": 50,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "vainilla",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 0.5,
+          "unidad": "cucharadita",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Precalentar horno a 180°C y engrasar molde cuadrado de 20x20 cm",
+        "Derretir chocolate con mantequilla a baño maría o microondas, dejar enfriar",
+        "Batir huevos con azúcar hasta que estén espumosos y pálidos",
+        "Incorporar chocolate derretido y vainilla a la mezcla de huevos",
+        "Tamizar harina, cacao y sal, agregar a la mezcla con movimientos envolventes",
+        "Verter en el molde y hornear 30-35 minutos, debe quedar húmedo en el centro",
+        "Dejar enfriar completamente antes de cortar en cuadrados"
+      ],
+      "tags": [
+        "chocolate",
+        "postre",
+        "horneado",
+        "casero"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 245,
+        "proteina_g": 4,
+        "carbohidratos_g": 28,
+        "grasa_g": 14
+      }
+    },
+    {
+      "nombre": "Ceviche Peruano de Pescado",
+      "descripcion_corta": "Pescado fresco marinado en limón con cebolla morada y ají",
+      "origen": "Perú",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial"
+      ],
+      "tiempo_total_min": 30,
+      "tiempo_preparacion_min": 25,
+      "tiempo_coccion_min": 0,
+      "dificultad": "facil",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "pescado blanco fresco",
+          "categoria": "proteina_animal",
+          "cantidad": 600,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "limón",
+          "categoria": "fruta",
+          "cantidad": 12,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "cebolla morada",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "ají limo",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "cilantro",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "porcion",
+          "esencial": true
+        },
+        {
+          "nombre": "camote",
+          "categoria": "vegetal",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": false
+        },
+        {
+          "nombre": "maíz",
+          "categoria": "grano",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Cortar el pescado fresco en cubos medianos de aproximadamente 2 cm",
+        "Exprimir los limones y reservar el jugo colado",
+        "Cortar la cebolla morada en juliana fina y lavar con agua fría para quitar el picor",
+        "Picar finamente el ají limo y el cilantro",
+        "Mezclar el pescado con sal, ají, cilantro y jugo de limón, dejar reposar 5-10 minutos",
+        "Agregar la cebolla morada justo antes de servir",
+        "Acompañar con camote cocido y choclo hervido"
+      ],
+      "tags": [
+        "peruano",
+        "sin_coccion",
+        "fresco",
+        "picante",
+        "proteico",
+        "verano"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 245,
+        "proteina_g": 35,
+        "carbohidratos_g": 18,
+        "grasa_g": 3
+      }
+    },
+    {
+      "nombre": "Risotto de Champiñones",
+      "descripcion_corta": "Arroz cremoso italiano con champiñones y parmesano",
+      "origen": "italiana",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial"
+      ],
+      "tiempo_total_min": 45,
+      "tiempo_preparacion_min": 10,
+      "tiempo_coccion_min": 35,
+      "dificultad": "media",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "arroz arborio",
+          "categoria": "grano",
+          "cantidad": 300,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "champiñón",
+          "categoria": "vegetal",
+          "cantidad": 400,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "caldo de pollo",
+          "categoria": "bebida",
+          "cantidad": 1,
+          "unidad": "l",
+          "esencial": true
+        },
+        {
+          "nombre": "vino blanco",
+          "categoria": "bebida",
+          "cantidad": 100,
+          "unidad": "ml",
+          "esencial": false
+        },
+        {
+          "nombre": "cebolla",
+          "categoria": "vegetal",
+          "cantidad": 1,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "queso parmesano",
+          "categoria": "lacteo",
+          "cantidad": 80,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "mantequilla",
+          "categoria": "lacteo",
+          "cantidad": 50,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "aceite de oliva",
+          "categoria": "condimento",
+          "cantidad": 3,
+          "unidad": "cucharada",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Calentar el caldo y mantenerlo caliente en una olla aparte",
+        "Saltear champiñones laminados en aceite hasta dorar, reservar",
+        "Sofreír cebolla picada en mantequilla hasta transparentar",
+        "Agregar arroz y tostar 2 minutos, añadir vino y dejar evaporar",
+        "Incorporar caldo caliente cucharón por cucharón, revolviendo constantemente",
+        "Continuar agregando caldo durante 20 minutos hasta arroz cremoso",
+        "Añadir champiñones, parmesano rallado y mantequilla, mezclar bien",
+        "Retirar del fuego, dejar reposar 2 minutos y servir inmediatamente"
+      ],
+      "tags": [
+        "vegetariano",
+        "cremoso",
+        "italiano",
+        "comfort_food"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 420,
+        "proteina_g": 14,
+        "carbohidratos_g": 58,
+        "grasa_g": 14
+      }
+    },
+    {
+      "nombre": "Brownies de Chocolate con Nueces",
+      "descripcion_corta": "Brownies densos y húmedos con chocolate intenso y nueces crujientes",
+      "origen": "Estados Unidos",
+      "tipo_comida": [
+        "postre",
+        "snack"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial",
+        "reunion"
+      ],
+      "tiempo_total_min": 50,
+      "tiempo_preparacion_min": 15,
+      "tiempo_coccion_min": 35,
+      "dificultad": "facil",
+      "porciones": 16,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "chocolate oscuro",
+          "categoria": "snack",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "mantequilla",
+          "categoria": "lacteo",
+          "cantidad": 150,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "azúcar",
+          "categoria": "condimento",
+          "cantidad": 250,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "huevo",
+          "categoria": "proteina_animal",
+          "cantidad": 3,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "harina de trigo",
+          "categoria": "grano",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "cacao en polvo",
+          "categoria": "condimento",
+          "cantidad": 40,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "nuez",
+          "categoria": "snack",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "vainilla",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharadita",
+          "esencial": false
+        },
+        {
+          "nombre": "sal",
+          "categoria": "condimento",
+          "cantidad": 0.5,
+          "unidad": "cucharadita",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Precalentar el horno a 180°C y engrasar un molde cuadrado de 20x20 cm",
+        "Derretir el chocolate oscuro con la mantequilla a baño maría o microondas",
+        "Batir los huevos con el azúcar hasta obtener una mezcla espumosa y clara",
+        "Incorporar el chocolate derretido y la vainilla a los huevos batidos",
+        "Tamizar la harina, cacao en polvo y sal, agregar a la mezcla en forma envolvente",
+        "Añadir las nueces picadas y mezclar suavemente",
+        "Verter en el molde y hornear 30-35 minutos hasta que los bordes estén firmes pero el centro ligeramente húmedo",
+        "Dejar enfriar completamente antes de cortar en 16 cuadrados"
+      ],
+      "tags": [
+        "postre",
+        "chocolate",
+        "americano",
+        "horneado",
+        "dulce",
+        "brownie"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 265,
+        "proteina_g": 4,
+        "carbohidratos_g": 30,
+        "grasa_g": 15
+      }
+    },
+    {
+      "nombre": "Tacos de Pescado Estilo Baja California",
+      "descripcion_corta": "Tacos con pescado empanizado, repollo y salsa cremosa picante",
+      "origen": "México",
+      "tipo_comida": [
+        "almuerzo",
+        "cena"
+      ],
+      "ocasion": [
+        "fin_semana",
+        "especial"
+      ],
+      "tiempo_total_min": 35,
+      "tiempo_preparacion_min": 20,
+      "tiempo_coccion_min": 15,
+      "dificultad": "media",
+      "porciones": 4,
+      "costo_estimado": "medio",
+      "ingredientes": [
+        {
+          "nombre": "filete de pescado blanco",
+          "categoria": "proteina_animal",
+          "cantidad": 500,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "tortilla de maíz",
+          "categoria": "grano",
+          "cantidad": 12,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "harina",
+          "categoria": "grano",
+          "cantidad": 100,
+          "unidad": "g",
+          "esencial": true
+        },
+        {
+          "nombre": "repollo morado",
+          "categoria": "vegetal",
+          "cantidad": 200,
+          "unidad": "g",
+          "esencial": false
+        },
+        {
+          "nombre": "mayonesa",
+          "categoria": "condimento",
+          "cantidad": 100,
+          "unidad": "ml",
+          "esencial": false
+        },
+        {
+          "nombre": "limón",
+          "categoria": "fruta",
+          "cantidad": 2,
+          "unidad": "unidades",
+          "esencial": true
+        },
+        {
+          "nombre": "chile chipotle",
+          "categoria": "condimento",
+          "cantidad": 1,
+          "unidad": "cucharada",
+          "esencial": false
+        },
+        {
+          "nombre": "cerveza",
+          "categoria": "bebida",
+          "cantidad": 150,
+          "unidad": "ml",
+          "esencial": false
+        },
+        {
+          "nombre": "aceite",
+          "categoria": "condimento",
+          "cantidad": 500,
+          "unidad": "ml",
+          "esencial": true
+        }
+      ],
+      "pasos": [
+        "Cortar el pescado en tiras de 2 cm de ancho y sazonar con sal y jugo de limón",
+        "Preparar la salsa mezclando mayonesa, chipotle y jugo de limón",
+        "Rallar finamente el repollo morado y mezclar con limón",
+        "Hacer una pasta con harina, cerveza, sal y pimienta para el empanizado",
+        "Calentar aceite abundante en una sartén honda",
+        "Pasar las tiras de pescado por la pasta y freír hasta dorar 3-4 minutos",
+        "Calentar las tortillas en comal",
+        "Armar los tacos con pescado, repollo y salsa cremosa"
+      ],
+      "tags": [
+        "mexicana",
+        "mariscos",
+        "frito",
+        "picante",
+        "costero"
+      ],
+      "info_nutricional_aprox": {
+        "calorias_porcion": 520,
+        "proteina_g": 32,
+        "carbohidratos_g": 45,
+        "grasa_g": 22
+      }
+    }
+  ]
+}
