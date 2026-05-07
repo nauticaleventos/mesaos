@@ -1,17 +1,22 @@
+import { useState } from 'react'
+import { supabase } from '../../lib/supabase'
 import type { Recipe } from '../../store/recipesStore'
 
 interface Props {
-  receta: Recipe
-  onBack: () => void
+  receta:       Recipe
+  onBack:       () => void
+  memberId?:    string
+  memberRating?: number
+  onRated?:     () => void
 }
 
-const DIFICULTAD_COLOR = {
+const DIFICULTAD_COLOR: Record<string, string> = {
   facil:   'bg-green-50 text-green-700 border-green-200',
   media:   'bg-yellow-50 text-yellow-700 border-yellow-200',
   dificil: 'bg-red-50 text-red-700 border-red-200',
 }
 
-export default function RecetaDetalle({ receta: r, onBack }: Props) {
+export default function RecetaDetalle({ receta: r, onBack, memberId, memberRating, onRated }: Props) {
   return (
     <div className="min-h-screen pb-8 max-w-lg mx-auto">
       <div className="sticky top-0 bg-bg/95 backdrop-blur px-4 pt-6 pb-3 z-10">
@@ -22,6 +27,7 @@ export default function RecetaDetalle({ receta: r, onBack }: Props) {
       </div>
 
       <div className="px-4 flex flex-col gap-5">
+
         {/* Header */}
         <div>
           <h1 className="text-2xl font-serif font-semibold text-text">{r.nombre}</h1>
@@ -44,9 +50,9 @@ export default function RecetaDetalle({ receta: r, onBack }: Props) {
         {r.info_nutricional_aprox && (
           <div className="card grid grid-cols-4 gap-2 text-center">
             <NutriItem label="Calorías" value={r.info_nutricional_aprox.calorias_porcion} unit="kcal" />
-            <NutriItem label="Proteína" value={r.info_nutricional_aprox.proteina_g} unit="g" />
-            <NutriItem label="Carbos" value={r.info_nutricional_aprox.carbohidratos_g} unit="g" />
-            <NutriItem label="Grasa" value={r.info_nutricional_aprox.grasa_g} unit="g" />
+            <NutriItem label="Proteína" value={r.info_nutricional_aprox.proteina_g}       unit="g"    />
+            <NutriItem label="Carbos"   value={r.info_nutricional_aprox.carbohidratos_g}  unit="g"    />
+            <NutriItem label="Grasa"    value={r.info_nutricional_aprox.grasa_g}          unit="g"    />
           </div>
         )}
 
@@ -89,13 +95,89 @@ export default function RecetaDetalle({ receta: r, onBack }: Props) {
             ))}
           </div>
         )}
+
+        {/* Rating */}
+        {memberId && (
+          <RatingSection
+            recipeId={r.id}
+            memberId={memberId}
+            initial={memberRating}
+            onSaved={onRated}
+          />
+        )}
       </div>
     </div>
   )
 }
 
+// ── RatingSection ────────────────────────────────────────────────────────────
+const STAR_LABELS = ['', 'No me gustó', 'Regular', 'Estuvo bien', 'Muy buena', '¡Deliciosa!']
+
+function RatingSection({ recipeId, memberId, initial, onSaved }: {
+  recipeId: string
+  memberId: string
+  initial?: number
+  onSaved?: () => void
+}) {
+  const [stars,  setStars]  = useState(initial ?? 0)
+  const [hover,  setHover]  = useState(0)
+  const [saving, setSaving] = useState(false)
+  const [saved,  setSaved]  = useState(false)
+
+  const save = async (rating: number) => {
+    if (saving) return
+    setSaving(true)
+    await supabase.from('recipe_reactions').upsert({
+      recipe_id: recipeId,
+      member_id: memberId,
+      reaction:  'like',
+      rating,
+    }, { onConflict: 'recipe_id,member_id' })
+    setStars(rating)
+    setSaving(false)
+    setSaved(true)
+    onSaved?.()
+    setTimeout(() => setSaved(false), 2500)
+  }
+
+  const active = hover || stars
+
+  return (
+    <div className="card flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-text">Tu valoración</p>
+        {saved && <p className="text-xs text-success">¡Guardada! ✓</p>}
+      </div>
+
+      <div className="flex gap-2">
+        {[1,2,3,4,5].map(s => (
+          <button
+            key={s}
+            onMouseEnter={() => setHover(s)}
+            onMouseLeave={() => setHover(0)}
+            onTouchStart={() => save(s)}
+            onClick={() => save(s)}
+            disabled={saving}
+            className="text-4xl transition-transform hover:scale-110 active:scale-90 disabled:opacity-50">
+            <span className={s <= active ? 'text-yellow-400' : 'text-gray-200'}>★</span>
+          </button>
+        ))}
+      </div>
+
+      <p className="text-xs text-muted min-h-4">
+        {active > 0 ? STAR_LABELS[active] : 'Toca las estrellas para valorar'}
+      </p>
+    </div>
+  )
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function Chip({ children }: { children: React.ReactNode }) {
-  return <span className="px-2 py-0.5 bg-white border border-border text-muted text-xs rounded-full">{children}</span>
+  return (
+    <span className="px-2 py-0.5 bg-white border border-border text-muted text-xs rounded-full">
+      {children}
+    </span>
+  )
 }
 
 function NutriItem({ label, value, unit }: { label: string; value: number; unit: string }) {
