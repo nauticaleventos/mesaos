@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase'
 import { useRecipesStore, type Recipe } from '../../store/recipesStore'
 import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore, type FridgeItem } from '../../store/fridgeStore'
-import CocinarMode from '../../components/recipes/CocinarMode'
 
 type Tab = 'ingredientes' | 'pasos' | 'nutricion'
 
@@ -36,7 +35,6 @@ export default function RecetaPage() {
 
   const [recipe, setRecipe]           = useState<Recipe | null>(null)
   const [activeTab, setActiveTab]     = useState<Tab>('ingredientes')
-  const [cooking, setCooking]         = useState(false)
   const [memberRating, setMemberRating] = useState<number | undefined>()
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [toastMsg, setToastMsg]       = useState<string | null>(null)
@@ -102,17 +100,6 @@ export default function RecetaPage() {
       await navigator.clipboard.writeText(url)
       showToast('🔗 Enlace copiado')
     }
-  }
-
-  const handleCookingFinished = async (rating: number) => {
-    if (memberId && id) {
-      await supabase.from('recipe_reactions').upsert({
-        recipe_id: id, member_id: memberId, reaction: 'like', rating,
-      }, { onConflict: 'recipe_id,member_id' })
-      setMemberRating(rating)
-      showToast(`⭐ Valoración guardada (${rating}/5)`)
-    }
-    setCooking(false)
   }
 
   const handleAddToList = () => showToast('🛒 Lista de mercado próximamente')
@@ -319,15 +306,6 @@ export default function RecetaPage() {
         </div>
       )}
 
-      {/* Botón flotante "Empezar a cocinar" */}
-      <div className="fixed bottom-0 left-0 right-0 px-4 pb-6 pt-3 bg-gradient-to-t from-bg to-transparent z-10 max-w-lg mx-auto">
-        <button
-          onClick={() => setCooking(true)}
-          className="w-full py-4 rounded-2xl bg-accent text-white font-semibold text-base shadow-lg hover:bg-accent-hover transition-all active:scale-95">
-          🍳 Empezar a cocinar
-        </button>
-      </div>
-
       {/* Toast */}
       {toastMsg && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-text text-bg text-sm px-4 py-2.5 rounded-xl shadow-lg z-30 whitespace-nowrap">
@@ -335,14 +313,6 @@ export default function RecetaPage() {
         </div>
       )}
 
-      {/* Modo cocinar */}
-      {cooking && (
-        <CocinarMode
-          recipe={recipe}
-          onClose={() => setCooking(false)}
-          onFinished={handleCookingFinished}
-        />
-      )}
     </div>
   )
 }
