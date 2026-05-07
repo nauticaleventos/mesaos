@@ -4,8 +4,9 @@ import { useFamilyStore } from '../../store/familyStore'
 import { useRecipesStore, type Recipe } from '../../store/recipesStore'
 import ImportarReceta from '../../components/recipes/ImportarReceta'
 import RecetaDetalle from '../../components/recipes/RecetaDetalle'
+import SwipeRecetas from '../../components/recipes/SwipeRecetas'
 
-type Vista = 'lista' | 'importar' | 'detalle'
+type Vista = 'lista' | 'importar' | 'detalle' | 'swipe'
 
 const DIFICULTAD_COLOR = {
   facil:  'bg-green-50 text-green-700 border-green-200',
@@ -39,6 +40,10 @@ export default function RecetasPage() {
     const matchTipo = filtroTipo === 'todos' || r.tipo_comida.includes(filtroTipo)
     return matchBusqueda && matchTipo
   })
+
+  if (vista === 'swipe') {
+    return <SwipeRecetas onClose={() => setVista('lista')} />
+  }
 
   if (vista === 'importar') {
     return (
@@ -77,10 +82,16 @@ export default function RecetasPage() {
             <h1 className="text-xl font-serif font-semibold text-text">Recetario</h1>
             <span className="text-muted text-sm">({filtradas.length})</span>
           </div>
-          <button onClick={() => setVista('importar')}
-            className="px-3 py-1.5 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-all">
-            + Agregar
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setVista('swipe')}
+              className="px-3 py-1.5 rounded-xl bg-accent-light text-accent text-sm font-medium hover:bg-accent hover:text-white transition-all">
+              ❤️ Valorar
+            </button>
+            <button onClick={() => setVista('importar')}
+              className="px-3 py-1.5 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-all">
+              + Agregar
+            </button>
+          </div>
         </div>
 
         {/* Búsqueda */}
