@@ -15,6 +15,7 @@ export interface Family {
   id: string
   name: string
   owner_user_id: string
+  healthy_mode_active: boolean
   created_at: string
   updated_at: string
 }
@@ -132,6 +133,7 @@ export const DEFAULT_PERMISSIONS: Record<BaseRole, Record<string, boolean | stri
     cooking_mark_done: true, tasks_assigned: [],
     notifications_operational: true, notifications_summary: false,
     permissions_manage: false, invite_users: false,
+    can_rate_for_members: false,
   },
   contributor: {
     menu_view: false, menu_edit: false, menu_generate_ai: false,
@@ -143,5 +145,6 @@ export const DEFAULT_PERMISSIONS: Record<BaseRole, Record<string, boolean | stri
     cooking_mark_done: false, tasks_assigned: [],
     notifications_operational: false, notifications_summary: false,
     permissions_manage: false, invite_users: false,
+    can_rate_for_members: false,
   },
 }

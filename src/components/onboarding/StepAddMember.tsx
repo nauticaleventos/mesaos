@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useFamilyStore } from '../../store/familyStore'
 import type { FamilyMember } from '../../lib/types'
+import ActividadesList from '../family/ActividadesList'
 
 // Base types con variantes de tono de piel (como WhatsApp)
 const SKIN_TONES = ['', '🏻', '🏼', '🏽', '🏾', '🏿']
@@ -88,6 +89,7 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
   const [loading, setLoading]                 = useState(false)
   const addMember                             = useFamilyStore(s => s.addMember)
   const updateMember                          = useFamilyStore(s => s.updateMember)
+  const members                               = useFamilyStore(s => s.members)
 
   const set = (field: string, value: unknown) =>
     setForm(f => ({ ...f, [field]: value }))
@@ -347,6 +349,14 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
             ))}
           </div>
         </div>
+
+        {/* Porciones */}
+        <PorcionesConfig form={form} set={set} members={members} editingId={editingMember?.id} />
+
+        {/* Actividades semanales */}
+        {editingMember?.id && (
+          <ActividadesSection memberId={editingMember.id} />
+        )}
 
         {/* Comidas del día */}
         <MealsConfig form={form} setForm={setForm} />
@@ -655,6 +665,127 @@ function CustomMacros({ form, set }: { form: MacroForm; set: (f: string, v: unkn
           <p className="text-xs text-muted bg-accent-light rounded-lg px-3 py-2">
             💡 Si ponés calorías sin macros (o al revés), la app completa el resto automáticamente.
           </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Sección Porciones ─────────────────────────────────────────────────────────
+interface PorcionesProps {
+  form:      { is_portion_anchor: boolean; portion_multiplier: number }
+  set:       (field: string, value: unknown) => void
+  members:   FamilyMember[]
+  editingId: string | undefined
+}
+
+function PorcionesConfig({ form, set, members, editingId }: PorcionesProps) {
+  const [open, setOpen] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+
+  const currentAnchor = members.find(m => m.is_portion_anchor && m.id !== editingId)
+
+  const handleAnchorToggle = () => {
+    if (!form.is_portion_anchor && currentAnchor) {
+      setShowConfirm(true)
+    } else {
+      const next = !form.is_portion_anchor
+      set('is_portion_anchor', next)
+      if (next) set('portion_multiplier', 1.0)
+    }
+  }
+
+  const confirmAnchor = () => {
+    set('is_portion_anchor', true)
+    set('portion_multiplier', 1.0)
+    setShowConfirm(false)
+  }
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-text">Porciones</span>
+          {form.is_portion_anchor && (
+            <span className="px-2 py-0.5 bg-accent-light text-accent text-xs rounded-full">⚓ Ancla</span>
+          )}
+          {!form.is_portion_anchor && form.portion_multiplier !== 1.0 && (
+            <span className="px-2 py-0.5 bg-accent-light text-accent text-xs rounded-full">×{form.portion_multiplier}</span>
+          )}
+        </div>
+        <span className="text-muted text-sm">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-2 bg-white flex flex-col gap-4">
+          <p className="text-xs text-muted bg-surface rounded-lg px-3 py-2">
+            Una persona de la familia es la "ancla" de porciones (quien lleva la cuenta nutricional).
+            Los demás comen en proporción: papá puede comer 1.5×, una niña 0.75×.
+            Esto permite servir el mismo plato con porciones distintas sin pesar nada.
+          </p>
+
+          {/* Toggle anchor */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-text">¿Es la persona ancla?</p>
+              <p className="text-xs text-muted">Solo un miembro por familia puede serlo</p>
+            </div>
+            <button type="button" onClick={handleAnchorToggle}
+              className={`w-12 h-6 rounded-full transition-colors relative ${form.is_portion_anchor ? 'bg-accent' : 'bg-gray-200'}`}>
+              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all
+                ${form.is_portion_anchor ? 'left-6' : 'left-0.5'}`} />
+            </button>
+          </div>
+
+          {/* Confirm dialog */}
+          {showConfirm && currentAnchor && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex flex-col gap-2">
+              <p className="text-xs text-yellow-800">
+                Actualmente <strong>{currentAnchor.name}</strong> es el ancla.
+                Si marcás a este miembro, {currentAnchor.name} dejará de serlo.
+              </p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShowConfirm(false)}
+                  className="flex-1 py-1.5 text-xs border border-border rounded-lg text-muted">Cancelar</button>
+                <button type="button" onClick={confirmAnchor}
+                  className="flex-1 py-1.5 text-xs bg-accent text-white rounded-lg font-medium">Confirmar</button>
+              </div>
+            </div>
+          )}
+
+          {/* Multiplicador */}
+          <div className={form.is_portion_anchor ? 'opacity-40 pointer-events-none' : ''}>
+            <label className="input-label">Multiplicador de porción</label>
+            <input type="number" step={0.05} min={0.25} max={3.0}
+              value={form.portion_multiplier}
+              onChange={e => set('portion_multiplier', parseFloat(e.target.value) || 1.0)}
+              disabled={form.is_portion_anchor}
+            />
+            <p className="text-xs text-muted mt-1">
+              Tu plato es la referencia (1.0). Ej: papá come más → 1.5 · niña come menos → 0.75
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Sección Actividades (solo en modo edición) ────────────────────────────────
+function ActividadesSection({ memberId }: { memberId: string }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors">
+        <span className="text-sm font-medium text-text">Actividades semanales</span>
+        <span className="text-muted text-sm">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 pt-2 bg-white">
+          <ActividadesList memberId={memberId} />
         </div>
       )}
     </div>

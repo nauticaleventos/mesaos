@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { supabase } from '../../lib/supabase'
 import { useRecipesStore, type Recipe } from '../../store/recipesStore'
 
 interface Props {
@@ -8,14 +9,17 @@ interface Props {
 }
 
 type Modo = 'elegir' | 'url' | 'manual'
+type Visibility = 'public' | 'private'
 
 export default function ImportarReceta({ familyId, onSaved, onCancel }: Props) {
-  const [modo, setModo]       = useState<Modo>('elegir')
-  const [url, setUrl]         = useState('')
-  const [loading, setLoading] = useState(false)
-  const [preview, setPreview] = useState<Partial<Recipe> | null>(null)
-  const [error, setError]     = useState<string | null>(null)
-  const addRecipe             = useRecipesStore(s => s.addRecipe)
+  const [modo, setModo]             = useState<Modo>('elegir')
+  const [url, setUrl]               = useState('')
+  const [sourceText, setSourceText] = useState('')
+  const [visibility, setVisibility] = useState<Visibility>('public')
+  const [loading, setLoading]       = useState(false)
+  const [preview, setPreview]       = useState<Partial<Recipe> | null>(null)
+  const [error, setError]           = useState<string | null>(null)
+  const addRecipe                   = useRecipesStore(s => s.addRecipe)
 
   const importarDesdeUrl = async () => {
     if (!url.trim()) return
@@ -38,10 +42,16 @@ export default function ImportarReceta({ familyId, onSaved, onCancel }: Props) {
   const guardar = async () => {
     if (!preview) return
     setLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
     const err = await addRecipe({
       ...preview,
-      family_id:      familyId,
-      is_base_recipe: false,
+      family_id:            familyId,
+      is_base_recipe:       false,
+      visibility,
+      created_by_user_id:   user?.id ?? null,
+      created_in_family_id: familyId,
+      source:               sourceText.trim() || (url.trim() || null),
+      is_active_for_menu:   true,
     } as Omit<Recipe, 'id' | 'created_at'>)
     setLoading(false)
     if (err) return setError(err)
@@ -115,6 +125,31 @@ export default function ImportarReceta({ familyId, onSaved, onCancel }: Props) {
             <p className="text-xs text-muted">
               {(preview.ingredientes as { nombre: string }[] ?? []).length} ingredientes · {(preview.pasos as string[] ?? []).length} pasos
             </p>
+
+            {/* Visibilidad */}
+            <div>
+              <label className="input-label text-xs">Visibilidad</label>
+              <div className="flex gap-2">
+                {([['public','🌐 Pública'], ['private','🔒 Solo mi familia']] as [Visibility, string][]).map(([v, label]) => (
+                  <button key={v} type="button" onClick={() => setVisibility(v)}
+                    className={`flex-1 py-2 rounded-xl border-2 text-xs font-medium transition-all
+                      ${visibility === v ? 'border-accent bg-accent-light text-accent' : 'border-border text-muted'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted mt-1">
+                {visibility === 'public' ? 'Otras familias en mesa.os podrán verla.' : 'Solo visible para tu familia.'}
+              </p>
+            </div>
+
+            {/* Fuente */}
+            <div>
+              <label className="input-label text-xs">Fuente (opcional)</label>
+              <input type="text" placeholder="Ej: Abuela Rosa, canal @cocina, libro X..."
+                value={sourceText} onChange={e => setSourceText(e.target.value)} />
+            </div>
+
             <button onClick={guardar} className="btn-primary" disabled={loading}>
               {loading ? 'Guardando...' : 'Guardar en mi recetario'}
             </button>

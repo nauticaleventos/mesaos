@@ -14,6 +14,9 @@ export interface NutricionAprox {
   proteina_g:        number
   carbohidratos_g:   number
   grasa_g:           number
+  sodio_mg?:         number
+  azucar_g?:         number
+  fibra_g?:          number
 }
 
 export interface Recipe {
@@ -39,6 +42,32 @@ export interface Recipe {
   imagen_url:             string | null
   imagen_credito:         { fotografo: string; perfil_url: string } | null
   created_at:             string
+  // Oleada 1 — campos nuevos
+  visibility?:            'private' | 'public'
+  created_by_user_id?:    string | null
+  created_in_family_id?:  string | null
+  source?:                string | null
+  is_active_for_menu?:    boolean
+  perfiles?: {
+    ninos?:                 boolean
+    vegetariana?:           boolean
+    vegana?:                boolean
+    sin_gluten?:            boolean
+    sin_lacteos?:           boolean
+    diabetes_friendly?:     boolean
+    hipertension_friendly?: boolean
+    embarazo_friendly?:     boolean
+    lactancia_friendly?:    boolean
+    adulto_mayor_friendly?: boolean
+  }
+  filtros_nutricionales?: {
+    bajo_sodio?:    boolean
+    alto_proteina?: boolean
+    bajo_carbo?:    boolean
+    alto_fibra?:    boolean
+    bajo_grasa?:    boolean
+    bajo_azucar?:   boolean
+  }
 }
 
 interface RecipesState {

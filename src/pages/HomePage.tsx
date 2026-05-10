@@ -5,8 +5,9 @@ import { useFamilyStore } from '../store/familyStore'
 import { useFridgeStore } from '../store/fridgeStore'
 import { supabase } from '../lib/supabase'
 import { calcularNivelNevera } from '../lib/nivelNevera'
-import type { FamilyMember } from '../lib/types'
+import type { FamilyMember, FamilyUser } from '../lib/types'
 import StepAddMember from '../components/onboarding/StepAddMember'
+import AsistenciaSemanalPanel from '../components/family/AsistenciaSemanalPanel'
 
 export default function HomePage() {
   const navigate                          = useNavigate()
@@ -26,6 +27,26 @@ export default function HomePage() {
   const [inviteLoading, setInviteLoading] = useState(false)
 
   const isOwner = family?.owner_user_id === session?.user?.id
+
+  const [showAsistencia, setShowAsistencia]   = useState(false)
+  const [showSettings, setShowSettings]       = useState(false)
+  const [familyUsers, setFamilyUsers]         = useState<FamilyUser[]>([])
+  const setHealthyMode                        = useFamilyStore(s => s.setHealthyMode)
+
+  useEffect(() => {
+    if (family?.id && isOwner) {
+      supabase.from('family_users').select('*').eq('family_id', family.id)
+        .then(({ data }) => { if (data) setFamilyUsers(data as FamilyUser[]) })
+    }
+  }, [family?.id, isOwner])
+
+  const toggleChefPermission = async (fuId: string, current: boolean) => {
+    const fu = familyUsers.find(f => f.id === fuId)
+    if (!fu) return
+    const newPerms = { ...fu.permissions, can_rate_for_members: !current }
+    await supabase.from('family_users').update({ permissions: newPerms }).eq('id', fuId)
+    setFamilyUsers(fus => fus.map(f => f.id === fuId ? { ...f, permissions: newPerms } : f))
+  }
 
   const generateInvite = async () => {
     if (!family?.id || !session?.user?.id) return
@@ -201,6 +222,82 @@ export default function HomePage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Asistencia semanal */}
+      {members.length > 0 && (
+        <div className="card flex flex-col gap-3">
+          <button type="button" onClick={() => setShowAsistencia(o => !o)}
+            className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📅</span>
+              <span className="font-medium text-text text-sm">Esta semana comen en casa</span>
+            </div>
+            <span className="text-muted text-xs">{showAsistencia ? '▲' : '▼'}</span>
+          </button>
+          {showAsistencia && <AsistenciaSemanalPanel />}
+        </div>
+      )}
+
+      {/* Configuración de familia (owner) */}
+      {isOwner && (
+        <div className="card flex flex-col gap-3">
+          <button type="button" onClick={() => setShowSettings(o => !o)}
+            className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">⚙️</span>
+              <span className="font-medium text-text text-sm">Configuración</span>
+            </div>
+            <span className="text-muted text-xs">{showSettings ? '▲' : '▼'}</span>
+          </button>
+
+          {showSettings && (
+            <div className="flex flex-col gap-4 pt-1">
+              {/* Modo saludable */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-text">🥗 Modo saludable</p>
+                  <p className="text-xs text-muted mt-0.5 max-w-[220px]">
+                    La app prefiere versiones más livianas (air fryer, integrales, menos azúcar) cuando existen.
+                  </p>
+                </div>
+                <button type="button" onClick={() => setHealthyMode(!family?.healthy_mode_active)}
+                  className={`w-12 h-6 rounded-full transition-colors relative flex-shrink-0
+                    ${family?.healthy_mode_active ? 'bg-accent' : 'bg-gray-200'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all
+                    ${family?.healthy_mode_active ? 'left-6' : 'left-0.5'}`} />
+                </button>
+              </div>
+
+              {/* Permisos chef */}
+              {familyUsers.filter(fu => fu.base_role !== 'owner').length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-text mb-2">👨‍🍳 Permisos del chef</p>
+                  <div className="flex flex-col gap-2">
+                    {familyUsers.filter(fu => fu.base_role !== 'owner').map(fu => (
+                      <div key={fu.id} className="flex items-center justify-between p-2.5 bg-surface rounded-xl border border-border">
+                        <div>
+                          <p className="text-sm text-text">{fu.display_name}</p>
+                          <p className="text-xs text-muted capitalize">{fu.base_role}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <p className="text-xs text-muted">Valorar a nombre de miembros</p>
+                          <button type="button"
+                            onClick={() => toggleChefPermission(fu.id, !!fu.permissions.can_rate_for_members)}
+                            className={`w-10 h-5 rounded-full transition-colors relative
+                              ${fu.permissions.can_rate_for_members ? 'bg-accent' : 'bg-gray-200'}`}>
+                            <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all
+                              ${fu.permissions.can_rate_for_members ? 'left-5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
