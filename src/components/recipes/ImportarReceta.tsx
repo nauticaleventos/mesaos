@@ -8,11 +8,9 @@ interface Props {
   onCancel: () => void
 }
 
-type Modo = 'elegir' | 'url' | 'manual'
 type Visibility = 'public' | 'private'
 
 export default function ImportarReceta({ familyId, onSaved, onCancel }: Props) {
-  const [modo, setModo]             = useState<Modo>('elegir')
   const [url, setUrl]               = useState('')
   const [sourceText, setSourceText] = useState('')
   const [visibility, setVisibility] = useState<Visibility>('public')
@@ -50,7 +48,7 @@ export default function ImportarReceta({ familyId, onSaved, onCancel }: Props) {
       visibility,
       created_by_user_id:   user?.id ?? null,
       created_in_family_id: familyId,
-      source:               sourceText.trim() || (url.trim() || null),
+      source:               sourceText.trim() || url.trim() || null,
       is_active_for_menu:   true,
     } as Omit<Recipe, 'id' | 'created_at'>)
     setLoading(false)
@@ -58,117 +56,87 @@ export default function ImportarReceta({ familyId, onSaved, onCancel }: Props) {
     onSaved()
   }
 
-  // Elegir modo
-  if (modo === 'elegir') {
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="card flex flex-col gap-3">
-          <div>
-            <p className="font-semibold text-text text-sm">🔗 Importar desde link</p>
-            <p className="text-muted text-xs mt-0.5">
-              Pega un link de TikTok, Instagram, YouTube o cualquier blog de recetas.
-              Claude extrae el nombre, ingredientes y pasos automáticamente.
-            </p>
-          </div>
-          <button onClick={() => setModo('url')} className="btn-primary">
-            Pegar link de receta
-          </button>
-        </div>
-
-        <button onClick={onCancel} className="btn-ghost">Cancelar</button>
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <label className="input-label">Link de la receta</label>
+        <input
+          type="url"
+          placeholder="https://www.tiktok.com/... o https://..."
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          autoFocus
+        />
+        <p className="text-xs text-muted mt-1">
+          Funciona con TikTok, Instagram, YouTube, blogs de cocina, etc.
+        </p>
       </div>
-    )
-  }
 
-  // Importar por URL
-  if (modo === 'url') {
-    return (
-      <div className="flex flex-col gap-4">
-        <div>
-          <label className="input-label">Link de la receta</label>
-          <input
-            type="url"
-            placeholder="https://www.tiktok.com/... o https://..."
-            value={url}
-            onChange={e => setUrl(e.target.value)}
-            autoFocus
-          />
-          <p className="text-xs text-muted mt-1">
-            Funciona con TikTok, Instagram, YouTube, blogs de cocina, etc.
+      {error && <p className="text-error text-sm">{error}</p>}
+
+      {loading && (
+        <div className="flex items-center gap-3 text-muted text-sm">
+          <div className="flex gap-1">
+            <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+          Claude está leyendo la receta...
+        </div>
+      )}
+
+      {/* Preview */}
+      {preview && (
+        <div className="card flex flex-col gap-3 border-accent">
+          <p className="text-xs text-accent font-medium">✓ Receta detectada — revisa y guarda</p>
+          <p className="font-semibold text-text">{preview.nombre}</p>
+          {preview.descripcion_corta && <p className="text-muted text-xs">{preview.descripcion_corta}</p>}
+          <div className="flex gap-2 flex-wrap text-xs text-muted">
+            {preview.tiempo_total_min && <span>⏱ {preview.tiempo_total_min}min</span>}
+            {preview.dificultad && <span>• {preview.dificultad}</span>}
+            {preview.porciones && <span>• {preview.porciones} porciones</span>}
+          </div>
+          <p className="text-xs text-muted">
+            {(preview.ingredientes as { nombre: string }[] ?? []).length} ingredientes · {(preview.pasos as string[] ?? []).length} pasos
           </p>
-        </div>
 
-        {error && <p className="text-error text-sm">{error}</p>}
-
-        {loading && (
-          <div className="flex items-center gap-3 text-muted text-sm">
-            <div className="flex gap-1">
-              <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '300ms' }} />
+          {/* Visibilidad */}
+          <div>
+            <label className="input-label text-xs">Visibilidad</label>
+            <div className="flex gap-2">
+              {([['public','🌐 Pública'], ['private','🔒 Solo mi familia']] as [Visibility, string][]).map(([v, label]) => (
+                <button key={v} type="button" onClick={() => setVisibility(v)}
+                  className={`flex-1 py-2 rounded-xl border-2 text-xs font-medium transition-all
+                    ${visibility === v ? 'border-accent bg-accent-light text-accent' : 'border-border text-muted'}`}>
+                  {label}
+                </button>
+              ))}
             </div>
-            Claude está leyendo la receta...
-          </div>
-        )}
-
-        {/* Preview */}
-        {preview && (
-          <div className="card flex flex-col gap-3 border-accent">
-            <p className="text-xs text-accent font-medium">✓ Receta detectada — revisa y guarda</p>
-            <p className="font-semibold text-text">{preview.nombre}</p>
-            {preview.descripcion_corta && <p className="text-muted text-xs">{preview.descripcion_corta}</p>}
-            <div className="flex gap-2 flex-wrap text-xs text-muted">
-              {preview.tiempo_total_min && <span>⏱ {preview.tiempo_total_min}min</span>}
-              {preview.dificultad && <span>• {preview.dificultad}</span>}
-              {preview.porciones && <span>• {preview.porciones} porciones</span>}
-            </div>
-            <p className="text-xs text-muted">
-              {(preview.ingredientes as { nombre: string }[] ?? []).length} ingredientes · {(preview.pasos as string[] ?? []).length} pasos
+            <p className="text-xs text-muted mt-1">
+              {visibility === 'public' ? 'Otras familias en mesa.os podrán verla.' : 'Solo visible para tu familia.'}
             </p>
-
-            {/* Visibilidad */}
-            <div>
-              <label className="input-label text-xs">Visibilidad</label>
-              <div className="flex gap-2">
-                {([['public','🌐 Pública'], ['private','🔒 Solo mi familia']] as [Visibility, string][]).map(([v, label]) => (
-                  <button key={v} type="button" onClick={() => setVisibility(v)}
-                    className={`flex-1 py-2 rounded-xl border-2 text-xs font-medium transition-all
-                      ${visibility === v ? 'border-accent bg-accent-light text-accent' : 'border-border text-muted'}`}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-muted mt-1">
-                {visibility === 'public' ? 'Otras familias en mesa.os podrán verla.' : 'Solo visible para tu familia.'}
-              </p>
-            </div>
-
-            {/* Fuente */}
-            <div>
-              <label className="input-label text-xs">Fuente (opcional)</label>
-              <input type="text" placeholder="Ej: Abuela Rosa, canal @cocina, libro X..."
-                value={sourceText} onChange={e => setSourceText(e.target.value)} />
-            </div>
-
-            <button onClick={guardar} className="btn-primary" disabled={loading}>
-              {loading ? 'Guardando...' : 'Guardar en mi recetario'}
-            </button>
           </div>
-        )}
 
-        {!preview && !loading && (
-          <button onClick={importarDesdeUrl} className="btn-primary" disabled={!url.trim()}>
-            Importar receta
+          {/* Fuente */}
+          <div>
+            <label className="input-label text-xs">Fuente (opcional)</label>
+            <input type="text" placeholder="Ej: Abuela Rosa, canal @cocina, libro X..."
+              value={sourceText} onChange={e => setSourceText(e.target.value)} />
+          </div>
+
+          <button onClick={guardar} className="btn-primary" disabled={loading}>
+            {loading ? 'Guardando...' : 'Guardar en mi recetario'}
           </button>
-        )}
+        </div>
+      )}
 
-        <button onClick={() => { setModo('elegir'); setPreview(null); setError(null) }}
-          className="btn-ghost">
-          Volver
+      {!preview && !loading && (
+        <button onClick={importarDesdeUrl} className="btn-primary" disabled={!url.trim()}>
+          Importar receta
         </button>
-      </div>
-    )
-  }
+      )}
 
-  return null
+      <button onClick={onCancel} className="btn-ghost">Cancelar</button>
+    </div>
+  )
 }
