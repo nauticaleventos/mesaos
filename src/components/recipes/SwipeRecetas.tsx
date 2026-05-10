@@ -211,7 +211,7 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
             </p>
           )}
 
-          {/* Tarjeta draggable */}
+          {/* Tarjeta draggable — botones de acción están dentro de RecipeCard */}
           <div
             style={cardStyle}
             className="w-full active:cursor-grabbing"
@@ -229,24 +229,11 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
               dragX={dragX}
               dragY={dragY}
               onStarTap={handleStarTap}
+              onDislike={() => !saving && triggerLeave('left')}
+              onBookmark={() => !saving && triggerLeave('up')}
+              onLike={() => !saving && triggerLeave('right')}
             />
           </div>
-
-          {/* Botones: solo X y Bookmark */}
-          <div className="flex items-center justify-center gap-8">
-            <ActionBtn onClick={() => triggerLeave('left')} disabled={saving} size="lg"
-              className="border-red-400 text-red-500 hover:bg-red-50">
-              ✗
-            </ActionBtn>
-            <ActionBtn onClick={() => triggerLeave('up')} disabled={saving} size="lg"
-              className="border-blue-300 text-blue-500 hover:bg-blue-50">
-              🔖
-            </ActionBtn>
-          </div>
-
-          <p className="text-xs text-muted text-center">
-            ← no me gusta · 🔖 guardar para probar · ⭐ toca las estrellas de la tarjeta
-          </p>
         </div>
       )}
     </>
@@ -291,17 +278,5 @@ export default function SwipeRecetas({ onClose, embedded = false, memberId: exte
           onClose={() => { setShowModal(false); setDragX(0); setDragY(0) }} />
       )}
     </div>
-  )
-}
-
-function ActionBtn({ onClick, disabled, size, className, children }: {
-  onClick: () => void; disabled?: boolean; size: 'md' | 'lg'; className: string; children: React.ReactNode
-}) {
-  const dim = size === 'lg' ? 'w-16 h-16 text-2xl' : 'w-11 h-11 text-lg'
-  return (
-    <button onClick={onClick} disabled={disabled}
-      className={`${dim} rounded-full bg-white border-2 flex items-center justify-center shadow-md transition-all active:scale-90 disabled:opacity-40 ${className}`}>
-      {children}
-    </button>
   )
 }
