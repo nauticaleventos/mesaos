@@ -71,15 +71,21 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   // ── Guardar configuración ───────────────────────────────────────────────────
   saveConfig: async (familyId, patch) => {
     const current = get().config
-    const updated = { ...current, ...patch, family_id: familyId }
+    // Actualizar estado localmente de inmediato (UX optimista)
+    const optimistic = { ...current, ...patch, family_id: familyId } as MenuConfig
+    set({ config: optimistic })
 
-    const { data, error } = await supabase
+    // Persistir en BD — excluir id vacío para que Supabase lo genere
+    const { id, ...rest } = optimistic
+    const upsertData = id ? optimistic : { ...rest }
+
+    const { data } = await supabase
       .from('menu_config')
-      .upsert({ ...updated }, { onConflict: 'family_id' })
+      .upsert(upsertData, { onConflict: 'family_id' })
       .select()
       .single()
 
-    if (!error && data) set({ config: data as MenuConfig })
+    if (data) set({ config: data as MenuConfig })
   },
 
   // ── Cargar menú de la semana actual ────────────────────────────────────────
