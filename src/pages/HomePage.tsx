@@ -179,27 +179,35 @@ export default function HomePage() {
 
                   {/* Condiciones médicas */}
                   {m.conditions.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
+                    <div className="flex flex-wrap gap-1.5 mt-2">
                       {m.conditions.map(c => (
-                        <span key={c} className="px-2 py-0.5 bg-red-50 text-error text-xs rounded-full border border-red-200">
+                        <span key={c} className="flex items-center gap-1 px-3 py-1.5 bg-red-50 border border-red-200 rounded-full text-xs font-medium" style={{ color: '#C84B31' }}>
                           ⚕️ {c}
                         </span>
                       ))}
                     </div>
                   )}
 
-                  {/* Alergias */}
+                  {/* Alergias — chips grandes */}
                   {m.allergies.length > 0 && (
-                    <p className="text-xs text-muted mt-1.5">
-                      🚫 <span className="text-error">Alérgico a:</span> {m.allergies.join(', ')}
-                    </p>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {m.allergies.map(a => (
+                        <span key={a} className="flex items-center gap-1 px-3 py-1.5 bg-red-50 border border-red-300 rounded-full text-xs font-semibold" style={{ color: '#C84B31' }}>
+                          ⚠️ {a}
+                        </span>
+                      ))}
+                    </div>
                   )}
 
-                  {/* Prohibidos */}
+                  {/* Prohibidos — chips grises */}
                   {m.prohibited.length > 0 && (
-                    <p className="text-xs text-muted mt-1">
-                      ❌ No come: {m.prohibited.join(', ')}
-                    </p>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {m.prohibited.map(p => (
+                        <span key={p} className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-full text-xs font-medium text-muted">
+                          🚫 {p}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -304,53 +312,66 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Nevera — card completo con estado */}
-      <button onClick={() => navigate('/nevera')}
-        className="card w-full text-left flex flex-col gap-3 hover:border-accent transition-all active:scale-95">
-        <div className="flex items-center justify-between min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <Refrigerator size={20} className="text-accent flex-shrink-0" />
-            <span className="font-semibold text-text truncate">Mi Nevera</span>
+      {/* Nevera — card consolidada */}
+      {items.length === 0 ? (
+        /* Nevera vacía — una sola card limpia */
+        <div className="card flex flex-col items-center gap-4 py-6 text-center">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+            style={{ background: 'rgba(231,111,81,0.1)' }}>
+            <Refrigerator size={32} color="#E76F51" />
           </div>
-          <span className="text-xs text-muted flex-shrink-0 ml-2">{items.length} {items.length !== 1 ? 'items' : 'item'}</span>
+          <div>
+            <p className="font-semibold text-text">Tu nevera está vacía 😬</p>
+            {nivel.categoriasFaltantes.length > 0 && (
+              <p className="text-muted text-sm mt-1">
+                Te faltan: {nivel.categoriasFaltantes.join(', ')}
+              </p>
+            )}
+          </div>
+          <button onClick={() => navigate('/nevera')} className="btn-primary max-w-xs">
+            + Agregar productos
+          </button>
         </div>
-
-        {/* Barra de nivel */}
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-text">{nivel.resumen}</span>
-            <span className="text-sm font-semibold"
-              style={{ color: nivel.porcentaje >= 75 ? '#22c55e' : nivel.porcentaje >= 50 ? '#4a7c59' : nivel.porcentaje >= 25 ? '#e8a020' : '#ef4444' }}>
-              {nivel.porcentaje}%
-            </span>
+      ) : (
+        /* Nevera con contenido */
+        <button onClick={() => navigate('/nevera')}
+          className="card w-full text-left flex flex-col gap-3 hover:border-accent transition-all active:scale-95">
+          <div className="flex items-center justify-between min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <Refrigerator size={20} className="text-accent flex-shrink-0" />
+              <span className="font-semibold text-text truncate">Mi Nevera</span>
+            </div>
+            <span className="text-xs text-muted flex-shrink-0 ml-2">{items.length} {items.length !== 1 ? 'items' : 'item'}</span>
           </div>
-          <div className="w-full bg-border rounded-full h-2">
-            <div className="h-2 rounded-full transition-all duration-500"
-              style={{
-                width: `${nivel.porcentaje}%`,
-                backgroundColor: nivel.porcentaje >= 75 ? '#22c55e'
-                  : nivel.porcentaje >= 50 ? '#4a7c59'
-                  : nivel.porcentaje >= 25 ? '#e8a020'
-                  : '#ef4444'
-              }} />
-          </div>
-        </div>
 
-        {/* Alertas */}
-        {nivel.alertasVencimiento > 0 && (
-          <p className="text-xs text-error">
-            ⚠️ {nivel.alertasVencimiento} alimento{nivel.alertasVencimiento > 1 ? 's' : ''} por vencer
-          </p>
-        )}
-        {nivel.categoriasFaltantes.length > 0 && nivel.porcentaje < 75 && (
-          <p className="text-xs text-muted">
-            Para el mercado: <span className="text-text">{nivel.categoriasFaltantes.join(', ')}</span>
-          </p>
-        )}
-        {nivel.porcentaje >= 75 && (
-          <p className="text-xs text-success">Nevera completa — podés relajarte 😌</p>
-        )}
-      </button>
+          {/* Barra de nivel */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-text">{nivel.resumen}</span>
+              <span className="text-sm font-semibold"
+                style={{ color: nivel.porcentaje >= 75 ? '#6B7F39' : nivel.porcentaje >= 50 ? '#6B7F39' : nivel.porcentaje >= 25 ? '#E8B547' : '#C84B31' }}>
+                {nivel.porcentaje}%
+              </span>
+            </div>
+            <div className="w-full rounded-full h-2" style={{ background: 'rgba(44,44,42,0.08)' }}>
+              <div className="h-2 rounded-full transition-all duration-500"
+                style={{
+                  width: `${nivel.porcentaje}%`,
+                  backgroundColor: nivel.porcentaje >= 50 ? '#6B7F39' : nivel.porcentaje >= 25 ? '#E8B547' : '#C84B31'
+                }} />
+            </div>
+          </div>
+
+          {nivel.alertasVencimiento > 0 && (
+            <p className="text-xs text-error">
+              ⚠️ {nivel.alertasVencimiento} alimento{nivel.alertasVencimiento > 1 ? 's' : ''} por vencer
+            </p>
+          )}
+          {nivel.porcentaje >= 75 && (
+            <p className="text-xs" style={{ color: '#6B7F39' }}>Nevera completa — podés relajarte 😌</p>
+          )}
+        </button>
+      )}
 
 
       {/* Modal invitación */}
