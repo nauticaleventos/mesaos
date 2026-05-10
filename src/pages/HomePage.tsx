@@ -247,7 +247,7 @@ export default function HomePage() {
             </div>
             <span className="text-muted text-xs">{showAsistencia ? '▲' : '▼'}</span>
           </button>
-          {showAsistencia && <AsistenciaSemanalPanel />}
+          {showAsistencia && family?.id && <AsistenciaSemanalPanel familyId={family.id} />}
         </div>
       )}
 

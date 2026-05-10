@@ -60,16 +60,25 @@ export interface FridgeItemMin {
   name: string
 }
 
+/** Asistencia granular: quién come en un slot específico */
+export interface SlotAttendance {
+  dayOfWeek:          number
+  mealType:           MealType
+  memberIds:          string[]
+  totalServings:      number
+  guestRestrictions:  string[]   // restricciones detectadas en notas de invitados
+}
+
 export interface AlgorithmInput {
-  config:           MenuConfig
-  activeMembers:    FamilyMember[]
-  totalServings:    number
-  fridgeItems:      FridgeItemMin[]
-  allRecipes:       RecipeForMenu[]
-  suggestions:      SuggestionData[]
-  reactions:        ReactionData[]
-  recentRecipeIds:  Set<string>   // últimas 2 semanas
-  healthyMode:      boolean
+  config:          MenuConfig
+  allMembers:      FamilyMember[]
+  slotAttendance:  SlotAttendance[]   // asistencia por día/comida
+  fridgeItems:     FridgeItemMin[]
+  allRecipes:      RecipeForMenu[]
+  suggestions:     SuggestionData[]
+  reactions:       ReactionData[]
+  recentRecipeIds: Set<string>
+  healthyMode:     boolean
 }
 
 export interface MenuSlot {
@@ -197,83 +206,81 @@ function calcularScore(
 // ── Función principal ─────────────────────────────────────────────────────────
 
 export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
-  const { config, activeMembers, totalServings, allRecipes } = input
-  const activeMemberIds = new Set(activeMembers.map(m => m.id!))
+  const { config, allMembers, slotAttendance, allRecipes } = input
 
-  // Pre-filtrar recetas: solo las compatibles con AL MENOS un miembro
-  // (las incompatibles con algunos miembros generarán alternativas)
-  const compatibleConTodos = allRecipes.filter(r =>
-    activeMembers.every(m => esCompatibleConMiembro(r, m))
-  )
-  const compatibleConAlguno = allRecipes.filter(r =>
-    activeMembers.some(m => esCompatibleConMiembro(r, m))
-  )
-
-  const mealTypes: MealType[] = []
-  if (config.planear_desayuno) mealTypes.push('desayuno')
-  if (config.planear_almuerzo) mealTypes.push('almuerzo')
-  if (config.planear_cena)     mealTypes.push('cena')
-  if (config.planear_snacks)   mealTypes.push('snack')
-
-  const result: MenuSlot[] = []
-  const usedThisWeek = new Set<string>()
-  let proteinDaysUsed = 0  // días con proteína animal esta semana
+  const result:       MenuSlot[] = []
+  const usedThisWeek             = new Set<string>()
+  let proteinDaysUsed            = 0
 
   for (let day = 1; day <= 7; day++) {
-    const isDayFinde = day >= 6  // 6=Sab, 7=Dom
+    const isDayFinde = day >= 6
+
+    const mealTypes: MealType[] = []
+    if (config.planear_desayuno) mealTypes.push('desayuno')
+    if (config.planear_almuerzo) mealTypes.push('almuerzo')
+    if (config.planear_cena)     mealTypes.push('cena')
+    if (config.planear_snacks)   mealTypes.push('snack')
 
     for (const tipo of mealTypes) {
-      // ── Buscar receta principal (compatible con todos) ──────────────────────
-      let bestScore = -Infinity
+      // Obtener asistencia específica para este día/comida
+      const slot = slotAttendance.find(s => s.dayOfWeek === day && s.mealType === tipo)
+      const slotMemberIds  = slot?.memberIds  ?? allMembers.map(m => m.id!)
+      const slotServings   = slot?.totalServings ?? allMembers.length
+      const slotMembers    = allMembers.filter(m => slotMemberIds.includes(m.id!))
+      const activeMemberIds= new Set(slotMemberIds)
+
+      // Si no hay nadie en este slot, saltar
+      if (slotServings === 0 || slotMembers.length === 0) continue
+
+      // Restricciones extra de invitados (por notas)
+      const guestRestrictions = slot?.guestRestrictions ?? []
+
+      // Filtrar recetas compatibles con los miembros presentes en este slot
+      const compatibleConTodos = allRecipes.filter(r => {
+        if (!slotMembers.every(m => esCompatibleConMiembro(r, m))) return false
+        // Aplicar restricciones de invitados
+        if (guestRestrictions.includes('vegetariana') && !r.perfiles?.vegetariana) return false
+        if (guestRestrictions.includes('sin_gluten')  && !r.filtros_nutricionales?.sin_gluten)  return false
+        if (guestRestrictions.includes('sin_lacteos') && !r.filtros_nutricionales?.sin_lacteos) return false
+        return true
+      })
+      const compatibleConAlguno = allRecipes.filter(r =>
+        slotMembers.some(m => esCompatibleConMiembro(r, m))
+      )
+
+      // Buscar mejor receta
+      let bestScore  = -Infinity
       let bestRecipe: RecipeForMenu | null = null
 
       for (const r of compatibleConTodos) {
         const score = calcularScore(r, input, usedThisWeek, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
         if (score > bestScore) { bestScore = score; bestRecipe = r }
       }
-
-      // Si no hay ninguna compatible con todos, buscar entre los compatibles con alguno
       if (!bestRecipe || bestScore < 0) {
         for (const r of compatibleConAlguno) {
           const score = calcularScore(r, input, usedThisWeek, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
           if (score > bestScore) { bestScore = score; bestRecipe = r }
         }
       }
-
-      if (!bestRecipe) continue  // sin candidatos — slot vacío
+      if (!bestRecipe) continue
 
       usedThisWeek.add(bestRecipe.id)
       if (tieneProteinaAnimal(bestRecipe)) proteinDaysUsed++
 
-      // ── Alternativas para miembros incompatibles ────────────────────────────
+      // Alternativas para miembros incompatibles
       const alternativas: MenuSlot['alternativas'] = []
-
-      for (const m of activeMembers) {
+      for (const m of slotMembers) {
         if (esCompatibleConMiembro(bestRecipe, m)) continue
-
-        // Buscar alternativa para este miembro
-        let altScore = -Infinity
-        let altRecipe: RecipeForMenu | null = null
-
+        let altScore = -Infinity, altRecipe: RecipeForMenu | null = null
         for (const r of allRecipes) {
-          if (r.id === bestRecipe.id) continue
-          if (!esCompatibleConMiembro(r, m)) continue
+          if (r.id === bestRecipe.id || !esCompatibleConMiembro(r, m)) continue
           const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed, new Set([m.id!]), isDayFinde, tipo)
           if (s > altScore) { altScore = s; altRecipe = r }
         }
-
-        if (altRecipe) {
-          alternativas.push({ memberId: m.id!, recipe: altRecipe })
-        }
+        if (altRecipe) alternativas.push({ memberId: m.id!, recipe: altRecipe })
       }
 
-      result.push({
-        dayOfWeek:  day,
-        tipo,
-        principal:  bestRecipe,
-        servings:   totalServings,
-        alternativas,
-      })
+      result.push({ dayOfWeek: day, tipo, principal: bestRecipe, servings: slotServings, alternativas })
     }
   }
 

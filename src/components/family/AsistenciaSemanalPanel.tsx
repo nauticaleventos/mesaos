@@ -1,76 +1,222 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { Plus, X } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 import { useFamilyStore } from '../../store/familyStore'
+import { getMondayOfWeek, DAY_NAMES, DAY_NAMES_FULL } from '../../lib/motorMenu'
 
-export default function AsistenciaSemanalPanel() {
-  const { family, members, attendance, loadAttendance, setMemberActive, setGuestsExtra } = useFamilyStore()
+const MEAL_LABELS: Record<string, string> = {
+  desayuno: '☀️ Desayuno',
+  almuerzo: '🍽️ Almuerzo',
+  cena:     '🌙 Cena',
+  snack:    '🍎 Snack',
+}
+const ALL_MEALS = ['desayuno', 'almuerzo', 'cena', 'snack']
 
-  useEffect(() => {
-    if (family?.id) loadAttendance(family.id)
-  }, [family?.id, loadAttendance])
+interface AbsenceRow { id: string; member_id: string; day_of_week: number; meal_type: string }
+interface GuestRow   { id: string; day_of_week: number; meal_type: string; cantidad: number; notas: string | null }
 
-  const getAttendance = (memberId: string) =>
-    attendance.find(a => a.member_id === memberId)
+export default function AsistenciaSemanalPanel({ familyId }: { familyId: string }) {
+  const members    = useFamilyStore(s => s.members)
+  const weekStart  = getMondayOfWeek()
 
-  const isActive = (memberId: string) => {
-    const a = getAttendance(memberId)
-    return a ? a.is_active : true // default: todos activos
+  const [day, setDay]             = useState(getCurrentDay)
+  const [absences, setAbsences]   = useState<AbsenceRow[]>([])
+  const [guests, setGuests]       = useState<GuestRow[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [guestCtx, setGuestCtx]   = useState<{ day: number; meal: string } | null>(null)
+
+  useEffect(() => { loadData() }, [familyId, weekStart])
+
+  async function loadData() {
+    setLoading(true)
+    const [{ data: abs }, { data: gst }] = await Promise.all([
+      supabase.from('weekly_attendance').select('id, member_id, day_of_week, meal_type')
+        .eq('family_id', familyId).eq('week_start', weekStart).eq('is_eating', false),
+      supabase.from('weekly_guests').select('*')
+        .eq('family_id', familyId).eq('week_start', weekStart),
+    ])
+    setAbsences((abs ?? []) as AbsenceRow[])
+    setGuests((gst ?? []) as GuestRow[])
+    setLoading(false)
   }
 
-  const guestsFor = (memberId: string) =>
-    getAttendance(memberId)?.guests_extra ?? 0
+  const isEating = (memberId: string, d: number, meal: string) =>
+    !absences.some(a => a.member_id === memberId && a.day_of_week === d && a.meal_type === meal)
 
-  const totalComensales = members.reduce((sum, m) => {
-    if (!isActive(m.id!)) return sum
-    return sum + 1 + guestsFor(m.id!)
-  }, 0)
+  const toggleEating = async (memberId: string, d: number, meal: string) => {
+    if (isEating(memberId, d, meal)) {
+      // Marcar ausente
+      const { data } = await supabase.from('weekly_attendance')
+        .upsert({ family_id: familyId, week_start: weekStart, member_id: memberId, day_of_week: d, meal_type: meal, is_eating: false },
+          { onConflict: 'family_id,week_start,member_id,day_of_week,meal_type' })
+        .select('id, member_id, day_of_week, meal_type').single()
+      if (data) setAbsences(p => [...p.filter(a => !(a.member_id === memberId && a.day_of_week === d && a.meal_type === meal)), data as AbsenceRow])
+    } else {
+      // Marcar presente: borrar la ausencia
+      const row = absences.find(a => a.member_id === memberId && a.day_of_week === d && a.meal_type === meal)
+      if (row) {
+        await supabase.from('weekly_attendance').delete().eq('id', row.id)
+        setAbsences(p => p.filter(a => a.id !== row.id))
+      }
+    }
+  }
+
+  const dayGuests = (d: number, meal: string) =>
+    guests.filter(g => g.day_of_week === d && g.meal_type === meal)
+
+  const removeGuest = async (id: string) => {
+    await supabase.from('weekly_guests').delete().eq('id', id)
+    setGuests(p => p.filter(g => g.id !== id))
+  }
+
+  const addGuest = async (d: number, meal: string, cantidad: number, notas: string) => {
+    const { data } = await supabase.from('weekly_guests')
+      .insert({ family_id: familyId, week_start: weekStart, day_of_week: d, meal_type: meal, cantidad, notas: notas || null })
+      .select().single()
+    if (data) setGuests(p => [...p, data as GuestRow])
+    setGuestCtx(null)
+  }
+
+  if (loading) return <p className="text-sm text-muted text-center py-4">Cargando…</p>
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-text">Esta semana comen en casa</p>
-        <span className="text-xs bg-accent-light text-accent px-2 py-0.5 rounded-full font-medium">
-          {totalComensales} comensales
-        </span>
+    <div className="flex flex-col gap-4">
+      <p className="text-xs text-muted">
+        Por defecto, todos comen todas las comidas. Desmarcá lo que no aplique.
+      </p>
+
+      {/* Tabs por día */}
+      <div className="flex gap-1 overflow-x-auto -mx-1 px-1 pb-0.5">
+        {DAY_NAMES.slice(1).map((label, i) => (
+          <button key={i} type="button" onClick={() => setDay(i + 1)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all
+              ${day === i + 1 ? 'bg-accent text-white' : 'bg-white border border-border text-muted'}`}>
+            {label}
+          </button>
+        ))}
       </div>
 
-      <div className="flex flex-col gap-2">
-        {members.map(m => {
-          const active = isActive(m.id!)
-          const guests = guestsFor(m.id!)
+      {/* Comidas del día seleccionado */}
+      <div className="flex flex-col gap-5">
+        {ALL_MEALS.map(meal => {
+          const slotGuests = dayGuests(day, meal)
           return (
-            <div key={m.id}
-              className={`flex items-center gap-3 p-3 rounded-xl border transition-all
-                ${active ? 'border-border bg-white' : 'border-border bg-gray-50 opacity-60'}`}>
-              <span className="text-2xl flex-shrink-0">{m.emoji}</span>
-              <p className="flex-1 text-sm font-medium text-text">{m.name}</p>
+            <div key={meal}>
+              <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+                {MEAL_LABELS[meal]}
+              </p>
 
-              {/* Invitados extra */}
-              {active && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted">+</span>
-                  <button type="button" onClick={() => setGuestsExtra(m.id!, Math.max(0, guests - 1))}
-                    className="w-6 h-6 rounded-full border border-border text-muted text-sm flex items-center justify-center hover:border-accent hover:text-accent">−</button>
-                  <span className="text-sm w-4 text-center">{guests}</span>
-                  <button type="button" onClick={() => setGuestsExtra(m.id!, guests + 1)}
-                    className="w-6 h-6 rounded-full border border-border text-muted text-sm flex items-center justify-center hover:border-accent hover:text-accent">+</button>
+              {/* Miembros */}
+              <div className="flex flex-col gap-1.5">
+                {members.map(m => {
+                  const eating = isEating(m.id!, day, meal)
+                  return (
+                    <button key={m.id} type="button"
+                      onClick={() => toggleEating(m.id!, day, meal)}
+                      className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left
+                        ${eating ? 'border-oliva/30 bg-oliva-claro/30' : 'border-border bg-gray-50 opacity-55'}`}>
+                      <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0
+                        ${eating ? 'bg-oliva text-white' : 'border-2 border-border bg-white'}`}>
+                        {eating && <span className="text-[10px] font-bold">✓</span>}
+                      </div>
+                      <span className="text-xl">{m.emoji}</span>
+                      <span className="text-sm font-medium text-text">{m.name}</span>
+                      {!eating && <span className="ml-auto text-xs text-muted">No come</span>}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Invitados */}
+              {slotGuests.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {slotGuests.map(g => (
+                    <span key={g.id}
+                      className="flex items-center gap-1 px-2.5 py-1 bg-accent-light rounded-full text-xs text-accent border border-accent/30">
+                      👥 +{g.cantidad}{g.notas ? ` · ${g.notas}` : ''}
+                      <button onClick={() => removeGuest(g.id)} className="text-accent/70 hover:text-accent ml-0.5">
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ))}
                 </div>
               )}
 
-              {/* Toggle activo */}
-              <button type="button" onClick={() => setMemberActive(m.id!, !active)}
-                className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0
-                  ${active ? 'bg-accent' : 'bg-gray-200'}`}>
-                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all
-                  ${active ? 'left-5' : 'left-0.5'}`} />
+              {/* Agregar invitado */}
+              <button type="button" onClick={() => setGuestCtx({ day, meal })}
+                className="mt-2 flex items-center gap-1 text-xs text-accent font-medium hover:opacity-80 transition-opacity">
+                <Plus size={13} /> Agregar invitado a esta comida
               </button>
             </div>
           )
         })}
       </div>
 
-      <p className="text-xs text-muted">
-        Invitados extra se suman al total de porciones de la semana.
-      </p>
+      {/* Modal de invitado */}
+      {guestCtx && (
+        <GuestModal
+          day={guestCtx.day}
+          meal={guestCtx.meal}
+          onConfirm={addGuest}
+          onClose={() => setGuestCtx(null)}
+        />
+      )}
     </div>
   )
+}
+
+// ── Modal invitado ────────────────────────────────────────────────────────────
+function GuestModal({ day, meal, onConfirm, onClose }: {
+  day:       number
+  meal:      string
+  onConfirm: (d: number, m: string, c: number, n: string) => void
+  onClose:   () => void
+}) {
+  const [cantidad, setCantidad] = useState(1)
+  const [notas, setNotas]       = useState('')
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 px-4 pb-8"
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="card w-full max-w-sm flex flex-col gap-4">
+        <div>
+          <p className="font-semibold text-text">Agregar invitado</p>
+          <p className="text-muted text-xs mt-0.5">
+            {DAY_NAMES_FULL[day]} · {MEAL_LABELS[meal]}
+          </p>
+        </div>
+
+        <div>
+          <label className="input-label">¿Cuántas personas?</label>
+          <div className="flex items-center gap-5 mt-1">
+            <button onClick={() => setCantidad(c => Math.max(1, c - 1))}
+              className="w-10 h-10 rounded-xl border border-border text-xl flex items-center justify-center hover:bg-gray-50">−</button>
+            <span className="text-2xl font-semibold text-text w-6 text-center">{cantidad}</span>
+            <button onClick={() => setCantidad(c => c + 1)}
+              className="w-10 h-10 rounded-xl border border-border text-xl flex items-center justify-center hover:bg-gray-50">+</button>
+          </div>
+        </div>
+
+        <div>
+          <label className="input-label">Notas (opcional)</label>
+          <input type="text" value={notas} onChange={e => setNotas(e.target.value)}
+            placeholder="Mi suegra, vegetariana" />
+          <p className="text-xs text-muted mt-1">
+            Mencioná restricciones ("vegetariana", "sin gluten", "diabética") y las detectamos automáticamente.
+          </p>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose} className="btn-ghost flex-1 !py-2.5">Cancelar</button>
+          <button onClick={() => onConfirm(day, meal, cantidad, notas)}
+            className="btn-primary flex-1 !py-2.5">Agregar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function getCurrentDay(): number {
+  const d = new Date().getDay()  // 0=Dom
+  return d === 0 ? 7 : d        // 1=Lun..7=Dom
 }

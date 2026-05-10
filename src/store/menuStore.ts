@@ -137,31 +137,58 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       if (!config) return 'Configuración no cargada'
       set({ progress: 5 })
 
-      // 2. Miembros activos esta semana
-      const { data: attendance } = await supabase
-        .from('weekly_attendance')
-        .select('member_id, is_active, guests_extra, family_members(*)')
-        .eq('family_id', familyId)
-        .eq('week_start', weekStart)
+      // 2. Todos los miembros + asistencia granular + invitados
+      const [{ data: allMembersRaw }, { data: absences }, { data: guestRows }] = await Promise.all([
+        supabase.from('family_members').select('*').eq('family_id', familyId),
+        supabase.from('weekly_attendance').select('member_id, day_of_week, meal_type')
+          .eq('family_id', familyId).eq('week_start', weekStart).eq('is_eating', false),
+        supabase.from('weekly_guests').select('day_of_week, meal_type, cantidad, notas')
+          .eq('family_id', familyId).eq('week_start', weekStart),
+      ])
 
-      const { data: allMembersRaw } = await supabase
-        .from('family_members')
-        .select('*')
-        .eq('family_id', familyId)
+      const allMembers = (allMembersRaw ?? []) as import('../lib/types').FamilyMember[]
+      const absenceSet = absences ?? []
+      const guests     = guestRows ?? []
 
-      const allMembers = allMembersRaw ?? []
+      // Construir SlotAttendance para cada día × comida activa
+      const mealTypes: import('../lib/motorMenu').MealType[] = []
+      if (config.planear_desayuno) mealTypes.push('desayuno')
+      if (config.planear_almuerzo) mealTypes.push('almuerzo')
+      if (config.planear_cena)     mealTypes.push('cena')
+      if (config.planear_snacks)   mealTypes.push('snack')
 
-      // Si no hay registros de asistencia, todos los miembros están activos
-      const activeMembers = attendance && attendance.length > 0
-        ? attendance
-            .filter((a: { is_active: boolean }) => a.is_active)
-            .map((a: { family_members: unknown }) => a.family_members as { id: string; [key: string]: unknown })
-            .filter(Boolean)
-        : allMembers
+      const slotAttendance: import('../lib/motorMenu').SlotAttendance[] = []
+      for (let day = 1; day <= 7; day++) {
+        for (const meal of mealTypes) {
+          const presentMembers = allMembers.filter(m =>
+            !absenceSet.some((a: { member_id: string; day_of_week: number; meal_type: string }) =>
+              a.member_id === m.id && a.day_of_week === day && a.meal_type === meal
+            )
+          )
+          const slotGuests = guests.filter((g: { day_of_week: number; meal_type: string }) =>
+            g.day_of_week === day && g.meal_type === meal
+          )
+          const guestCount = slotGuests.reduce((s: number, g: { cantidad: number }) => s + g.cantidad, 0)
 
-      const totalGuests = attendance?.reduce((sum: number, a: { is_active: boolean; guests_extra: number }) =>
-        a.is_active ? sum + (a.guests_extra ?? 0) : sum, 0) ?? 0
-      const totalServings = activeMembers.length + totalGuests
+          // Detectar restricciones en notas de invitados
+          const guestRestrictions: string[] = []
+          for (const g of slotGuests as { notas: string | null }[]) {
+            if (!g.notas) continue
+            const n = g.notas.toLowerCase()
+            if (n.includes('vegetarian')) guestRestrictions.push('vegetariana')
+            if (n.includes('sin gluten') || n.includes('celiaco') || n.includes('celiaca')) guestRestrictions.push('sin_gluten')
+            if (n.includes('sin lacteo') || n.includes('lactosa')) guestRestrictions.push('sin_lacteos')
+          }
+
+          slotAttendance.push({
+            dayOfWeek:         day,
+            mealType:          meal as import('../lib/motorMenu').MealType,
+            memberIds:         presentMembers.map(m => m.id!),
+            totalServings:     presentMembers.length + guestCount,
+            guestRestrictions,
+          })
+        }
+      }
       set({ progress: 15 })
 
       // 3. Recetas disponibles (campos mínimos para el algoritmo)
@@ -175,7 +202,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       set({ progress: 35 })
 
       // 4. Sugerencias pendientes
-      const memberIds = activeMembers.map((m: { id: string }) => m.id).filter(Boolean) as string[]
+      const memberIds = allMembers.map(m => m.id!).filter(Boolean)
       const { data: suggestions } = memberIds.length > 0
         ? await supabase.from('recipe_suggestions').select('recipe_id, member_id, status')
             .in('member_id', memberIds).eq('status', 'pending')
@@ -185,7 +212,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       // 5. Reacciones de la familia
       const { data: reactions } = memberIds.length > 0
         ? await supabase.from('recipe_reactions').select('recipe_id, member_id, reaction, rating')
-            .in('member_id', memberIds)
+            .in('member_id', memberIds as string[])
         : { data: [] }
       set({ progress: 55 })
 
@@ -209,12 +236,12 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       // 8. Correr el algoritmo
       const slots: MenuSlot[] = generarMenuSemanal({
         config,
-        activeMembers: activeMembers as { id: string; allergies: string[]; prohibited: string[]; eating_style: string }[] as Parameters<typeof generarMenuSemanal>[0]['activeMembers'],
-        totalServings: Math.max(1, totalServings),
-        fridgeItems:   fridgeItems.map(f => ({ name: f.name })),
+        allMembers,
+        slotAttendance,
+        fridgeItems:    fridgeItems.map(f => ({ name: f.name })),
         allRecipes,
-        suggestions:   suggestions ?? [],
-        reactions:     reactions ?? [],
+        suggestions:    suggestions ?? [],
+        reactions:      reactions ?? [],
         recentRecipeIds,
         healthyMode,
       })
