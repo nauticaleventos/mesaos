@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore, expiryStatus, expiryLabel, type FridgeItem, type NewFridgeItem } from '../../store/fridgeStore'
 import { calcularNivelNevera } from '../../lib/nivelNevera'
+import BottomNav from '../../components/ui/BottomNav'
 import AddItemForm from '../../components/fridge/AddItemForm'
 import PhotoScan from '../../components/fridge/PhotoScan'
 import QuickList from '../../components/fridge/QuickList'
@@ -103,7 +104,8 @@ export default function FridgePage() {
   }
 
   return (
-    <div className="min-h-screen pb-8 max-w-lg mx-auto">
+    <div className="min-h-screen pb-28 max-w-lg mx-auto overflow-x-hidden">
+      <BottomNav />
 
       {/* Header */}
       <div className="sticky top-0 bg-bg/95 backdrop-blur px-4 pt-6 pb-3 z-10">

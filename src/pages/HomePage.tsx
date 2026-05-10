@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Refrigerator, CalendarDays, Settings } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useFamilyStore } from '../store/familyStore'
 import { useFridgeStore } from '../store/fridgeStore'
@@ -8,6 +9,7 @@ import { calcularNivelNevera } from '../lib/nivelNevera'
 import type { FamilyMember, FamilyUser } from '../lib/types'
 import StepAddMember from '../components/onboarding/StepAddMember'
 import AsistenciaSemanalPanel from '../components/family/AsistenciaSemanalPanel'
+import BottomNav from '../components/ui/BottomNav'
 
 export default function HomePage() {
   const navigate                          = useNavigate()
@@ -102,7 +104,8 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8 max-w-lg mx-auto flex flex-col gap-6">
+    <div className="min-h-screen px-4 py-8 pb-28 max-w-lg mx-auto flex flex-col gap-6 overflow-x-hidden">
+      <BottomNav />
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -148,11 +151,11 @@ export default function HomePage() {
         ) : (
           <div className="flex flex-col gap-3">
             {members.map((m: FamilyMember) => (
-              <div key={m.id} className="card flex items-start gap-4">
-                <span className="text-3xl pt-0.5">{m.emoji}</span>
+              <div key={m.id} className="card flex items-start gap-4 overflow-hidden">
+                <span className="text-3xl pt-0.5 flex-shrink-0">{m.emoji}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-text">{m.name}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-text truncate">{m.name}</p>
                     <div className="flex items-center gap-2">
                       <button onClick={() => setEditingMember(m)}
                         className="text-muted hover:text-accent transition-colors text-sm">
@@ -231,7 +234,7 @@ export default function HomePage() {
           <button type="button" onClick={() => setShowAsistencia(o => !o)}
             className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
-              <span className="text-lg">📅</span>
+              <CalendarDays size={18} className="text-accent flex-shrink-0" />
               <span className="font-medium text-text text-sm">Esta semana comen en casa</span>
             </div>
             <span className="text-muted text-xs">{showAsistencia ? '▲' : '▼'}</span>
@@ -246,7 +249,7 @@ export default function HomePage() {
           <button type="button" onClick={() => setShowSettings(o => !o)}
             className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
-              <span className="text-lg">⚙️</span>
+              <Settings size={18} className="text-accent flex-shrink-0" />
               <span className="font-medium text-text text-sm">Configuración</span>
             </div>
             <span className="text-muted text-xs">{showSettings ? '▲' : '▼'}</span>
@@ -304,12 +307,12 @@ export default function HomePage() {
       {/* Nevera — card completo con estado */}
       <button onClick={() => navigate('/nevera')}
         className="card w-full text-left flex flex-col gap-3 hover:border-accent transition-all active:scale-95">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🧊</span>
-            <span className="font-semibold text-text">Mi Nevera</span>
+        <div className="flex items-center justify-between min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <Refrigerator size={20} className="text-accent flex-shrink-0" />
+            <span className="font-semibold text-text truncate">Mi Nevera</span>
           </div>
-          <span className="text-xs text-muted">{items.length} item{items.length !== 1 ? 's' : ''}</span>
+          <span className="text-xs text-muted flex-shrink-0 ml-2">{items.length} {items.length !== 1 ? 'items' : 'item'}</span>
         </div>
 
         {/* Barra de nivel */}
@@ -349,22 +352,6 @@ export default function HomePage() {
         )}
       </button>
 
-      {/* Otros módulos */}
-      <div className="grid grid-cols-3 gap-3">
-        <button onClick={() => navigate('/recetas')}
-          className="card flex flex-col items-center gap-2 py-4 hover:border-accent hover:bg-accent-light transition-all active:scale-95">
-          <span className="text-2xl">📖</span>
-          <span className="text-xs font-medium text-text text-center">Recetario</span>
-        </button>
-        <div className="card flex flex-col items-center gap-2 py-4 opacity-40 cursor-not-allowed">
-          <span className="text-2xl">🍽️</span>
-          <span className="text-xs font-medium text-text text-center">Menú semanal</span>
-        </div>
-        <div className="card flex flex-col items-center gap-2 py-4 opacity-40 cursor-not-allowed">
-          <span className="text-2xl">🛒</span>
-          <span className="text-xs font-medium text-text text-center">Mercado</span>
-        </div>
-      </div>
 
       {/* Modal invitación */}
       {inviteUrl && (

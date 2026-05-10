@@ -7,6 +7,7 @@ import type { FamilyMember } from '../../lib/types'
 import ImportarReceta from '../../components/recipes/ImportarReceta'
 import SwipeRecetas from '../../components/recipes/SwipeRecetas'
 import ShareMemberModal from '../../components/recipes/ShareMemberModal'
+import BottomNav from '../../components/ui/BottomNav'
 
 type Tab   = 'mis' | 'guardadas' | 'descubrir'
 type Vista = 'tabs' | 'importar'
@@ -179,7 +180,8 @@ export default function RecetasPage() {
   const showGuardadas = tab === 'guardadas'
 
   return (
-    <div className="min-h-screen pb-8 max-w-lg mx-auto">
+    <div className="min-h-screen pb-28 max-w-lg mx-auto overflow-x-hidden">
+      <BottomNav />
 
       {/* Header sticky */}
       <div className="sticky top-0 bg-bg/95 backdrop-blur z-10 px-4 pt-5 pb-3 flex flex-col gap-3">
