@@ -11,6 +11,7 @@ import FridgePage     from './pages/fridge/FridgePage'
 import RecetasPage    from './pages/recipes/RecetasPage'
 import RecetaPage     from './pages/recipes/RecetaPage'
 import UnirsePage     from './pages/invite/UnirsePage'
+import MenuPage       from './pages/menu/MenuPage'
 
 function AppRoutes() {
   const { session, loading: authLoading }   = useAuthStore()
@@ -46,6 +47,11 @@ function AppRoutes() {
       } />
       <Route path="/recetas" element={
         !session ? <Navigate to="/login" replace /> : <RecetasPage />
+      } />
+      <Route path="/menu" element={
+        !session ? <Navigate to="/login" replace />
+        : !family  ? <Navigate to="/onboarding" replace />
+        : <MenuPage />
       } />
       {/* Pública — muestra preview si no hay sesión */}
       <Route path="/receta/:id" element={<RecetaPage />} />
