@@ -1,0 +1,21 @@
+{
+  "name": "mesa.os",
+  "short_name": "mesa.os",
+  "description": "Tu asistente de cocina familiar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FBF5E5",
+  "theme_color": "#E76F51",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "share_target": {
+    "action": "/recetas?import=share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text":  "text",
+      "url":   "url"
+    }
+  }
+}

@@ -4,10 +4,10 @@ import { supabase } from '../../lib/supabase'
 import { useFamilyStore } from '../../store/familyStore'
 import { useRecipesStore, type Recipe } from '../../store/recipesStore'
 import type { FamilyMember } from '../../lib/types'
-import ImportarReceta from '../../components/recipes/ImportarReceta'
 import SwipeRecetas from '../../components/recipes/SwipeRecetas'
 import ShareMemberModal from '../../components/recipes/ShareMemberModal'
 import BottomNav from '../../components/ui/BottomNav'
+import ImportModal from '../../components/recipes/import/ImportModal'
 
 type Tab   = 'mis' | 'guardadas' | 'descubrir'
 type Vista = 'tabs' | 'importar'
@@ -159,18 +159,11 @@ export default function RecetasPage() {
 
   if (vista === 'importar') {
     return (
-      <div className="min-h-screen px-4 py-6 max-w-lg mx-auto">
-        <button onClick={() => setVista('tabs')}
-          className="text-muted text-sm mb-5 flex items-center gap-1 hover:text-text transition-colors">
-          ← Volver
-        </button>
-        <h2 className="text-xl font-semibold text-text mb-4">Agregar receta</h2>
-        <ImportarReceta
-          familyId={family?.id ?? ''}
-          onSaved={() => { loadRecipes(family?.id ?? ''); setVista('tabs'); setTab('mis') }}
-          onCancel={() => setVista('tabs')}
-        />
-      </div>
+      <ImportModal
+        familyId={family?.id ?? ''}
+        onSaved={() => { loadRecipes(family?.id ?? ''); setVista('tabs'); setTab('mis') }}
+        onClose={() => setVista('tabs')}
+      />
     )
   }
 
