@@ -22,7 +22,7 @@ export default function UnirsePage() {
   const { token }           = useParams<{ token: string }>()
   const navigate            = useNavigate()
   const { session }         = useAuthStore()
-  const { family, loadFamily } = useFamilyStore()
+  const { loadFamily } = useFamilyStore()
 
   const [state, setState]   = useState<State>('loading')
   const [invite, setInvite] = useState<Invitation | null>(null)
