@@ -66,7 +66,7 @@ export default function FormaFoto({ onExtracted, onBack }: Props) {
           </div>
         )}
 
-        <input ref={fileRef} type="file" accept="image/*" capture="environment"
+        <input ref={fileRef} type="file" accept="image/*"
           className="hidden" onChange={handleChange} />
 
         {error && <div className="p-3 rounded-xl bg-red-50 border border-red-200"><p className="text-sm text-error">{error}</p></div>}
