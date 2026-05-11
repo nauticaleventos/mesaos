@@ -10,14 +10,6 @@ interface Props {
   onGoToFoto?:  () => void
 }
 
-const SOCIAL_DOMAINS = [
-  'instagram.com', 'www.instagram.com',
-  'tiktok.com', 'www.tiktok.com', 'vm.tiktok.com',
-  'facebook.com', 'www.facebook.com', 'fb.com',
-  'youtube.com', 'www.youtube.com', 'youtu.be',
-  'twitter.com', 'x.com',
-]
-
 function detectSocialNetwork(url: string): string | null {
   try {
     const hostname = new URL(url).hostname.toLowerCase()
