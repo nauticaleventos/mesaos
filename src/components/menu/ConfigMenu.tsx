@@ -77,6 +77,28 @@ export default function ConfigMenu({ familyId, healthyMode, onGenerar }: Props) 
           onChange={v => update('distinguir_finde', v)} />
       </div>
 
+      {/* Frecuencia de cocción */}
+      <div className="card">
+        <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">¿Con qué frecuencia cocinás?</p>
+        <div className="flex flex-col gap-2">
+          {([
+            ['daily',    '🍳 Todos los días',           'Recetas frescas a diario'],
+            ['2x_week',  '🥘 2–3 veces por semana',     'Batch cooking, recalentas el resto'],
+            ['1x_week',  '📦 Una vez por semana',        'Todo en un día, sirve y emplata'],
+          ] as const).map(([val, label, desc]) => (
+            <button key={val} type="button"
+              onClick={() => saveConfig(familyId, { cocina_frequency: val })}
+              className={`py-2.5 px-4 rounded-xl border-2 text-sm text-left transition-all
+                ${(config.cocina_frequency ?? 'daily') === val
+                  ? 'border-accent bg-accent-light'
+                  : 'border-border'}`}>
+              <span className={`font-medium ${(config.cocina_frequency ?? 'daily') === val ? 'text-accent' : 'text-text'}`}>{label}</span>
+              <span className="text-muted ml-2 text-xs">{desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Modo saludable info */}
       {healthyMode && (
         <div className="p-4 rounded-2xl border border-oliva/40 bg-oliva-claro/50">

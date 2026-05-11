@@ -7,15 +7,16 @@ import {
 import type { FridgeItem } from './fridgeStore'
 
 export interface EnrichedMenuEntry {
-  id:            string
-  day_of_week:   number
-  meal_type:     string
-  recipe_id:     string
-  member_id:     string | null
-  is_main_recipe:boolean
-  servings:      number
-  status:        'planned' | 'cooked' | 'skipped' | 'swapped'
-  recipe:        RecipeForMenu
+  id:             string
+  day_of_week:    number
+  meal_type:      string
+  meal_component: string   // 'completo' | 'proteina' | 'carbohidrato' | 'ensalada' | 'salsa'
+  recipe_id:      string
+  member_id:      string | null
+  is_main_recipe: boolean
+  servings:       number
+  status:         'planned' | 'cooked' | 'skipped' | 'swapped'
+  recipe:         RecipeForMenu
 }
 
 export type { MenuConfig } from '../lib/motorMenu'
@@ -53,16 +54,16 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     if (data) {
       set({ config: data as MenuConfig })
     } else {
-      // Config por defecto — se crea al guardar
       set({
         config: {
           id: '',
-          family_id:        familyId,
-          planear_desayuno: false,
-          planear_almuerzo: true,
-          planear_cena:     true,
-          planear_snacks:   false,
-          distinguir_finde: true,
+          family_id:         familyId,
+          planear_desayuno:  false,
+          planear_almuerzo:  true,
+          planear_cena:      true,
+          planear_snacks:    false,
+          distinguir_finde:  true,
+          cocina_frequency:  'daily',
         }
       })
     }
@@ -113,12 +114,14 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     const recipeMap = new Map((recipes ?? []).map(r => [r.id, r]))
 
     const enriched: EnrichedMenuEntry[] = (entries as {
-      id: string; day_of_week: number; meal_type: string; recipe_id: string;
-      member_id: string | null; is_main_recipe: boolean; servings: number; status: string
+      id: string; day_of_week: number; meal_type: string; meal_component: string;
+      recipe_id: string; member_id: string | null; is_main_recipe: boolean;
+      servings: number; status: string
     }[])
       .filter(e => recipeMap.has(e.recipe_id))
       .map(e => ({
         ...e,
+        meal_component: e.meal_component ?? 'completo',
         status: e.status as EnrichedMenuEntry['status'],
         recipe: recipeMap.get(e.recipe_id) as RecipeForMenu,
       }))
@@ -251,31 +254,20 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       await supabase.from('weekly_menu').delete()
         .eq('family_id', familyId).eq('week_start', weekStart)
 
-      const rows = slots.flatMap(slot => {
-        const principal = {
-          family_id:     familyId,
-          week_start:    weekStart,
-          day_of_week:   slot.dayOfWeek,
-          meal_type:     slot.tipo,
-          recipe_id:     slot.principal.id,
-          member_id:     null,
-          is_main_recipe:true,
-          servings:      slot.servings,
-          status:        'planned',
-        }
-        const alts = slot.alternativas.map(alt => ({
-          family_id:     familyId,
-          week_start:    weekStart,
-          day_of_week:   slot.dayOfWeek,
-          meal_type:     slot.tipo,
-          recipe_id:     alt.recipe.id,
-          member_id:     alt.memberId,
-          is_main_recipe:false,
-          servings:      1,
-          status:        'planned',
+      const rows = slots.flatMap(slot =>
+        slot.components.map(comp => ({
+          family_id:      familyId,
+          week_start:     weekStart,
+          day_of_week:    slot.dayOfWeek,
+          meal_type:      slot.tipo,
+          meal_component: comp.component,
+          recipe_id:      comp.recipe.id,
+          member_id:      comp.memberId,
+          is_main_recipe: comp.component === 'proteina' || comp.component === 'completo',
+          servings:       comp.servings,
+          status:         'planned',
         }))
-        return [principal, ...alts]
-      })
+      )
 
       await supabase.from('weekly_menu').insert(rows)
       set({ progress: 100 })

@@ -6,15 +6,17 @@
 import type { FamilyMember } from './types'
 
 export type MealType = 'desayuno' | 'almuerzo' | 'cena' | 'snack'
+export type MealComponent = 'completo' | 'proteina' | 'carbohidrato' | 'ensalada' | 'salsa'
 
 export interface MenuConfig {
-  id:               string
-  family_id:        string
-  planear_desayuno: boolean
-  planear_almuerzo: boolean
-  planear_cena:     boolean
-  planear_snacks:   boolean
-  distinguir_finde: boolean
+  id:                string
+  family_id:         string
+  planear_desayuno:  boolean
+  planear_almuerzo:  boolean
+  planear_cena:      boolean
+  planear_snacks:    boolean
+  distinguir_finde:  boolean
+  cocina_frequency?: 'daily' | '2x_week' | '1x_week'
 }
 
 export interface RecipeForMenu {
@@ -81,12 +83,21 @@ export interface AlgorithmInput {
   healthyMode:     boolean
 }
 
+export interface MenuComponent {
+  component:  MealComponent
+  recipe:     RecipeForMenu
+  memberId:   string | null   // null = toda la familia
+  servings:   number
+}
+
 export interface MenuSlot {
-  dayOfWeek:     number            // 1=Lun, 7=Dom
-  tipo:          MealType
-  principal:     RecipeForMenu
-  servings:      number
-  alternativas:  { memberId: string; recipe: RecipeForMenu }[]
+  dayOfWeek:    number
+  tipo:         MealType
+  components:   MenuComponent[]   // proteína + carbs por miembro + ensalada
+  /** @deprecated usar components */
+  principal:    RecipeForMenu
+  servings:     number
+  alternativas: { memberId: string; recipe: RecipeForMenu }[]
 }
 
 // ── Utilidades ────────────────────────────────────────────────────────────────
@@ -128,6 +139,40 @@ function scoreInventario(recipe: RecipeForMenu, fridge: FridgeItemMin[]): number
 /** True si la receta tiene al menos un ingrediente de proteína animal */
 function tieneProteinaAnimal(recipe: RecipeForMenu): boolean {
   return recipe.ingredientes.some(i => i.categoria === 'proteina_animal')
+}
+
+/**
+ * Clasifica una receta como componente de comida.
+ * Heurística basada en categorías de ingredientes dominantes.
+ */
+export function clasificarComponente(recipe: RecipeForMenu): MealComponent {
+  const cats = recipe.ingredientes.map(i => i.categoria)
+  const total = cats.length || 1
+
+  const proteinCount  = cats.filter(c => c === 'proteina_animal' || c === 'embutido').length
+  const granoCount    = cats.filter(c => c === 'grano').length
+  const veggieCount   = cats.filter(c => c === 'vegetal' || c === 'fruta').length
+  const legumbreCount = cats.filter(c => c === 'legumbre').length
+
+  // Si más del 35% son proteínas animales → componente proteína
+  if (proteinCount / total >= 0.35) return 'proteina'
+  // Si más del 40% son granos o legumbres con pocas proteínas → carbohidrato
+  if ((granoCount + legumbreCount) / total >= 0.40 && proteinCount / total < 0.2) return 'carbohidrato'
+  // Si más del 55% son vegetales → ensalada/acompañamiento
+  if (veggieCount / total >= 0.55 && proteinCount / total < 0.15) return 'ensalada'
+  // Todo lo demás es un plato completo
+  return 'completo'
+}
+
+/** Recetas de carbohidratos simples como acompañamiento */
+const CARBS_KEYWORDS = ['arroz', 'papa', 'plátano', 'patacón', 'yuca', 'pasta', 'pan', 'arepas', 'quinua', 'maíz']
+export function esCarbohidratoAcompa(recipe: RecipeForMenu): boolean {
+  const nombre = normalizar(recipe.nombre)
+  return CARBS_KEYWORDS.some(k => nombre.includes(k)) || clasificarComponente(recipe) === 'carbohidrato'
+}
+export function esEnsalada(recipe: RecipeForMenu): boolean {
+  const nombre = normalizar(recipe.nombre)
+  return nombre.includes('ensalada') || nombre.includes('slaw') || clasificarComponente(recipe) === 'ensalada'
 }
 
 /** Calcular score combinado para una receta en un slot dado */
@@ -280,7 +325,70 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         if (altRecipe) alternativas.push({ memberId: m.id!, recipe: altRecipe })
       }
 
-      result.push({ dayOfWeek: day, tipo, principal: bestRecipe, servings: slotServings, alternativas })
+      // ── Construir componentes del slot ──────────────────────────────────────
+      const components: MenuComponent[] = []
+
+      // El plato principal: si es 'completo' no se desglosa
+      const mainComponent = clasificarComponente(bestRecipe)
+
+      if (mainComponent === 'completo' || tipo === 'desayuno' || tipo === 'snack') {
+        // Plato único para todos
+        components.push({ component: mainComponent, recipe: bestRecipe, memberId: null, servings: slotServings })
+        // Alternativas para incompatibles
+        for (const alt of alternativas) {
+          components.push({ component: mainComponent, recipe: alt.recipe, memberId: alt.memberId, servings: 1 })
+        }
+      } else {
+        // Almuerzo/cena con proteína + acompañamientos por miembro
+        components.push({ component: 'proteina', recipe: bestRecipe, memberId: null, servings: slotServings })
+
+        // Acompañamientos por miembro según side_prefs
+        const carbRecipes   = allRecipes.filter(r => esCarbohidratoAcompa(r) && !usedThisWeek.has(r.id) && r.id !== bestRecipe.id)
+        const saladRecipes  = allRecipes.filter(r => esEnsalada(r)            && !usedThisWeek.has(r.id) && r.id !== bestRecipe.id)
+
+        // Carbohidrato: uno compartido para quienes lo quieren
+        const membersWantCarbs = slotMembers.filter(m => m.side_prefs?.include_carbs !== false)
+        if (membersWantCarbs.length > 0 && carbRecipes.length > 0) {
+          let bestCarb: RecipeForMenu | null = null, bestCarbScore = -Infinity
+          for (const r of carbRecipes) {
+            const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed,
+              new Set(membersWantCarbs.map(m => m.id!)), isDayFinde, tipo)
+            if (s > bestCarbScore) { bestCarbScore = s; bestCarb = r }
+          }
+          if (bestCarb) {
+            const carbServings = membersWantCarbs.length
+            // Si todos quieren carbs → member_id null; si solo algunos → por miembro
+            if (carbServings === slotMembers.length) {
+              components.push({ component: 'carbohidrato', recipe: bestCarb, memberId: null, servings: carbServings })
+            } else {
+              for (const m of membersWantCarbs) {
+                components.push({ component: 'carbohidrato', recipe: bestCarb, memberId: m.id!, servings: 1 })
+              }
+            }
+          }
+        }
+
+        // Ensalada: compartida para quienes la quieren
+        const membersWantSalad = slotMembers.filter(m => m.side_prefs?.include_salad !== false)
+        if (membersWantSalad.length > 0 && saladRecipes.length > 0) {
+          let bestSalad: RecipeForMenu | null = null, bestSaladScore = -Infinity
+          for (const r of saladRecipes) {
+            const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed,
+              new Set(membersWantSalad.map(m => m.id!)), isDayFinde, tipo)
+            if (s > bestSaladScore) { bestSaladScore = s; bestSalad = r }
+          }
+          if (bestSalad) {
+            components.push({ component: 'ensalada', recipe: bestSalad, memberId: null, servings: membersWantSalad.length })
+          }
+        }
+
+        // Alternativas de proteína para incompatibles
+        for (const alt of alternativas) {
+          components.push({ component: 'proteina', recipe: alt.recipe, memberId: alt.memberId, servings: 1 })
+        }
+      }
+
+      result.push({ dayOfWeek: day, tipo, components, principal: bestRecipe, servings: slotServings, alternativas })
     }
   }
 

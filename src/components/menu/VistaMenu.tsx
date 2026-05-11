@@ -19,10 +19,7 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
     return d
   })
 
-  const altEntries  = menu.filter(e => !e.is_main_recipe)
-
-  const mainByDay   = (day: number) => menu.filter(e => e.day_of_week === day && e.is_main_recipe)
-  const altsByDay   = (day: number) => altEntries.filter(e => e.day_of_week === day)
+  const byDay = (day: number) => menu.filter(e => e.day_of_week === day)
 
   // Estadísticas rápidas
   const cocinadas  = menu.filter(e => e.is_main_recipe && e.status === 'cooked').length
@@ -76,8 +73,7 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
           key={i}
           dayOfWeek={i + 1}
           date={days[i]}
-          entries={mainByDay(i + 1)}
-          altEntries={altsByDay(i + 1)}
+          entries={byDay(i + 1)}
         />
       ))}
     </div>

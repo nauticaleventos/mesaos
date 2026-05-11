@@ -72,6 +72,7 @@ const emptyMember = (): Omit<FamilyMember, 'id' | 'family_id' | 'created_at' | '
   conditions: [], allergies: [], prohibited: [], dislikes: [],
   loves: [], restrictions_prep: [], meals_per_day: [],
   linked_user_id: null,
+  side_prefs: { include_carbs: true, include_salad: true, notas: '' },
 })
 
 export default function StepAddMember({ familyName, memberCount, onAdded, onFinish, editingMember, onUpdated }: Props) {
@@ -349,6 +350,9 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
             ))}
           </div>
         </div>
+
+        {/* Acompañamientos */}
+        <AcompConfig form={form} set={set} />
 
         {/* Porciones */}
         <PorcionesConfig form={form} set={set} members={members} editingId={editingMember?.id} />
@@ -765,6 +769,61 @@ function PorcionesConfig({ form, set, members, editingId }: PorcionesProps) {
             <p className="text-xs text-muted mt-1">
               Tu plato es la referencia (1.0). Ej: papá come más → 1.5 · niña come menos → 0.75
             </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Sección Acompañamientos ───────────────────────────────────────────────────
+interface AcompForm {
+  side_prefs: { include_carbs: boolean; include_salad: boolean; notas: string } | null
+}
+
+function AcompConfig({ form, set }: { form: AcompForm; set: (f: string, v: unknown) => void }) {
+  const [open, setOpen] = useState(false)
+  const prefs = form.side_prefs ?? { include_carbs: true, include_salad: true, notas: '' }
+
+  const update = (key: string, val: boolean | string) =>
+    set('side_prefs', { ...prefs, [key]: val })
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-text">Acompañamientos en el almuerzo/cena</span>
+          {(!prefs.include_carbs || !prefs.include_salad) && (
+            <span className="px-2 py-0.5 bg-accent-light text-accent text-xs rounded-full">Personalizado</span>
+          )}
+        </div>
+        <span className="text-muted text-sm">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 pt-2 bg-white flex flex-col gap-4">
+          <p className="text-xs text-muted">
+            El motor usa esto para generar acompañamientos distintos por miembro. Ej: sin arroz para bajar carbos.
+          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-text">🍚 Incluir carbohidrato (arroz, papa, plátano…)</p>
+            <button type="button" onClick={() => update('include_carbs', !prefs.include_carbs)}
+              className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${prefs.include_carbs ? 'bg-accent' : 'bg-gray-200'}`}>
+              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${prefs.include_carbs ? 'left-5' : 'left-0.5'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-text">🥗 Incluir ensalada</p>
+            <button type="button" onClick={() => update('include_salad', !prefs.include_salad)}
+              className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${prefs.include_salad ? 'bg-accent' : 'bg-gray-200'}`}>
+              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${prefs.include_salad ? 'left-5' : 'left-0.5'}`} />
+            </button>
+          </div>
+          <div>
+            <label className="input-label">Notas adicionales</label>
+            <input type="text" value={prefs.notas}
+              onChange={e => update('notas', e.target.value)}
+              placeholder="Ej: plátano asado los días de ejercicio, sin papa…" />
           </div>
         </div>
       )}

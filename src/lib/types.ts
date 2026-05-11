@@ -64,6 +64,11 @@ export interface FamilyMember {
   meals_per_day: { name: string; time: string }[]
   eating_style: string
   linked_user_id: string | null
+  side_prefs: {
+    include_carbs:  boolean
+    include_salad:  boolean
+    notas:          string
+  } | null
   created_at: string
   updated_at: string
 }

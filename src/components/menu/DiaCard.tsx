@@ -7,10 +7,9 @@ import type { FamilyMember } from '../../lib/types'
 import { DAY_NAMES_FULL } from '../../lib/motorMenu'
 
 interface Props {
-  dayOfWeek:   number   // 1-7
-  date:        Date
-  entries:     EnrichedMenuEntry[]  // solo is_main_recipe=true
-  altEntries:  EnrichedMenuEntry[]  // is_main_recipe=false (alternativas)
+  dayOfWeek: number
+  date:      Date
+  entries:   EnrichedMenuEntry[]   // TODOS los entries del día (todos los componentes)
 }
 
 const MEAL_LABELS: Record<string, string> = {
@@ -21,29 +20,43 @@ const MEAL_LABELS: Record<string, string> = {
 }
 const MEAL_ORDER = ['desayuno', 'almuerzo', 'cena', 'snack']
 
+const COMPONENT_LABELS: Record<string, string> = {
+  proteina:      '🥩 Proteína',
+  carbohidrato:  '🍚 Carbohidrato',
+  ensalada:      '🥗 Ensalada',
+  salsa:         '🫙 Salsa',
+  completo:      '',
+}
+
 const DIFICULTAD_COLOR: Record<string, string> = {
   facil:   'bg-green-100 text-green-700',
   media:   'bg-yellow-100 text-yellow-700',
   dificil: 'bg-red-100 text-red-700',
 }
 
-export default function DiaCard({ dayOfWeek, date, entries, altEntries }: Props) {
+export default function DiaCard({ dayOfWeek, date, entries }: Props) {
   const { marcarCocinada, saltarReceta } = useMenuStore()
   const members = useFamilyStore(s => s.members)
 
-  const isHoy = new Date().toDateString() === date.toDateString()
+  const isHoy    = new Date().toDateString() === date.toDateString()
   const fechaStr = date.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
 
   // Agrupar por meal_type en orden
   const porTipo = MEAL_ORDER
-    .map(tipo => ({ tipo, entry: entries.find(e => e.meal_type === tipo) }))
-    .filter(({ entry }) => !!entry)
+    .map(tipo => ({
+      tipo,
+      components: entries.filter(e => e.meal_type === tipo),
+    }))
+    .filter(({ components }) => components.length > 0)
 
   if (porTipo.length === 0) return null
 
+  // Entrada principal de cada comida (proteína o completo, member_id=null)
+  const mainEntry = (components: EnrichedMenuEntry[]) =>
+    components.find(e => e.is_main_recipe && e.member_id === null) ?? components[0]
+
   return (
     <div className={`card flex flex-col gap-4 ${isHoy ? 'border-accent' : ''}`}>
-      {/* Header del día */}
       <div className="flex items-center justify-between">
         <div>
           <p className={`font-semibold ${isHoy ? 'text-accent' : 'text-text'}`}>
@@ -54,20 +67,19 @@ export default function DiaCard({ dayOfWeek, date, entries, altEntries }: Props)
         </div>
       </div>
 
-      {/* Comidas del día */}
-      {porTipo.map(({ tipo, entry }) => {
-        if (!entry) return null
-        const alts = altEntries.filter(a => a.meal_type === tipo)
+      {porTipo.map(({ tipo, components }) => {
+        const main = mainEntry(components)
+        if (!main) return null
 
         return (
           <RecetaSlot
             key={tipo}
             tipo={tipo}
-            entry={entry}
-            alts={alts}
+            main={main}
+            allComponents={components}
             members={members}
-            onCocinada={() => marcarCocinada(entry.id)}
-            onSaltar={() => saltarReceta(entry.id)}
+            onCocinada={() => marcarCocinada(main.id)}
+            onSaltar={() => saltarReceta(main.id)}
           />
         )
       })}
@@ -75,19 +87,24 @@ export default function DiaCard({ dayOfWeek, date, entries, altEntries }: Props)
   )
 }
 
-function RecetaSlot({ tipo, entry, alts, members, onCocinada, onSaltar }: {
-  tipo:       string
-  entry:      EnrichedMenuEntry
-  alts:       EnrichedMenuEntry[]
-  members:    FamilyMember[]
-  onCocinada: () => void
-  onSaltar:   () => void
+function RecetaSlot({ tipo, main, allComponents, members, onCocinada, onSaltar }: {
+  tipo:          string
+  main:          EnrichedMenuEntry
+  allComponents: EnrichedMenuEntry[]
+  members:       FamilyMember[]
+  onCocinada:    () => void
+  onSaltar:      () => void
 }) {
   const [expanded, setExpanded] = useState(false)
-  const navigate = useNavigate()
-  const r = entry.recipe
-  const isCooked  = entry.status === 'cooked'
-  const isSkipped = entry.status === 'skipped'
+  const navigate  = useNavigate()
+  const r         = main.recipe
+  const isCooked  = main.status === 'cooked'
+  const isSkipped = main.status === 'skipped'
+
+  // Componentes extra (carbohidratos y ensaladas)
+  const extras = allComponents.filter(e => e.id !== main.id)
+  // Variaciones por miembro (mismo componente, distinto miembro)
+  const perMember = allComponents.filter(e => e.member_id !== null)
 
   return (
     <div className={`rounded-xl overflow-hidden border transition-all
@@ -95,11 +112,10 @@ function RecetaSlot({ tipo, entry, alts, members, onCocinada, onSaltar }: {
       ${isSkipped ? 'border-border opacity-40' : ''}
       ${!isCooked && !isSkipped ? 'border-border bg-white' : ''}`}>
 
-      {/* Cabecera del slot */}
+      {/* Cabecera — proteína o plato completo */}
       <button type="button" onClick={() => setExpanded(e => !e)}
         className="w-full flex items-center gap-3 p-3 text-left">
 
-        {/* Foto */}
         <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-accent-light">
           {r.imagen_url ? (
             <img src={r.imagen_url} alt={r.nombre} className="w-full h-full object-cover" />
@@ -110,7 +126,6 @@ function RecetaSlot({ tipo, entry, alts, members, onCocinada, onSaltar }: {
           )}
         </div>
 
-        {/* Info */}
         <div className="flex-1 min-w-0">
           <p className="text-xs text-muted font-medium">{MEAL_LABELS[tipo]}</p>
           <p className="font-semibold text-text text-sm leading-tight mt-0.5 truncate">
@@ -131,18 +146,40 @@ function RecetaSlot({ tipo, entry, alts, members, onCocinada, onSaltar }: {
           </div>
         </div>
 
-        <span className="text-muted text-xs">{expanded ? '▲' : '▼'}</span>
+        <span className="text-muted text-xs flex-shrink-0">{expanded ? '▲' : '▼'}</span>
       </button>
 
-      {/* Alternativas */}
-      {alts.length > 0 && (
-        <div className="px-3 pb-2 -mt-1">
-          {alts.map(alt => {
-            const m = members.find((mb: FamilyMember) => mb.id === alt.member_id)
+      {/* Componentes extra (carbos / ensalada) compartidos */}
+      {extras.filter(e => e.member_id === null).length > 0 && (
+        <div className="px-3 pb-2 flex flex-col gap-1 border-t border-border/50">
+          {extras.filter(e => e.member_id === null).map(comp => (
+            <button key={comp.id} onClick={() => navigate(`/receta/${comp.recipe_id}`)}
+              className="flex items-center gap-2 py-1.5 text-left hover:opacity-80 transition-opacity">
+              <span className="text-xs text-muted font-medium w-24 flex-shrink-0">
+                {COMPONENT_LABELS[comp.meal_component] || comp.meal_component}
+              </span>
+              <span className="text-xs text-text truncate">{comp.recipe.nombre}</span>
+              <ExternalLink size={10} className="text-muted flex-shrink-0 ml-auto" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Variaciones por miembro */}
+      {perMember.length > 0 && (
+        <div className="px-3 pb-2 flex flex-col gap-1">
+          {perMember.map(comp => {
+            const m = members.find((mb: FamilyMember) => mb.id === comp.member_id)
             return (
-              <p key={alt.id} className="text-xs text-muted">
-                {m?.emoji} <strong>{m?.name}</strong>: {alt.recipe.nombre}
-              </p>
+              <button key={comp.id} onClick={() => navigate(`/receta/${comp.recipe_id}`)}
+                className="flex items-center gap-1.5 text-xs text-muted text-left hover:opacity-80 transition-opacity">
+                <span>{m?.emoji}</span>
+                <strong className="text-text">{m?.name}</strong>
+                <span className="text-muted">·</span>
+                <span className="text-muted">{COMPONENT_LABELS[comp.meal_component] || ''}</span>
+                <span className="text-text truncate">{comp.recipe.nombre}</span>
+                <ExternalLink size={9} className="flex-shrink-0 ml-auto" />
+              </button>
             )
           })}
         </div>
@@ -151,24 +188,23 @@ function RecetaSlot({ tipo, entry, alts, members, onCocinada, onSaltar }: {
       {/* Acciones expandidas */}
       {expanded && !isSkipped && (
         <div className="border-t border-border flex flex-col">
-          {/* Ver receta completa */}
-          <button onClick={() => navigate(`/receta/${entry.recipe_id}`)}
+          <button onClick={() => navigate(`/receta/${main.recipe_id}`)}
             className="flex items-center justify-center gap-1.5 py-2.5 text-sm text-accent font-medium hover:bg-accent/5 transition-colors border-b border-border">
             <ExternalLink size={14} /> Ver receta completa
           </button>
           <div className="flex">
-          {!isCooked && (
-            <button onClick={onCocinada}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-oliva font-medium hover:bg-oliva-claro/40 transition-colors">
-              <Check size={15} /> La cociné
-            </button>
-          )}
-          {!isCooked && (
-            <button onClick={onSaltar}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-muted hover:bg-gray-50 transition-colors border-l border-border">
-              <SkipForward size={15} /> Saltar
-            </button>
-          )}
+            {!isCooked && (
+              <button onClick={onCocinada}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-oliva font-medium hover:bg-oliva-claro/40 transition-colors">
+                <Check size={15} /> La cociné
+              </button>
+            )}
+            {!isCooked && (
+              <button onClick={onSaltar}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-muted hover:bg-gray-50 transition-colors border-l border-border">
+                <SkipForward size={15} /> Saltar
+              </button>
+            )}
           </div>
         </div>
       )}
