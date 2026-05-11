@@ -65,9 +65,9 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
             <Printer size={15} />
           </button>
           <button onClick={() => setShowDiaDificil(true)}
-            title="Día difícil — simplificar próximas comidas"
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-yellow-300 text-yellow-600 text-sm font-medium hover:bg-yellow-50 transition-colors print:hidden">
             <Zap size={15} />
+            <span>Día difícil</span>
           </button>
           <button onClick={onRegenerar} disabled={generating}
             className="flex items-center gap-2 px-3 py-2 rounded-xl border border-accent text-accent text-sm font-medium hover:bg-accent/5 transition-colors disabled:opacity-40 print:hidden">
