@@ -223,24 +223,94 @@ function RecetaSlot({ tipo, main, allComponents, members, membersInSlot, leftove
       )}
 
       {/* Variaciones por miembro */}
-      {perMember.length > 0 && (
-        <div className="px-3 pb-2 flex flex-col gap-1">
-          {perMember.map(comp => {
-            const m = members.find((mb: FamilyMember) => mb.id === comp.member_id)
-            return (
-              <button key={comp.id} onClick={() => navigate(`/receta/${comp.recipe_id}`)}
-                className="flex items-center gap-1.5 text-xs text-muted text-left hover:opacity-80 transition-opacity">
-                <span>{m?.emoji}</span>
-                <strong className="text-text">{m?.name}</strong>
-                <span className="text-muted">·</span>
-                <span className="text-muted">{COMPONENT_LABELS[comp.meal_component] || ''}</span>
-                <span className="text-text truncate">{comp.recipe.nombre}</span>
-                <ExternalLink size={9} className="flex-shrink-0 ml-auto" />
-              </button>
-            )
-          })}
-        </div>
-      )}
+      {perMember.length > 0 && (() => {
+        // Separar: platos principales por miembro (desayuno/snack personalizados)
+        // vs acompañamientos específicos por miembro (carb/salad en almuerzo/cena)
+        const mainPerMember = perMember.filter(e => e.is_main_recipe)
+        const sidePerMember = perMember.filter(e => !e.is_main_recipe)
+
+        // Agrupar platos principales por recipe_id para mostrar juntos a quien comparte
+        const recipeGroups = new Map<string, { comp: EnrichedMenuEntry; memberIds: string[] }>()
+        for (const comp of mainPerMember) {
+          if (!recipeGroups.has(comp.recipe_id)) {
+            recipeGroups.set(comp.recipe_id, { comp, memberIds: [] })
+          }
+          recipeGroups.get(comp.recipe_id)!.memberIds.push(comp.member_id!)
+        }
+
+        return (
+          <>
+            {/* Mini-cards por miembro para desayuno/snack */}
+            {recipeGroups.size > 0 && (
+              <div className="px-3 pb-2 pt-1 flex flex-col gap-2 border-t border-border/50">
+                {[...recipeGroups.values()].map(({ comp: c, memberIds }) => {
+                  const groupMembers = memberIds.map(id => members.find(mb => mb.id === id)).filter(Boolean) as FamilyMember[]
+                  const rc = c.recipe
+                  return (
+                    <button key={c.recipe_id}
+                      onClick={() => navigate(`/receta/${c.recipe_id}`)}
+                      className="flex items-center gap-2.5 p-2 rounded-xl border border-border hover:border-accent hover:bg-accent-light/20 transition-all text-left">
+                      {/* Imagen */}
+                      <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent-light">
+                        {rc.imagen_url
+                          ? <img src={rc.imagen_url} alt={rc.nombre} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center"><ChefHat size={16} color="#E76F51" /></div>
+                        }
+                      </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        {/* Emojis de quién come esto */}
+                        <div className="flex items-center gap-1 mb-0.5">
+                          {groupMembers.map(m => (
+                            <span key={m.id} className="text-sm leading-none" title={m.name ?? ''}>{m.emoji}</span>
+                          ))}
+                          <span className="text-xs text-muted ml-1">
+                            {groupMembers.map(m => m.name).join(' y ')}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-text leading-tight line-clamp-1">{rc.nombre}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {rc.tiempo_total_min && (
+                            <span className="flex items-center gap-0.5 text-xs text-muted">
+                              <Clock size={10} />{rc.tiempo_total_min}min
+                            </span>
+                          )}
+                          {rc.dificultad && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DIFICULTAD_COLOR[rc.dificultad]}`}>
+                              {rc.dificultad}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <ExternalLink size={12} className="text-muted flex-shrink-0" />
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Acompañamientos específicos por miembro (almuerzo/cena) */}
+            {sidePerMember.length > 0 && (
+              <div className="px-3 pb-2 flex flex-col gap-1">
+                {sidePerMember.map(comp => {
+                  const m = members.find((mb: FamilyMember) => mb.id === comp.member_id)
+                  return (
+                    <button key={comp.id} onClick={() => navigate(`/receta/${comp.recipe_id}`)}
+                      className="flex items-center gap-1.5 text-xs text-muted text-left hover:opacity-80 transition-opacity">
+                      <span>{m?.emoji}</span>
+                      <strong className="text-text">{m?.name}</strong>
+                      <span className="text-muted">·</span>
+                      <span className="text-muted">{COMPONENT_LABELS[comp.meal_component] || ''}</span>
+                      <span className="text-text truncate">{comp.recipe.nombre}</span>
+                      <ExternalLink size={9} className="flex-shrink-0 ml-auto" />
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </>
+        )
+      })()}
 
       {/* Acciones expandidas */}
       {expanded && (

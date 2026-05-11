@@ -384,17 +384,43 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         usedThisWeekProtOnly.add(bestRecipe.id)
       }
 
-      // Alternativas para miembros incompatibles
+      // Alternativas: (1) por incompatibilidad dura, (2) por preferencia en desayuno/snack
       const alternativas: MenuSlot['alternativas'] = []
+      const altUsedIds = new Set<string>([bestRecipe.id])
+
       for (const m of slotMembers) {
-        if (esCompatibleConMiembro(bestRecipe, m)) continue
+        if (esCompatibleConMiembro(bestRecipe, m)) {
+          // Para desayuno/snack: ofrecer receta personal si tiene favoritos que coincidan
+          if (tipo === 'desayuno' || tipo === 'snack') {
+            const favMatch = allRecipes.find(r =>
+              esCompatibleConMiembro(r, m) &&
+              !usedThisWeek.has(r.id) &&
+              !usedToday.has(r.id) &&
+              !altUsedIds.has(r.id) &&
+              r.tipo_comida.includes(tipo) &&
+              (
+                (m.favorite_recipes ?? []).some(fav => sonSimilares(r.nombre, fav)) ||
+                (m.loves ?? []).length > 0 && tieneIngrediente(r, m.loves)
+              )
+            )
+            if (favMatch) {
+              alternativas.push({ memberId: m.id!, recipe: favMatch })
+              altUsedIds.add(favMatch.id)
+            }
+          }
+          continue
+        }
+        // Incompatibilidad dura → alternativa obligatoria
         let altScore = -Infinity, altRecipe: RecipeForMenu | null = null
         for (const r of allRecipes) {
-          if (r.id === bestRecipe.id || !esCompatibleConMiembro(r, m)) continue
+          if (altUsedIds.has(r.id) || !esCompatibleConMiembro(r, m)) continue
           const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed, new Set([m.id!]), isDayFinde, tipo)
           if (s > altScore) { altScore = s; altRecipe = r }
         }
-        if (altRecipe) alternativas.push({ memberId: m.id!, recipe: altRecipe })
+        if (altRecipe) {
+          alternativas.push({ memberId: m.id!, recipe: altRecipe })
+          altUsedIds.add(altRecipe.id)
+        }
       }
 
       // ── Construir componentes del slot ──────────────────────────────────────
