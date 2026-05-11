@@ -101,7 +101,7 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
   const set = (field: string, value: unknown) =>
     setForm(f => ({ ...f, [field]: value }))
 
-  const toggleCondition = (c: string) =>
+  const _toggleCondition = (c: string) =>
     setForm(f => ({
       ...f,
       conditions: f.conditions.includes(c)
@@ -381,7 +381,7 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
         <CustomMacros form={form} set={set} />
 
         {/* Condiciones de salud */}
-        <CondicionesSaludSection form={form} set={set} setForm={setForm} />
+        <CondicionesSaludSection form={form} setForm={setForm} />
 
         {/* Alergias */}
         <div>
@@ -1143,10 +1143,9 @@ interface CondicionesSaludForm {
 }
 
 function CondicionesSaludSection({
-  form, set, setForm,
+  form, setForm,
 }: {
   form:    CondicionesSaludForm
-  set:     (f: string, v: unknown) => void
   setForm: React.Dispatch<React.SetStateAction<ReturnType<typeof emptyMember>>>
 }) {
   const [open, setOpen] = useState(false)
