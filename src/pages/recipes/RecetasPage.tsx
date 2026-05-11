@@ -11,19 +11,26 @@ import ImportModal from '../../components/recipes/import/ImportModal'
 
 type Tab      = 'mis' | 'guardadas' | 'descubrir'
 type Vista    = 'tabs' | 'importar'
-type Categoria = 'todos' | 'desayuno' | 'almuerzo' | 'cena' | 'snack' | 'postre' | 'bebida' | 'smoothie' | 'ensalada' | 'acompañamiento'
+type Categoria =
+  | 'todos'
+  | 'proteina'   | 'guarnicion' | 'ensalada'  | 'sopa'
+  | 'plato_unico'| 'postre'     | 'bebida'     | 'merienda'
+  | 'desayuno'   | 'almuerzo'   | 'cena'       | 'snack'
 
 const CATEGORIAS: { id: Categoria; emoji: string; label: string }[] = [
-  { id: 'todos',          emoji: '🍳', label: 'Todos'           },
-  { id: 'desayuno',       emoji: '☀️', label: 'Desayunos'       },
-  { id: 'almuerzo',       emoji: '🍽️', label: 'Almuerzos'       },
-  { id: 'cena',           emoji: '🌙', label: 'Cenas'            },
-  { id: 'snack',          emoji: '🍎', label: 'Snacks'           },
-  { id: 'postre',         emoji: '🍰', label: 'Postres'          },
-  { id: 'bebida',         emoji: '🥤', label: 'Bebidas'          },
-  { id: 'smoothie',       emoji: '🥤', label: 'Smoothies'        },
-  { id: 'ensalada',       emoji: '🥗', label: 'Ensaladas'        },
-  { id: 'acompañamiento', emoji: '🍚', label: 'Acompañamientos'  },
+  { id: 'todos',       emoji: '🍳', label: 'Todas'         },
+  { id: 'proteina',    emoji: '🍖', label: 'Proteínas'     },
+  { id: 'guarnicion',  emoji: '🍚', label: 'Guarniciones'  },
+  { id: 'ensalada',    emoji: '🥗', label: 'Ensaladas'     },
+  { id: 'sopa',        emoji: '🥄', label: 'Sopas'         },
+  { id: 'plato_unico', emoji: '🥘', label: 'Platos únicos' },
+  { id: 'postre',      emoji: '🍰', label: 'Postres'       },
+  { id: 'bebida',      emoji: '🥤', label: 'Bebidas'       },
+  { id: 'merienda',    emoji: '🍿', label: 'Meriendas'     },
+  { id: 'desayuno',    emoji: '🍳', label: 'Desayunos'     },
+  { id: 'almuerzo',    emoji: '🍽️', label: 'Almuerzos'     },
+  { id: 'cena',        emoji: '🌙', label: 'Cenas'          },
+  { id: 'snack',       emoji: '🍎', label: 'Snacks'         },
 ]
 
 const TIPO_ICONS: Record<string, string> = {
@@ -161,16 +168,25 @@ export default function RecetasPage() {
 
   const matchesCategoria = (r: Recipe): boolean => {
     if (categoria === 'todos') return true
-    const nombre = r.nombre.toLowerCase()
-    if (r.tipo_comida.includes(categoria)) return true
-    if (categoria === 'ensalada')
-      return nombre.includes('ensalada') || nombre.includes('slaw')
-    if (categoria === 'smoothie')
-      return ['smoothie', 'batido', 'shake'].some(k => nombre.includes(k))
-    if (categoria === 'bebida')
-      return ['jugo', 'agua', 'té', 'cafe', 'café', 'limonada', 'infusion', 'refresco', 'bebida'].some(k => nombre.includes(k))
-    if (categoria === 'acompañamiento')
-      return ['arroz', 'papa', 'plátano', 'platano', 'patacón', 'patacon', 'yuca', 'pasta', 'arepa', 'quinua'].some(k => nombre.includes(k))
+    const nombre  = r.nombre.toLowerCase()
+    const tc      = (r as unknown as { tipo_componente?: string }).tipo_componente ?? ''
+
+    // Por tipo_componente (más preciso)
+    if (categoria === 'proteina'   ) return tc === 'proteina_principal'
+    if (categoria === 'guarnicion' ) return tc === 'guarnicion'
+    if (categoria === 'ensalada'   ) return tc === 'ensalada' || nombre.includes('ensalada') || nombre.includes('slaw')
+    if (categoria === 'plato_unico') return tc === 'plato_unico'
+    if (categoria === 'postre'     ) return tc === 'postre'
+    if (categoria === 'bebida'     ) return tc === 'bebida' || ['jugo','agua','té','cafe','café','limonada','smoothie','batido'].some(k => nombre.includes(k))
+    if (categoria === 'merienda'   ) return tc === 'merienda'
+    if (categoria === 'sopa'       ) return ['sopa','crema de','caldo','sancocho','ajiaco','cuchuco','mondongo','mazamorra'].some(k => nombre.includes(k))
+
+    // Por tipo_comida
+    if (categoria === 'desayuno') return r.tipo_comida.includes('desayuno')
+    if (categoria === 'almuerzo') return r.tipo_comida.includes('almuerzo')
+    if (categoria === 'cena'    ) return r.tipo_comida.includes('cena')
+    if (categoria === 'snack'   ) return r.tipo_comida.includes('snack')
+
     return false
   }
 
@@ -264,12 +280,6 @@ export default function RecetasPage() {
 
         {tab !== 'descubrir' && (
           <>
-            <input
-              type="search"
-              placeholder="Buscar receta..."
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-            />
             {/* Chips de categoría */}
             <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1">
               {CATEGORIAS.map(cat => (
@@ -278,11 +288,17 @@ export default function RecetasPage() {
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0
                     ${categoria === cat.id
                       ? 'bg-accent text-white shadow-sm'
-                      : 'bg-white border border-border text-muted hover:border-accent hover:text-accent'}`}>
+                      : 'bg-white border border-accent text-accent hover:bg-accent/10'}`}>
                   {cat.emoji} {cat.label}
                 </button>
               ))}
             </div>
+            <input
+              type="search"
+              placeholder="Buscar receta..."
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+            />
           </>
         )}
       </div>
