@@ -302,12 +302,22 @@ function calcularScore(
 
 // ── Función principal ─────────────────────────────────────────────────────────
 
+// Máximo de veces que puede repetir un acompañamiento en la semana
+export const MAX_ACCOMPA_WEEK = 2
+
 export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
   const { config, allMembers, slotAttendance, allRecipes } = input
 
-  const result:       MenuSlot[] = []
-  const usedThisWeek             = new Set<string>()
-  let proteinDaysUsed            = 0
+  const result:             MenuSlot[] = []
+  // usedThisWeek: platos principales (proteína/completo) — nunca repiten en la semana
+  const usedThisWeek        = new Set<string>()
+  // usedThisWeekProtOnly: solo proteínas — se pasa al scorer de acompañamientos
+  // para que los carbos usados como plato principal no bloqueen su uso como acompañamiento
+  const usedThisWeekProtOnly = new Set<string>()
+  // Tracking de acompañamientos: cuántas veces se usaron y en qué día
+  const carbWeekTrack  = new Map<string, { count: number; lastDay: number }>()
+  const saladWeekTrack = new Map<string, { count: number; lastDay: number }>()
+  let   proteinDaysUsed = 0
 
   for (let day = 1; day <= 7; day++) {
     const isDayFinde     = day >= 6
@@ -363,10 +373,16 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
       }
       if (!bestRecipe) continue
 
+      // Registrar el ganador inicial como plato principal (impide que repita como plato)
       usedThisWeek.add(bestRecipe.id)
       usedToday.add(bestRecipe.id)
       usedTodayNames.push(bestRecipe.nombre)
       if (tieneProteinaAnimal(bestRecipe)) proteinDaysUsed++
+      // Si el ganador inicial ya es proteína, registrar también en el set de proteínas
+      const initialComp = clasificarComponente(bestRecipe)
+      if (initialComp === 'proteina' || initialComp === 'completo') {
+        usedThisWeekProtOnly.add(bestRecipe.id)
+      }
 
       // Alternativas para miembros incompatibles
       const alternativas: MenuSlot['alternativas'] = []
@@ -402,10 +418,17 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           if (s > bestProtScore) { bestProtScore = s; bestProt = r }
         }
         if (bestProt) {
-          bestRecipe = bestProt
+          bestRecipe    = bestProt
           mainComponent = 'proteina'
+          // ── FIX: registrar el fallback protein en ambos sets ─────────────
+          // Sin esto, la misma proteína podía ganar en almuerzo Y cena del mismo día
+          usedThisWeek.add(bestProt.id)
+          usedThisWeekProtOnly.add(bestProt.id)
+          if (!usedToday.has(bestProt.id)) {
+            usedToday.add(bestProt.id)
+            usedTodayNames.push(bestProt.nombre)
+          }
         } else {
-          // No se encontró proteína → tratar como plato completo en lugar de etiquetar mal
           mainComponent = 'completo'
         }
       }
@@ -421,27 +444,28 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         components.push({ component: 'proteina', recipe: bestRecipe, memberId: null, servings: slotServings })
 
         // Acompañamientos por miembro según side_prefs
-        const carbRecipes  = allRecipes.filter(r =>
-          esCarbohidratoAcompa(r) &&
-          !usedThisWeek.has(r.id) &&
-          !usedToday.has(r.id) &&
-          r.id !== bestRecipe.id &&
-          !usedTodayNames.some(n => sonSimilares(r.nombre, n))
-        )
-        const saladRecipes = allRecipes.filter(r =>
-          esEnsalada(r) &&
-          !usedThisWeek.has(r.id) &&
-          !usedToday.has(r.id) &&
-          r.id !== bestRecipe.id &&
-          !usedTodayNames.some(n => sonSimilares(r.nombre, n))
-        )
+        // Reglas: no mismo día, no días consecutivos, máx MAX_ACCOMPA_WEEK veces en la semana
+        const filterAcompa = (track: Map<string, { count: number; lastDay: number }>, r: RecipeForMenu) => {
+          if (usedToday.has(r.id)) return false
+          if (r.id === bestRecipe.id) return false
+          if (usedTodayNames.some(n => sonSimilares(r.nombre, n))) return false
+          const t = track.get(r.id)
+          if (!t) return true
+          if (t.count >= MAX_ACCOMPA_WEEK) return false
+          if (day - t.lastDay <= 1) return false   // no días consecutivos
+          return true
+        }
+
+        const carbRecipes  = allRecipes.filter(r => esCarbohidratoAcompa(r) && filterAcompa(carbWeekTrack, r))
+        const saladRecipes = allRecipes.filter(r => esEnsalada(r)            && filterAcompa(saladWeekTrack, r))
 
         // Carbohidrato: uno compartido para quienes lo quieren
         const membersWantCarbs = slotMembers.filter(m => m.side_prefs?.include_carbs !== false)
         if (membersWantCarbs.length > 0 && carbRecipes.length > 0) {
           let bestCarb: RecipeForMenu | null = null, bestCarbScore = -Infinity
           for (const r of carbRecipes) {
-            const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed,
+            // Pasa usedThisWeekProtOnly: los carbos no están ahí, así pueden tener score positivo
+            const s = calcularScore(r, input, usedThisWeekProtOnly, proteinDaysUsed,
               new Set(membersWantCarbs.map(m => m.id!)), isDayFinde, tipo)
             if (s > bestCarbScore) { bestCarbScore = s; bestCarb = r }
           }
@@ -455,8 +479,10 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
               }
             }
             usedToday.add(bestCarb.id)
-            usedThisWeek.add(bestCarb.id)
             usedTodayNames.push(bestCarb.nombre)
+            // Registrar en carbWeekTrack (no en usedThisWeek — permite repetición controlada)
+            const ct = carbWeekTrack.get(bestCarb.id) ?? { count: 0, lastDay: 0 }
+            carbWeekTrack.set(bestCarb.id, { count: ct.count + 1, lastDay: day })
           }
         }
 
@@ -465,15 +491,16 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         if (membersWantSalad.length > 0 && saladRecipes.length > 0) {
           let bestSalad: RecipeForMenu | null = null, bestSaladScore = -Infinity
           for (const r of saladRecipes) {
-            const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed,
+            const s = calcularScore(r, input, usedThisWeekProtOnly, proteinDaysUsed,
               new Set(membersWantSalad.map(m => m.id!)), isDayFinde, tipo)
             if (s > bestSaladScore) { bestSaladScore = s; bestSalad = r }
           }
           if (bestSalad) {
             components.push({ component: 'ensalada', recipe: bestSalad, memberId: null, servings: membersWantSalad.length })
             usedToday.add(bestSalad.id)
-            usedThisWeek.add(bestSalad.id)
             usedTodayNames.push(bestSalad.nombre)
+            const st = saladWeekTrack.get(bestSalad.id) ?? { count: 0, lastDay: 0 }
+            saladWeekTrack.set(bestSalad.id, { count: st.count + 1, lastDay: day })
           }
         }
 
