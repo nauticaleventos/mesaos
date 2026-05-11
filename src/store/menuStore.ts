@@ -204,7 +204,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       // 3. Recetas disponibles (campos mínimos para el algoritmo)
       const { data: recipes } = await supabase
         .from('recipes')
-        .select('id, nombre, tipo_comida, dificultad, tiempo_total_min, porciones, imagen_url, ingredientes, info_nutricional_aprox, perfiles, filtros_nutricionales')
+        .select(RECIPE_SELECT)
         .eq('is_active_for_menu', true)
         .not('tipo_comida', 'is', null)
 
