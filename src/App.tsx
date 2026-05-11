@@ -10,8 +10,9 @@ import HomePage       from './pages/HomePage'
 import FridgePage     from './pages/fridge/FridgePage'
 import RecetasPage    from './pages/recipes/RecetasPage'
 import RecetaPage     from './pages/recipes/RecetaPage'
-import UnirsePage     from './pages/invite/UnirsePage'
-import MenuPage       from './pages/menu/MenuPage'
+import UnirsePage        from './pages/invite/UnirsePage'
+import MenuPage          from './pages/menu/MenuPage'
+import RecetasAutoPage   from './pages/admin/RecetasAutoPage'
 
 function AppRoutes() {
   const { session, loading: authLoading }   = useAuthStore()
@@ -58,6 +59,9 @@ function AppRoutes() {
       {/* Pública — link de invitación */}
       <Route path="/unirse/:token" element={<UnirsePage />} />
 
+      <Route path="/admin/recetas-auto" element={
+        !session ? <Navigate to="/login" replace /> : <RecetasAutoPage />
+      } />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
