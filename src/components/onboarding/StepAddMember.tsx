@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useFamilyStore } from '../../store/familyStore'
+import { supabase } from '../../lib/supabase'
 import type { FamilyMember } from '../../lib/types'
 import ActividadesList from '../family/ActividadesList'
 
@@ -71,6 +72,9 @@ const emptyMember = (): Omit<FamilyMember, 'id' | 'family_id' | 'created_at' | '
   eating_style: 'omnivore',
   conditions: [], allergies: [], prohibited: [], dislikes: [],
   loves: [], favorite_recipes: [], restrictions_prep: [], meals_per_day: [],
+  proteinas_animales_que_si_come:  ['pollo', 'res', 'cerdo', 'pescado', 'mariscos', 'huevos'],
+  proteinas_vegetales_que_si_come: ['frijoles', 'lentejas', 'garbanzos', 'tofu', 'soya'],
+  gustos_notas: null,
   plantilla_comida: 'clasico_colombiano' as const,
   guarniciones_por_comida: 2,
   quiere_ensalada: true,
@@ -358,8 +362,8 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
         {/* Plantilla de comida */}
         <PlantillaConfig form={form} set={set} />
 
-        {/* Gustos y favoritos */}
-        <GustosConfig form={form} setForm={setForm} />
+        {/* Gustos alimenticios */}
+        <GustosAlimenticios form={form} set={set} />
 
         {/* Acompañamientos */}
         <AcompConfig form={form} set={set} />
@@ -945,6 +949,199 @@ function PlantillaConfig({ form, set }: { form: PlantillaForm; set: (f: string, 
               </button>
             </div>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Sección Gustos alimenticios ───────────────────────────────────────────────
+const ANIMALES_DEFAULT  = ['cerdo', 'huevos', 'mariscos', 'pescado', 'pollo', 'res']
+const VEGETALES_DEFAULT = ['frijoles', 'garbanzos', 'lentejas', 'soya', 'tofu']
+
+interface GustosForm {
+  proteinas_animales_que_si_come:  string[]
+  proteinas_vegetales_que_si_come: string[]
+  favorite_recipes: string[]
+  gustos_notas: string | null
+}
+
+function GustosAlimenticios({ form, set }: { form: GustosForm; set: (f: string, v: unknown) => void }) {
+  const [open, setOpen]               = useState(false)
+  const [customAnimal, setCustomAnimal]   = useState('')
+  const [customVegetal, setCustomVegetal] = useState('')
+  const [recipeQuery, setRecipeQuery]   = useState('')
+  const [recipeResults, setRecipeResults] = useState<{ id: string; nombre: string }[]>([])
+
+  const animales  = form.proteinas_animales_que_si_come  ?? ANIMALES_DEFAULT
+  const vegetales = form.proteinas_vegetales_que_si_come ?? VEGETALES_DEFAULT
+  const favIds    = form.favorite_recipes ?? []
+
+  const toggleAnimal = (p: string) =>
+    set('proteinas_animales_que_si_come',
+      animales.includes(p) ? animales.filter(x => x !== p) : [...animales, p].sort((a,b) => a.localeCompare(b,'es')))
+
+  const toggleVegetal = (p: string) =>
+    set('proteinas_vegetales_que_si_come',
+      vegetales.includes(p) ? vegetales.filter(x => x !== p) : [...vegetales, p].sort((a,b) => a.localeCompare(b,'es')))
+
+  const addCustomAnimal = () => {
+    const v = customAnimal.trim().toLowerCase()
+    if (!v || animales.includes(v)) return
+    set('proteinas_animales_que_si_come', [...animales, v].sort((a,b) => a.localeCompare(b,'es')))
+    setCustomAnimal('')
+  }
+
+  const addCustomVegetal = () => {
+    const v = customVegetal.trim().toLowerCase()
+    if (!v || vegetales.includes(v)) return
+    set('proteinas_vegetales_que_si_come', [...vegetales, v].sort((a,b) => a.localeCompare(b,'es')))
+    setCustomVegetal('')
+  }
+
+  useEffect(() => {
+    if (recipeQuery.length < 2) { setRecipeResults([]); return }
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from('recipes').select('id, nombre')
+        .ilike('nombre', `%${recipeQuery}%`)
+        .in('tipo_componente', ['proteina_principal','plato_unico'])
+        .limit(6)
+      setRecipeResults(data ?? [])
+    }, 300)
+    return () => clearTimeout(t)
+  }, [recipeQuery])
+
+  const toggleFav = (id: string) =>
+    set('favorite_recipes', favIds.includes(id) ? favIds.filter(x => x !== id) : [...favIds, id])
+
+  const countActive = animales.length + vegetales.length + favIds.length
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-text">Gustos alimenticios</span>
+          {countActive > 0 && (
+            <span className="px-2 py-0.5 bg-accent-light text-accent text-xs rounded-full">Configurado</span>
+          )}
+        </div>
+        <span className="text-muted text-sm">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-2 bg-white flex flex-col gap-5">
+
+          {/* Proteínas animales */}
+          <div>
+            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Proteínas animales</p>
+            <p className="text-xs text-muted mb-2">Marcá las que SÍ come. Las que NO marcás se excluirán del menú.</p>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {ANIMALES_DEFAULT.map(p => (
+                <button key={p} type="button" onClick={() => toggleAnimal(p)}
+                  className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all capitalize
+                    ${animales.includes(p) ? 'border-accent bg-accent-light text-accent' : 'border-border text-muted'}`}>
+                  {animales.includes(p) ? '✓' : '○'} {p}
+                </button>
+              ))}
+              {/* custom ones */}
+              {animales.filter(p => !ANIMALES_DEFAULT.includes(p)).map(p => (
+                <button key={p} type="button" onClick={() => toggleAnimal(p)}
+                  className="px-3 py-1.5 rounded-full border text-xs font-medium border-accent bg-accent-light text-accent capitalize">
+                  ✓ {p}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input type="text" placeholder="Agregar otra (ej: cordero)..."
+                value={customAnimal} onChange={e => setCustomAnimal(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomAnimal() }}}
+                className="flex-1 text-sm" />
+              <button type="button" onClick={addCustomAnimal}
+                className="px-3 py-1.5 bg-accent-light text-accent rounded-xl text-xs font-medium whitespace-nowrap">
+                + Agregar
+              </button>
+            </div>
+          </div>
+
+          {/* Proteínas vegetales */}
+          <div>
+            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Proteínas vegetales</p>
+            <p className="text-xs text-muted mb-2">Marcá las que SÍ come.</p>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {VEGETALES_DEFAULT.map(p => (
+                <button key={p} type="button" onClick={() => toggleVegetal(p)}
+                  className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all capitalize
+                    ${vegetales.includes(p) ? 'border-oliva bg-oliva-claro/40 text-oliva' : 'border-border text-muted'}`}>
+                  {vegetales.includes(p) ? '✓' : '○'} {p}
+                </button>
+              ))}
+              {vegetales.filter(p => !VEGETALES_DEFAULT.includes(p)).map(p => (
+                <button key={p} type="button" onClick={() => toggleVegetal(p)}
+                  className="px-3 py-1.5 rounded-full border text-xs font-medium border-oliva bg-oliva-claro/40 text-oliva capitalize">
+                  ✓ {p}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input type="text" placeholder="Agregar otra (ej: tempeh)..."
+                value={customVegetal} onChange={e => setCustomVegetal(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomVegetal() }}}
+                className="flex-1 text-sm" />
+              <button type="button" onClick={addCustomVegetal}
+                className="px-3 py-1.5 bg-accent-light text-accent rounded-xl text-xs font-medium whitespace-nowrap">
+                + Agregar
+              </button>
+            </div>
+          </div>
+
+          {/* Recetas favoritas */}
+          <div>
+            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Recetas favoritas</p>
+            <p className="text-xs text-muted mb-2">El motor las prioriza en el menú semanal.</p>
+            <input type="text" placeholder="🔍 Buscar receta..."
+              value={recipeQuery} onChange={e => setRecipeQuery(e.target.value)}
+            />
+            {recipeResults.length > 0 && (
+              <div className="mt-1 flex flex-col border border-border rounded-xl overflow-hidden">
+                {recipeResults.map(r => (
+                  <button key={r.id} type="button" onClick={() => { toggleFav(r.id); setRecipeQuery(''); setRecipeResults([]) }}
+                    className={`px-3 py-2 text-sm text-left transition-colors border-b border-border last:border-0
+                      ${favIds.includes(r.id) ? 'bg-accent-light text-accent' : 'hover:bg-gray-50 text-text'}`}>
+                    {favIds.includes(r.id) ? '⭐ ' : '+ '}{r.nombre}
+                  </button>
+                ))}
+              </div>
+            )}
+            {favIds.length > 0 && (
+              <div className="flex flex-col gap-1 mt-2">
+                {favIds.map(id => {
+                  // Try to show name from results cache or just show ID placeholder
+                  const found = recipeResults.find(r => r.id === id)
+                  return (
+                    <div key={id} className="flex items-center justify-between px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-xl">
+                      <span className="text-xs text-yellow-700">⭐ {found?.nombre ?? id.slice(0, 8) + '…'}</span>
+                      <button type="button" onClick={() => toggleFav(id)} className="text-yellow-600 text-sm font-bold">×</button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Gustos / notas */}
+          <div>
+            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Notas de gustos</p>
+            <textarea
+              placeholder="Ej: no le gusta el cilantro, prefiere las verduras crujientes, le encanta lo picante..."
+              value={form.gustos_notas ?? ''}
+              onChange={e => set('gustos_notas', e.target.value || null)}
+              rows={3}
+              className="w-full rounded-xl border border-border px-3 py-2 text-sm text-text resize-none focus:outline-none focus:border-accent"
+            />
+          </div>
+
         </div>
       )}
     </div>

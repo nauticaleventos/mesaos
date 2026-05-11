@@ -60,7 +60,10 @@ export interface FamilyMember {
   prohibited: string[]
   dislikes: string[]
   loves: string[]
-  favorite_recipes: string[]   // nombres de platos/recetas favoritas
+  favorite_recipes: string[]                    // IDs de recetas favoritas
+  proteinas_animales_que_si_come:  string[]     // ['pollo','res',...] — vacío = sin restricción
+  proteinas_vegetales_que_si_come: string[]     // ['frijoles','tofu',...] — vacío = sin restricción
+  gustos_notas: string | null
   restrictions_prep: string[]
   meals_per_day: { name: string; time: string }[]
   eating_style: string

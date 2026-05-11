@@ -113,6 +113,23 @@ function tieneIngrediente(recipe: RecipeForMenu, textos: string[]): boolean {
   return textos.some(t => ingNombres.some(n => n.includes(normalizar(t)) || normalizar(t).includes(n)))
 }
 
+// Mapa de proteína → keywords en nombres de ingredientes
+const PROTEIN_KEYWORDS: Record<string, string[]> = {
+  'pollo':    ['pollo', 'pechuga', 'muslo', 'contramuslo'],
+  'res':      ['res', 'carne de res', 'lomo', 'bistec', 'cuadril', 'costilla de res'],
+  'cerdo':    ['cerdo', 'puerco', 'tocino', 'chorizo', 'jamón', 'lomo de cerdo'],
+  'pescado':  ['pescado', 'salmón', 'tilapia', 'trucha', 'bacalao', 'atún', 'sardinas'],
+  'mariscos': ['mariscos', 'camarón', 'langostino', 'cangrejo', 'calamar', 'mejillón'],
+  'huevos':   ['huevo'],
+  'frijoles': ['frijol'],
+  'lentejas': ['lenteja'],
+  'garbanzos':['garbanzo'],
+  'tofu':     ['tofu'],
+  'soya':     ['soya', 'soja', 'edamame'],
+}
+const ALL_ANIMALES  = ['pollo', 'res', 'cerdo', 'pescado', 'mariscos', 'huevos']
+const ALL_VEGETALES = ['frijoles', 'lentejas', 'garbanzos', 'tofu', 'soya']
+
 /** True si el miembro puede comer esta receta (restricciones absolutas) */
 function esCompatibleConMiembro(recipe: RecipeForMenu, m: FamilyMember): boolean {
   // Alergias
@@ -125,6 +142,24 @@ function esCompatibleConMiembro(recipe: RecipeForMenu, m: FamilyMember): boolean
   if (es === 'keto'        && !recipe.perfiles?.keto)                           return false
   if (es === 'gluten_free' && !recipe.filtros_nutricionales?.sin_gluten)        return false
   if (es === 'lactose_free'&& !recipe.filtros_nutricionales?.sin_lacteos)       return false
+
+  // Proteínas que el miembro NO come (diferencia entre todas y las que sí come)
+  const animalesQueSiCome  = (m as unknown as { proteinas_animales_que_si_come?: string[] }).proteinas_animales_que_si_come
+  const vegetalesQueSiCome = (m as unknown as { proteinas_vegetales_que_si_come?: string[] }).proteinas_vegetales_que_si_come
+
+  const excluidos: string[] = [
+    ...(animalesQueSiCome  && animalesQueSiCome.length  > 0 ? ALL_ANIMALES.filter(p  => !animalesQueSiCome.includes(p))  : []),
+    ...(vegetalesQueSiCome && vegetalesQueSiCome.length > 0 ? ALL_VEGETALES.filter(p => !vegetalesQueSiCome.includes(p)) : []),
+  ]
+
+  if (excluidos.length > 0) {
+    const ingNombres = recipe.ingredientes.map(i => normalizar(i.nombre))
+    for (const prot of excluidos) {
+      const keywords = PROTEIN_KEYWORDS[prot] ?? [prot]
+      if (keywords.some(k => ingNombres.some(n => n.includes(k)))) return false
+    }
+  }
+
   return true
 }
 
@@ -321,9 +356,9 @@ function calcularScore(
     (m.loves ?? []).some(loved => tieneIngrediente(recipe, [loved]))
   ) ? 100 : 0
 
-  // Bonus por recetas favoritas explícitas del miembro — match por nombre (extra flat)
+  // Bonus por recetas favoritas — match exacto por ID (más confiable que nombre)
   const favRecipeBonus = activeMembers.some(m =>
-    (m.favorite_recipes ?? []).some(fav => sonSimilares(recipe.nombre, fav))
+    (m.favorite_recipes ?? []).includes(recipe.id)
   ) ? 60 : 0  // suma fija, no porcentual
 
   // Penalty si ya usamos mucha proteína animal esta semana
