@@ -186,7 +186,7 @@ export function clasificarComponente(recipe: RecipeForMenu): MealComponent {
 }
 
 /** Recetas de carbohidratos simples como acompañamiento */
-const CARBS_KEYWORDS = ['arroz', 'papa', 'plátano', 'patacón', 'yuca', 'pasta', 'pan', 'arepas', 'quinua', 'maíz']
+const CARBS_KEYWORDS = ['arroz', 'papa', 'plátano', 'platano', 'patacón', 'patacon', 'yuca', 'pasta', 'pan ', 'arepa', 'quinua', 'maíz', 'maiz']
 export function esCarbohidratoAcompa(recipe: RecipeForMenu): boolean {
   const nombre = normalizar(recipe.nombre)
   return CARBS_KEYWORDS.some(k => nombre.includes(k)) || clasificarComponente(recipe) === 'carbohidrato'
@@ -194,6 +194,14 @@ export function esCarbohidratoAcompa(recipe: RecipeForMenu): boolean {
 export function esEnsalada(recipe: RecipeForMenu): boolean {
   const nombre = normalizar(recipe.nombre)
   return nombre.includes('ensalada') || nombre.includes('slaw') || clasificarComponente(recipe) === 'ensalada'
+}
+
+/** Detecta si dos recetas son "similares" por nombre (evita duplicados temáticos) */
+export function sonSimilares(a: string, b: string): boolean {
+  const words = (s: string) => normalizar(s).split(/\s+/).filter(w => w.length > 3)
+  const wa = words(a), wb = words(b)
+  const common = wa.filter(w => wb.includes(w))
+  return common.length >= 2
 }
 
 /** Calcular score combinado para una receta en un slot dado */
@@ -279,7 +287,9 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
   let proteinDaysUsed            = 0
 
   for (let day = 1; day <= 7; day++) {
-    const isDayFinde = day >= 6
+    const isDayFinde     = day >= 6
+    const usedToday      = new Set<string>()   // resetea cada día — evita repetir en mismo día
+    const usedTodayNames: string[] = []         // para detectar recetas similares en el mismo día
 
     const mealTypes: MealType[] = []
     if (config.planear_desayuno) mealTypes.push('desayuno')
@@ -331,6 +341,8 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
       if (!bestRecipe) continue
 
       usedThisWeek.add(bestRecipe.id)
+      usedToday.add(bestRecipe.id)
+      usedTodayNames.push(bestRecipe.nombre)
       if (tieneProteinaAnimal(bestRecipe)) proteinDaysUsed++
 
       // Alternativas para miembros incompatibles
@@ -366,7 +378,13 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
           if (s > bestProtScore) { bestProtScore = s; bestProt = r }
         }
-        if (bestProt) { bestRecipe = bestProt; mainComponent = 'proteina' }
+        if (bestProt) {
+          bestRecipe = bestProt
+          mainComponent = 'proteina'
+        } else {
+          // No se encontró proteína → tratar como plato completo en lugar de etiquetar mal
+          mainComponent = 'completo'
+        }
       }
 
       if (mainComponent === 'completo' || tipo === 'desayuno' || tipo === 'snack') {
@@ -380,8 +398,20 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         components.push({ component: 'proteina', recipe: bestRecipe, memberId: null, servings: slotServings })
 
         // Acompañamientos por miembro según side_prefs
-        const carbRecipes   = allRecipes.filter(r => esCarbohidratoAcompa(r) && !usedThisWeek.has(r.id) && r.id !== bestRecipe.id)
-        const saladRecipes  = allRecipes.filter(r => esEnsalada(r)            && !usedThisWeek.has(r.id) && r.id !== bestRecipe.id)
+        const carbRecipes  = allRecipes.filter(r =>
+          esCarbohidratoAcompa(r) &&
+          !usedThisWeek.has(r.id) &&
+          !usedToday.has(r.id) &&
+          r.id !== bestRecipe.id &&
+          !usedTodayNames.some(n => sonSimilares(r.nombre, n))
+        )
+        const saladRecipes = allRecipes.filter(r =>
+          esEnsalada(r) &&
+          !usedThisWeek.has(r.id) &&
+          !usedToday.has(r.id) &&
+          r.id !== bestRecipe.id &&
+          !usedTodayNames.some(n => sonSimilares(r.nombre, n))
+        )
 
         // Carbohidrato: uno compartido para quienes lo quieren
         const membersWantCarbs = slotMembers.filter(m => m.side_prefs?.include_carbs !== false)
@@ -394,7 +424,6 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           }
           if (bestCarb) {
             const carbServings = membersWantCarbs.length
-            // Si todos quieren carbs → member_id null; si solo algunos → por miembro
             if (carbServings === slotMembers.length) {
               components.push({ component: 'carbohidrato', recipe: bestCarb, memberId: null, servings: carbServings })
             } else {
@@ -402,6 +431,9 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
                 components.push({ component: 'carbohidrato', recipe: bestCarb, memberId: m.id!, servings: 1 })
               }
             }
+            usedToday.add(bestCarb.id)
+            usedThisWeek.add(bestCarb.id)
+            usedTodayNames.push(bestCarb.nombre)
           }
         }
 
@@ -416,6 +448,9 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           }
           if (bestSalad) {
             components.push({ component: 'ensalada', recipe: bestSalad, memberId: null, servings: membersWantSalad.length })
+            usedToday.add(bestSalad.id)
+            usedThisWeek.add(bestSalad.id)
+            usedTodayNames.push(bestSalad.nombre)
           }
         }
 
