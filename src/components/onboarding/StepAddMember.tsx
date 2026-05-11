@@ -46,9 +46,9 @@ const EATING_STYLES = [
 ]
 
 const CONDITIONS = [
-  'Diabetes','Hipertensión','Celiaquía','TDA/TDAH','Embarazo',
-  'Lactancia','Hipotiroidismo','Hipertiroidismo','Colesterol alto',
-  'Enfermedad renal','Gota','Síndrome de intestino irritable',
+  'Celiaquía','Colesterol alto','Diabetes','Embarazo','Enfermedad renal',
+  'Gota','Hipertiroidismo','Hipertensión','Hipotiroidismo','Lactancia',
+  'Síndrome de intestino irritable','TDA/TDAH',
 ]
 
 interface Props {
@@ -417,7 +417,7 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {form.allergies.map(a => (
+            {[...form.allergies].sort((a,b) => a.localeCompare(b,'es')).map(a => (
               <span key={a} className="px-3 py-1 bg-red-50 border border-red-200 text-error text-xs rounded-full flex items-center gap-1">
                 {a} <button type="button" onClick={() => removeTag('allergies', a)} className="font-bold">×</button>
               </span>
@@ -441,7 +441,7 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {form.prohibited.map(p => (
+            {[...form.prohibited].sort((a,b) => a.localeCompare(b,'es')).map(p => (
               <span key={p} className="px-3 py-1 bg-accent-light border border-accent text-accent text-xs rounded-full flex items-center gap-1">
                 {p} <button type="button" onClick={() => removeTag('prohibited', p)} className="font-bold">×</button>
               </span>
@@ -466,7 +466,7 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {form.dislikes.map(d => (
+            {[...form.dislikes].sort((a,b) => a.localeCompare(b,'es')).map(d => (
               <span key={d} className="px-3 py-1 bg-gray-50 border border-border text-muted text-xs rounded-full flex items-center gap-1">
                 {d} <button type="button" onClick={() => removeTag('dislikes', d)} className="font-bold">×</button>
               </span>

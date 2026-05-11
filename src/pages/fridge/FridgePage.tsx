@@ -38,14 +38,17 @@ export default function FridgePage() {
   const { items, loading, loadItems, addItem, updateItem, deleteItem } = useFridgeStore()
   const [modal, setModal]           = useState<Modal>(null)
   const [editingItem, setEditingItem] = useState<FridgeItem | null>(null)
-  const [filter, setFilter]         = useState<Filter>('todos')
+  const [filter, setFilter]           = useState<Filter>('todos')
+  const [busqueda, setBusqueda]       = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   useEffect(() => {
     if (family?.id) loadItems(family.id)
   }, [family?.id, loadItems])
 
-  const filtered  = filter === 'todos' ? items : items.filter(i => i.location === filter)
+  const filtered = (filter === 'todos' ? items : items.filter(i => i.location === filter))
+    .filter(i => !busqueda || i.name.toLowerCase().includes(busqueda.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
   const nivel     = calcularNivelNevera(items)
 
   const expiringSoon = items.filter(i => {
@@ -143,6 +146,14 @@ export default function FridgePage() {
             </button>
           ))}
         </div>
+
+        {/* Buscador */}
+        <input
+          type="search"
+          placeholder="🔍 Buscar en nevera..."
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+        />
 
       </div>
 
