@@ -11,7 +11,7 @@ import ImportModal from '../../components/recipes/import/ImportModal'
 
 type Tab      = 'mis' | 'guardadas' | 'descubrir'
 type Vista    = 'tabs' | 'importar'
-type Categoria = 'todos' | 'desayuno' | 'almuerzo' | 'cena' | 'snack' | 'bebida' | 'smoothie' | 'ensalada' | 'acompañamiento'
+type Categoria = 'todos' | 'desayuno' | 'almuerzo' | 'cena' | 'snack' | 'postre' | 'bebida' | 'smoothie' | 'ensalada' | 'acompañamiento'
 
 const CATEGORIAS: { id: Categoria; emoji: string; label: string }[] = [
   { id: 'todos',          emoji: '🍳', label: 'Todos'           },
@@ -19,6 +19,7 @@ const CATEGORIAS: { id: Categoria; emoji: string; label: string }[] = [
   { id: 'almuerzo',       emoji: '🍽️', label: 'Almuerzos'       },
   { id: 'cena',           emoji: '🌙', label: 'Cenas'            },
   { id: 'snack',          emoji: '🍎', label: 'Snacks'           },
+  { id: 'postre',         emoji: '🍰', label: 'Postres'          },
   { id: 'bebida',         emoji: '🥤', label: 'Bebidas'          },
   { id: 'smoothie',       emoji: '🥤', label: 'Smoothies'        },
   { id: 'ensalada',       emoji: '🥗', label: 'Ensaladas'        },

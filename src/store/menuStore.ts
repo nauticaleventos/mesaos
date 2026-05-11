@@ -39,6 +39,7 @@ interface MenuState {
   saltarReceta:         (id: string) => Promise<void>
   buscarAlternativas:   (entryId: string, razon: SwapReason) => Promise<RecipeForMenu[]>
   cambiarReceta:        (entryId: string, newRecipeId: string) => Promise<void>
+  simplificarComidas:   (familyId: string, cuantas: number) => Promise<number>
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -338,6 +339,67 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
     // Mezclar aleatoriamente y devolver 5
     return candidates.sort(() => Math.random() - 0.5).slice(0, 5)
+  },
+
+  // ── Simplificar las próximas N comidas (modo día difícil) ──────────────────
+  simplificarComidas: async (familyId, cuantas) => {
+    const weekStart   = getMondayOfWeek()
+    const todayDate   = new Date()
+    const mondayDate  = new Date(weekStart + 'T00:00:00')
+    // day_of_week 1=lun … 7=dom; getDay() 0=dom
+    const jsDay       = todayDate.getDay()
+    const todayDow    = jsDay === 0 ? 7 : jsDay
+
+    // Orden cronológico de comidas dentro de la semana
+    const MEAL_ORDER  = ['desayuno', 'almuerzo', 'cena', 'snack']
+
+    // Próximos slots no cocinados a partir de hoy
+    const upcoming = get().menu
+      .filter(e =>
+        e.is_main_recipe &&
+        e.status === 'planned' &&
+        (e.day_of_week > todayDow ||
+          (e.day_of_week === todayDow))
+      )
+      .sort((a, b) => {
+        if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week
+        return MEAL_ORDER.indexOf(a.meal_type) - MEAL_ORDER.indexOf(b.meal_type)
+      })
+      .slice(0, cuantas)
+
+    if (upcoming.length === 0) return 0
+
+    // Para cada slot, buscar la receta más fácil y rápida del mismo tipo
+    let changed = 0
+    for (const entry of upcoming) {
+      const { data } = await supabase
+        .from('recipes')
+        .select(RECIPE_SELECT)
+        .eq('is_active_for_menu', true)
+        .eq('dificultad', 'facil')
+        .contains('tipo_comida', [entry.meal_type])
+        .order('tiempo_total_min', { ascending: true, nullsFirst: false })
+        .limit(10)
+
+      const candidates = (data ?? [] as RecipeForMenu[]).filter(r => r.id !== entry.recipe_id)
+      if (candidates.length === 0) continue
+
+      const chosen = candidates[Math.floor(Math.random() * Math.min(3, candidates.length))]
+      await supabase
+        .from('weekly_menu')
+        .update({ recipe_id: chosen.id, status: 'swapped' })
+        .eq('id', entry.id)
+
+      set(s => ({
+        menu: s.menu.map(e => e.id === entry.id
+          ? { ...e, recipe_id: chosen.id, status: 'swapped', recipe: chosen as RecipeForMenu }
+          : e
+        )
+      }))
+      changed++
+    }
+
+    return changed
   },
 
   // ── Cambiar receta por una alternativa ──────────────────────────────────────

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw, Printer, Leaf } from 'lucide-react'
+import { RefreshCw, Printer, Leaf, Zap } from 'lucide-react'
 import { useMenuStore } from '../../store/menuStore'
 import { useLeftoversStore } from '../../store/leftoversStore'
 import { useFamilyStore } from '../../store/familyStore'
 import DiaCard from './DiaCard'
 import SobradosSheet from './SobradosSheet'
+import DiaDificilSheet from './DiaDificilSheet'
 import { getMondayOfWeek, DAY_NAMES } from '../../lib/motorMenu'
 
 interface Props {
@@ -16,7 +17,8 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
   const { menu }                   = useMenuStore()
   const { family }                 = useFamilyStore()
   const { leftovers, loadLeftovers } = useLeftoversStore()
-  const [showSobrados, setShowSobrados] = useState(false)
+  const [showSobrados,   setShowSobrados]   = useState(false)
+  const [showDiaDificil, setShowDiaDificil] = useState(false)
 
   // Cargar sobrantes al montar
   useEffect(() => {
@@ -61,6 +63,11 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
           <button onClick={() => window.print()}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:border-accent hover:text-accent transition-colors print:hidden">
             <Printer size={15} />
+          </button>
+          <button onClick={() => setShowDiaDificil(true)}
+            title="Día difícil — simplificar próximas comidas"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-yellow-300 text-yellow-600 text-sm font-medium hover:bg-yellow-50 transition-colors print:hidden">
+            <Zap size={15} />
           </button>
           <button onClick={onRegenerar} disabled={generating}
             className="flex items-center gap-2 px-3 py-2 rounded-xl border border-accent text-accent text-sm font-medium hover:bg-accent/5 transition-colors disabled:opacity-40 print:hidden">
@@ -128,7 +135,8 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
         />
       ))}
 
-      {showSobrados && <SobradosSheet onClose={() => setShowSobrados(false)} />}
+      {showSobrados   && <SobradosSheet    onClose={() => setShowSobrados(false)} />}
+      {showDiaDificil && <DiaDificilSheet onClose={() => setShowDiaDificil(false)} />}
     </div>
   )
 }
