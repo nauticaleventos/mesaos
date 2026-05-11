@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useFamilyStore } from '../../store/familyStore'
 import { supabase } from '../../lib/supabase'
+import { CONDICIONES_UI, LEGACY_LABEL, type CondicionSalud } from '../../lib/condicionesMotor'
 import type { FamilyMember } from '../../lib/types'
 import ActividadesList from '../family/ActividadesList'
 
@@ -45,11 +46,8 @@ const EATING_STYLES = [
   { value: 'lactose_free',label: '🥛 Sin lactosa' },
 ]
 
-const CONDITIONS = [
-  'Celiaquía','Colesterol alto','Diabetes','Embarazo','Enfermedad renal',
-  'Gota','Hipertiroidismo','Hipertensión','Hipotiroidismo','Lactancia',
-  'Síndrome de intestino irritable','TDA/TDAH',
-]
+// Condiciones que el motor NO maneja (fuera del mapeo nutricional — solo informativas)
+const CONDITIONS_EXTRA = ['Embarazo', 'Hipertiroidismo', 'Hipotiroidismo', 'Lactancia', 'Síndrome de intestino irritable']
 
 interface Props {
   familyName:     string
@@ -70,7 +68,7 @@ const emptyMember = (): Omit<FamilyMember, 'id' | 'family_id' | 'created_at' | '
   calories_default: null, calories_per_day: {},
   protein_g_default: null, carbs_g_default: null, fat_g_default: null,
   eating_style: 'omnivore',
-  conditions: [], allergies: [], prohibited: [], dislikes: [],
+  conditions: [], condiciones_salud: [], allergies: [], prohibited: [], dislikes: [],
   loves: [], favorite_recipes: [], restrictions_prep: [], meals_per_day: [],
   proteinas_animales_que_si_come:  ['pollo', 'res', 'cerdo', 'pescado', 'mariscos', 'huevos'],
   proteinas_vegetales_que_si_come: ['frijoles', 'lentejas', 'garbanzos', 'tofu', 'soya'],
@@ -382,24 +380,8 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
         {/* Calorías y macros personalizados */}
         <CustomMacros form={form} set={set} />
 
-        {/* Condiciones médicas */}
-        <div>
-          <label className="input-label">Condiciones médicas
-            <span className="text-xs font-normal text-error ml-1">(se respetan al pie de la letra)</span>
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {CONDITIONS.map(c => (
-              <button key={c} type="button"
-                onClick={() => toggleCondition(c)}
-                className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all
-                  ${form.conditions.includes(c)
-                    ? 'border-error bg-red-50 text-error'
-                    : 'border-border text-muted'}`}>
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Condiciones de salud */}
+        <CondicionesSaludSection form={form} set={set} setForm={setForm} />
 
         {/* Alergias */}
         <div>
@@ -1152,6 +1134,111 @@ function GustosAlimenticios({ form, set }: { form: GustosForm; set: (f: string, 
 interface GustosForm {
   loves:            string[]
   favorite_recipes: string[]
+}
+
+// ── Sección Condiciones de salud ──────────────────────────────────────────────
+interface CondicionesSaludForm {
+  conditions:        string[]
+  condiciones_salud: string[]
+}
+
+function CondicionesSaludSection({
+  form, set, setForm,
+}: {
+  form:    CondicionesSaludForm
+  set:     (f: string, v: unknown) => void
+  setForm: React.Dispatch<React.SetStateAction<ReturnType<typeof emptyMember>>>
+}) {
+  const [open, setOpen] = useState(false)
+  const activas = form.condiciones_salud ?? []
+
+  const toggle = (key: CondicionSalud) => {
+    const label = LEGACY_LABEL[key]
+    if (activas.includes(key)) {
+      // Quitar
+      setForm(f => ({
+        ...f,
+        condiciones_salud: (f.condiciones_salud ?? []).filter(x => x !== key),
+        conditions:        f.conditions.filter(x => x !== label),
+      }))
+    } else {
+      // Agregar
+      setForm(f => ({
+        ...f,
+        condiciones_salud: [...(f.condiciones_salud ?? []), key],
+        conditions:        [...f.conditions, label],
+      }))
+    }
+  }
+
+  // Condiciones extra (informativas, sin mapeo de motor)
+  const toggleExtra = (label: string) =>
+    setForm(f => ({
+      ...f,
+      conditions: f.conditions.includes(label)
+        ? f.conditions.filter(x => x !== label)
+        : [...f.conditions, label],
+    }))
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-text">Condiciones de salud</span>
+          {activas.length > 0 && (
+            <span className="px-2 py-0.5 bg-red-50 text-error text-xs rounded-full border border-red-200">
+              {activas.length} activa{activas.length > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+        <span className="text-muted text-sm">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-2 bg-white flex flex-col gap-4">
+          <p className="text-xs text-muted">Marcá las que aplican. El motor ajustará las sugerencias automáticamente.</p>
+
+          {/* Condiciones con mapeo al motor */}
+          <div className="flex flex-wrap gap-2">
+            {CONDICIONES_UI.map(({ key, label }) => (
+              <button key={key} type="button" onClick={() => toggle(key)}
+                className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all
+                  ${activas.includes(key)
+                    ? 'border-error bg-red-50 text-error'
+                    : 'border-border text-muted hover:border-error/50'}`}>
+                {activas.includes(key) ? '✓ ' : ''}{label}
+              </button>
+            ))}
+          </div>
+
+          {/* Condiciones informativas (sin mapeo de motor) */}
+          <div>
+            <p className="text-[10px] text-muted uppercase tracking-wider mb-2">Otras condiciones (informativas)</p>
+            <div className="flex flex-wrap gap-2">
+              {CONDITIONS_EXTRA.map(label => (
+                <button key={label} type="button" onClick={() => toggleExtra(label)}
+                  className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all
+                    ${form.conditions.includes(label)
+                      ? 'border-amber-400 bg-amber-50 text-amber-700'
+                      : 'border-border text-muted hover:border-amber-400/50'}`}>
+                  {form.conditions.includes(label) ? '✓ ' : ''}{label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Disclaimer */}
+          <div className="p-3 rounded-xl bg-yellow-50 border border-yellow-200">
+            <p className="text-xs text-yellow-800">
+              ⚠️ Estas opciones ajustan las sugerencias de la app pero <strong>NO reemplazan el consejo médico</strong>.
+              Consultá a tu médico o nutricionista antes de cambiar tu alimentación.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ── Sección Actividades (solo en modo edición) ────────────────────────────────

@@ -64,6 +64,7 @@ export interface FamilyMember {
   proteinas_animales_que_si_come:  string[]     // ['pollo','res',...] — vacío = sin restricción
   proteinas_vegetales_que_si_come: string[]     // ['frijoles','tofu',...] — vacío = sin restricción
   gustos_notas: string | null
+  condiciones_salud: string[]                   // claves estandarizadas: 'diabetes','hipertension'...
   restrictions_prep: string[]
   meals_per_day: { name: string; time: string }[]
   eating_style: string

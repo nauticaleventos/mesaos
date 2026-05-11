@@ -5,6 +5,7 @@
 
 import type { FamilyMember } from './types'
 import { calcularMatch } from './matchReceta'
+import { getFiltrosParaCondiciones } from './condicionesMotor'
 
 export type MealType = 'desayuno' | 'almuerzo' | 'cena' | 'snack'
 export type MealComponent = 'completo' | 'proteina' | 'carbohidrato' | 'guarnicion' | 'ensalada' | 'salsa' | 'vinagreta'
@@ -41,10 +42,16 @@ export interface RecipeForMenu {
     keto?:             boolean
   }
   filtros_nutricionales: {
-    sin_gluten?:  boolean
-    sin_lacteos?: boolean
-    bajo_sodio?:  boolean
-    bajo_azucar?: boolean
+    sin_gluten?:         boolean
+    sin_lacteos?:        boolean
+    bajo_sodio?:         boolean
+    bajo_azucar?:        boolean
+    alto_proteina?:      boolean
+    bajo_carbohidratos?: boolean
+    alta_fibra?:         boolean
+    bajo_grasa?:         boolean
+    bajo_potasio?:       boolean
+    bajo_purinas?:       boolean
   }
 }
 
@@ -142,6 +149,18 @@ function esCompatibleConMiembro(recipe: RecipeForMenu, m: FamilyMember): boolean
   if (es === 'keto'        && !recipe.perfiles?.keto)                           return false
   if (es === 'gluten_free' && !recipe.filtros_nutricionales?.sin_gluten)        return false
   if (es === 'lactose_free'&& !recipe.filtros_nutricionales?.sin_lacteos)       return false
+
+  // Condiciones de salud → filtros nutricionales requeridos
+  // Lógica: excluir receta si un filtro REQUERIDO está explícitamente en false.
+  // Si el campo no existe en la receta (undefined), se da el beneficio de la duda.
+  const condicionesSalud = (m as unknown as { condiciones_salud?: string[] }).condiciones_salud
+  if (condicionesSalud && condicionesSalud.length > 0) {
+    const filtrosRequeridos = getFiltrosParaCondiciones(condicionesSalud)
+    for (const filtro of filtrosRequeridos) {
+      const val = recipe.filtros_nutricionales?.[filtro as keyof typeof recipe.filtros_nutricionales]
+      if (val === false) return false   // explícitamente marcado como NO apto
+    }
+  }
 
   // Proteínas que el miembro NO come (diferencia entre todas y las que sí come)
   const animalesQueSiCome  = (m as unknown as { proteinas_animales_que_si_come?: string[] }).proteinas_animales_que_si_come
