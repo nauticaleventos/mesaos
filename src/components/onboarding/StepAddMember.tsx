@@ -71,6 +71,10 @@ const emptyMember = (): Omit<FamilyMember, 'id' | 'family_id' | 'created_at' | '
   eating_style: 'omnivore',
   conditions: [], allergies: [], prohibited: [], dislikes: [],
   loves: [], favorite_recipes: [], restrictions_prep: [], meals_per_day: [],
+  plantilla_comida: 'clasico_colombiano' as const,
+  guarniciones_por_comida: 2,
+  quiere_ensalada: true,
+  quiere_salsa: false,
   linked_user_id: null,
   side_prefs: { include_carbs: true, include_salad: true, notas: '' },
 })
@@ -350,6 +354,9 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
             ))}
           </div>
         </div>
+
+        {/* Plantilla de comida */}
+        <PlantillaConfig form={form} set={set} />
 
         {/* Gustos y favoritos */}
         <GustosConfig form={form} setForm={setForm} />
@@ -828,6 +835,116 @@ function AcompConfig({ form, set }: { form: AcompForm; set: (f: string, v: unkno
               onChange={e => update('notas', e.target.value)}
               placeholder="Ej: plátano asado los días de ejercicio, sin papa…" />
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Sección Plantilla de comida ───────────────────────────────────────────────
+type Plantilla = 'clasico_colombiano' | 'liviano' | 'lowcarb_keto' | 'vegetariano' | 'personalizado'
+
+const PLANTILLAS: { id: Plantilla; emoji: string; label: string; desc: string }[] = [
+  { id: 'clasico_colombiano', emoji: '🍽️', label: 'Clásico',        desc: 'Proteína + 2 guarniciones + ensalada' },
+  { id: 'liviano',            emoji: '🥗', label: 'Liviano',         desc: 'Proteína + 1 guarnición + ensalada grande' },
+  { id: 'lowcarb_keto',       emoji: '🥑', label: 'Low-carb / Keto', desc: 'Solo proteína + ensalada, sin carbos' },
+  { id: 'vegetariano',        emoji: '🌱', label: 'Vegetariano',     desc: 'Legumbre o tofu + 2 guarniciones + ensalada' },
+  { id: 'personalizado',      emoji: '⚙️', label: 'Personalizar',    desc: 'Configuro yo mismo las guarniciones' },
+]
+
+interface PlantillaForm {
+  plantilla_comida:        string
+  guarniciones_por_comida: number
+  quiere_ensalada:         boolean
+  quiere_salsa:            boolean
+}
+
+function PlantillaConfig({ form, set }: { form: PlantillaForm; set: (f: string, v: unknown) => void }) {
+  const [open, setOpen] = useState(false)
+  const plantilla = (form.plantilla_comida ?? 'clasico_colombiano') as Plantilla
+  const label = PLANTILLAS.find(p => p.id === plantilla)?.label ?? plantilla
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-text">¿Cómo le gusta comer?</span>
+          <span className="px-2 py-0.5 bg-accent-light text-accent text-xs rounded-full">{label}</span>
+        </div>
+        <span className="text-muted text-sm">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-2 bg-white flex flex-col gap-3">
+          <p className="text-xs text-muted">
+            El motor usa esto para armar el plato: cuántas guarniciones, si quiere ensalada, si quiere salsa.
+          </p>
+
+          {PLANTILLAS.map(p => (
+            <button key={p.id} type="button"
+              onClick={() => {
+                set('plantilla_comida', p.id)
+                if (p.id === 'lowcarb_keto')  { set('guarniciones_por_comida', 0); set('quiere_ensalada', true) }
+                if (p.id === 'liviano')        { set('guarniciones_por_comida', 1); set('quiere_ensalada', true) }
+                if (p.id !== 'personalizado' && p.id !== 'lowcarb_keto' && p.id !== 'liviano') {
+                  set('guarniciones_por_comida', 2); set('quiere_ensalada', true)
+                }
+              }}
+              className={`flex items-start gap-3 py-2.5 px-3 rounded-xl border-2 text-left transition-all
+                ${plantilla === p.id ? 'border-accent bg-accent-light' : 'border-border hover:border-accent/40'}`}>
+              <span className="text-xl flex-shrink-0 mt-0.5">{p.emoji}</span>
+              <div>
+                <p className={`text-sm font-semibold ${plantilla === p.id ? 'text-accent' : 'text-text'}`}>{p.label}</p>
+                <p className="text-xs text-muted">{p.desc}</p>
+              </div>
+              {plantilla === p.id && <span className="text-accent ml-auto flex-shrink-0">✓</span>}
+            </button>
+          ))}
+
+          {/* Opciones extra personalizado */}
+          {plantilla === 'personalizado' && (
+            <div className="flex flex-col gap-3 pt-1 border-t border-border">
+              <div>
+                <label className="input-label">Guarniciones por comida</label>
+                <div className="flex items-center gap-3">
+                  {[0,1,2,3].map(n => (
+                    <button key={n} type="button"
+                      onClick={() => set('guarniciones_por_comida', n)}
+                      className={`w-10 h-10 rounded-xl border-2 text-sm font-bold transition-all
+                        ${form.guarniciones_por_comida === n ? 'border-accent bg-accent-light text-accent' : 'border-border text-muted'}`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-text">🥗 Incluir ensalada</p>
+                <button type="button" onClick={() => set('quiere_ensalada', !form.quiere_ensalada)}
+                  className={`w-11 h-6 rounded-full transition-colors relative ${form.quiere_ensalada ? 'bg-accent' : 'bg-gray-200'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.quiere_ensalada ? 'left-5' : 'left-0.5'}`} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-text">🫙 Incluir salsa / vinagreta</p>
+                <button type="button" onClick={() => set('quiere_salsa', !form.quiere_salsa)}
+                  className={`w-11 h-6 rounded-full transition-colors relative ${form.quiere_salsa ? 'bg-accent' : 'bg-gray-200'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.quiere_salsa ? 'left-5' : 'left-0.5'}`} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Toggle salsa fuera de personalizado */}
+          {plantilla !== 'personalizado' && (
+            <div className="flex items-center justify-between pt-1 border-t border-border">
+              <p className="text-sm text-text">🫙 Agregar salsa / vinagreta</p>
+              <button type="button" onClick={() => set('quiere_salsa', !form.quiere_salsa)}
+                className={`w-11 h-6 rounded-full transition-colors relative ${form.quiere_salsa ? 'bg-accent' : 'bg-gray-200'}`}>
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.quiere_salsa ? 'left-5' : 'left-0.5'}`} />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

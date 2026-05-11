@@ -70,6 +70,11 @@ export interface FamilyMember {
     include_salad:  boolean
     notas:          string
   } | null
+  // Plantilla de comida (cómo prefiere armar su plato)
+  plantilla_comida:        'clasico_colombiano' | 'liviano' | 'lowcarb_keto' | 'vegetariano' | 'personalizado'
+  guarniciones_por_comida: number    // 0-3, usado cuando plantilla = 'personalizado'
+  quiere_ensalada:         boolean
+  quiere_salsa:            boolean
   created_at: string
   updated_at: string
 }

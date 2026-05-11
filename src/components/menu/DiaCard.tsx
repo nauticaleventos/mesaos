@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { Check, SkipForward, Clock, ChefHat, ExternalLink, RefreshCw, Plus, RotateCcw } from 'lucide-react'
 import { useMenuStore, type EnrichedMenuEntry } from '../../store/menuStore'
 import { useFamilyStore } from '../../store/familyStore'
+import { useFridgeStore } from '../../store/fridgeStore'
 import type { FamilyMember } from '../../lib/types'
 import type { Leftover } from '../../store/leftoversStore'
 import { DAY_NAMES_FULL } from '../../lib/motorMenu'
+import { calcularMatch, matchBadge } from '../../lib/matchReceta'
 import CambiarSheet from './CambiarSheet'
 
 interface Props {
@@ -26,9 +28,11 @@ const MEAL_ORDER = ['desayuno', 'almuerzo', 'cena', 'snack']
 
 const COMPONENT_LABELS: Record<string, string> = {
   proteina:      '🥩 Proteína',
-  carbohidrato:  '🍚 Carbohidrato',
+  carbohidrato:  '🍚 Guarnición',
+  guarnicion:    '🍚 Guarnición',
   ensalada:      '🥗 Ensalada',
   salsa:         '🫙 Salsa',
+  vinagreta:     '🫙 Vinagreta',
   completo:      '',
 }
 
@@ -117,11 +121,16 @@ function RecetaSlot({ tipo, main, allComponents, members, membersInSlot, leftove
   const [showCambiar, setShowCambiar] = useState(false)
   const navigate            = useNavigate()
   const { restaurarReceta } = useMenuStore()
+  const fridgeItems         = useFridgeStore(s => s.items)
   const r         = main.recipe
   const isCooked  = main.status === 'cooked'
   const isSkipped = main.status === 'skipped'
 
-  // Componentes extra (carbohidratos y ensaladas)
+  // Match del plato principal contra nevera
+  const mainMatch = calcularMatch(r.ingredientes ?? [], fridgeItems)
+  const mainBadge = matchBadge(mainMatch.estado)
+
+  // Componentes extra (guarniciones, ensaladas, salsas)
   const extras = allComponents.filter(e => e.id !== main.id)
   // Variaciones por miembro (mismo componente, distinto miembro)
   const perMember = allComponents.filter(e => e.member_id !== null)
@@ -162,6 +171,11 @@ function RecetaSlot({ tipo, main, allComponents, members, membersInSlot, leftove
                 {r.dificultad}
               </span>
             )}
+            {!isCooked && !isSkipped && (
+              <span className={`text-xs font-medium ${mainBadge.color}`}>
+                {mainBadge.icon} {mainBadge.label}
+              </span>
+            )}
             {isCooked  && <span className="text-xs text-oliva font-medium">✓ Cocinada</span>}
             {isSkipped && <span className="text-xs text-muted font-medium">↩ Saltada</span>}
           </div>
@@ -181,19 +195,24 @@ function RecetaSlot({ tipo, main, allComponents, members, membersInSlot, leftove
         <span className="text-muted text-xs flex-shrink-0">{expanded ? '▲' : '▼'}</span>
       </button>
 
-      {/* Componentes extra (carbos / ensalada) compartidos */}
+      {/* Componentes extra (guarniciones / ensalada / salsa) compartidos */}
       {extras.filter(e => e.member_id === null).length > 0 && (
         <div className="px-3 pb-2 flex flex-col gap-1 border-t border-border/50">
-          {extras.filter(e => e.member_id === null).map(comp => (
-            <button key={comp.id} onClick={() => navigate(`/receta/${comp.recipe_id}`)}
-              className="flex items-center gap-2 py-1.5 text-left hover:opacity-80 transition-opacity">
-              <span className="text-xs text-muted font-medium w-24 flex-shrink-0">
-                {COMPONENT_LABELS[comp.meal_component] || comp.meal_component}
-              </span>
-              <span className="text-xs text-text truncate">{comp.recipe.nombre}</span>
-              <ExternalLink size={10} className="text-muted flex-shrink-0 ml-auto" />
-            </button>
-          ))}
+          {extras.filter(e => e.member_id === null).map(comp => {
+            const cm = calcularMatch(comp.recipe.ingredientes ?? [], fridgeItems)
+            const cb = matchBadge(cm.estado)
+            return (
+              <button key={comp.id} onClick={() => navigate(`/receta/${comp.recipe_id}`)}
+                className="flex items-center gap-2 py-1.5 text-left hover:opacity-80 transition-opacity">
+                <span className="text-xs text-muted font-medium w-24 flex-shrink-0">
+                  {COMPONENT_LABELS[comp.meal_component] || comp.meal_component}
+                </span>
+                <span className="text-xs text-text truncate">{comp.recipe.nombre}</span>
+                <span className={`text-[10px] flex-shrink-0 ml-1 ${cb.color}`}>{cb.icon}</span>
+                <ExternalLink size={10} className="text-muted flex-shrink-0 ml-auto" />
+              </button>
+            )
+          })}
         </div>
       )}
 

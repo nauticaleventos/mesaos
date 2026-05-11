@@ -22,7 +22,7 @@ export interface EnrichedMenuEntry {
 export type { MenuConfig, RecipeForMenu } from '../lib/motorMenu'
 export type SwapReason = 'no_ingredientes' | 'no_apetece' | 'muy_dificil' | 'variedad'
 
-const RECIPE_SELECT = 'id, nombre, tipo_comida, dificultad, tiempo_total_min, porciones, imagen_url, ingredientes, info_nutricional_aprox, perfiles, filtros_nutricionales'
+const RECIPE_SELECT = 'id, nombre, tipo_comida, tipo_componente, dificultad, tiempo_total_min, porciones, imagen_url, ingredientes, info_nutricional_aprox, perfiles, filtros_nutricionales'
 
 interface MenuState {
   config:     MenuConfig | null
@@ -115,7 +115,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     const recipeIds = [...new Set(entries.map((e: { recipe_id: string }) => e.recipe_id))]
     const { data: recipes } = await supabase
       .from('recipes')
-      .select('id, nombre, tipo_comida, dificultad, tiempo_total_min, porciones, imagen_url, ingredientes, info_nutricional_aprox, perfiles, filtros_nutricionales')
+      .select(RECIPE_SELECT)
       .in('id', recipeIds)
 
     const recipeMap = new Map((recipes ?? []).map(r => [r.id, r]))

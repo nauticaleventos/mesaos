@@ -4,9 +4,11 @@
 // ════════════════════════════════════════════════════════════════
 
 import type { FamilyMember } from './types'
+import { calcularMatch, inventarioTiene } from './matchReceta'
 
 export type MealType = 'desayuno' | 'almuerzo' | 'cena' | 'snack'
-export type MealComponent = 'completo' | 'proteina' | 'carbohidrato' | 'ensalada' | 'salsa'
+export type MealComponent = 'completo' | 'proteina' | 'carbohidrato' | 'guarnicion' | 'ensalada' | 'salsa' | 'vinagreta'
+export type TipoComponente = 'proteina_principal' | 'guarnicion' | 'ensalada' | 'salsa' | 'vinagreta' | 'postre' | 'bebida' | 'merienda' | 'plato_unico'
 
 export interface MenuConfig {
   id:                string
@@ -23,6 +25,7 @@ export interface RecipeForMenu {
   id:                      string
   nombre:                  string
   tipo_comida:             string[]
+  tipo_componente:         TipoComponente | null   // clasificación explícita desde BD
   dificultad:              'facil' | 'media' | 'dificil' | null
   tiempo_total_min:        number | null
   porciones:               number | null
@@ -125,15 +128,11 @@ function esCompatibleConMiembro(recipe: RecipeForMenu, m: FamilyMember): boolean
   return true
 }
 
-/** Score de inventario (0-100): qué % de ingredientes esenciales están en nevera */
+/** Score de inventario usando calcularMatch (esenciales 80% + opcionales 20% + sustituciones) */
 function scoreInventario(recipe: RecipeForMenu, fridge: FridgeItemMin[]): number {
-  const esenciales = recipe.ingredientes.filter(i => i.esencial)
-  if (esenciales.length === 0) return 60
-  const fridgeNames = fridge.map(f => normalizar(f.name))
-  const have = esenciales.filter(ing =>
-    fridgeNames.some(f => f.includes(normalizar(ing.nombre)) || normalizar(ing.nombre).includes(f))
-  ).length
-  return Math.round((have / esenciales.length) * 100)
+  if (recipe.ingredientes.length === 0) return 60
+  const result = calcularMatch(recipe.ingredientes, fridge)
+  return result.porcentaje
 }
 
 /** True si la receta tiene al menos un ingrediente de proteína animal */
@@ -141,15 +140,53 @@ function tieneProteinaAnimal(recipe: RecipeForMenu): boolean {
   return recipe.ingredientes.some(i => i.categoria === 'proteina_animal')
 }
 
+/** Capa 2: componentes que quiere un miembro según su plantilla */
+function plantillaDeComponentes(m: FamilyMember): {
+  guarniciones: number
+  quiereEnsalada: boolean
+  quiereSalsa: boolean
+} {
+  const p = (m.plantilla_comida as string | undefined) ?? 'clasico_colombiano'
+  let guarniciones =
+    p === 'lowcarb_keto'  ? 0 :
+    p === 'liviano'       ? 1 :
+    p === 'personalizado' ? (m.guarniciones_por_comida ?? 1) :
+    2   // clasico_colombiano y vegetariano
+
+  // side_prefs retrocompatible: include_carbs=false fuerza 0 guarniciones
+  if (m.side_prefs?.include_carbs === false) guarniciones = 0
+
+  const quiereEnsalada = (m as { quiere_ensalada?: boolean }).quiere_ensalada
+    ?? (m.side_prefs?.include_salad ?? true)
+  const quiereSalsa = (m as { quiere_salsa?: boolean }).quiere_salsa ?? false
+
+  return { guarniciones, quiereEnsalada, quiereSalsa }
+}
+
 /**
  * Clasifica una receta como componente de comida.
- * Heurística basada en categorías de ingredientes dominantes.
+ * Usa tipo_componente de BD cuando está disponible; heurística como fallback.
  */
 export function clasificarComponente(recipe: RecipeForMenu): MealComponent {
+  // ── Capa 2: clasificación explícita desde BD ──────────────────────────────
+  if (recipe.tipo_componente) {
+    switch (recipe.tipo_componente) {
+      case 'proteina_principal': return 'proteina'
+      case 'guarnicion':         return 'guarnicion'
+      case 'ensalada':           return 'ensalada'
+      case 'salsa':              return 'salsa'
+      case 'vinagreta':          return 'vinagreta'
+      case 'plato_unico':        return 'completo'
+      case 'postre':             return 'completo'
+      case 'bebida':             return 'completo'
+      case 'merienda':           return 'completo'
+    }
+  }
+
+  // ── Fallback: heurística por nombre e ingredientes ────────────────────────
   const nombre = normalizar(recipe.nombre)
 
-  // Bebidas → excluir de slots de comida principal
-  if (recipe.tipo_comida.includes('bebida')) return 'completo'  // se tratará como inválido en filtros
+  if (recipe.tipo_comida.includes('bebida')) return 'completo'
   if (['leche', 'jugo', 'agua', 'té ', 'te ', 'café', 'cafe', 'smoothie', 'batido', 'bebida', 'limonada', 'infusion'].some(k => nombre.includes(k))) return 'completo'
 
   const cats = recipe.ingredientes.map(i => i.categoria)
@@ -161,39 +198,42 @@ export function clasificarComponente(recipe: RecipeForMenu): MealComponent {
   const legumbreCount = cats.filter(c => c === 'legumbre').length
   const condCount     = cats.filter(c => c === 'condimento').length
 
-  // Salsas y bases líquidas (mayoría condimentos)
   if (condCount / total >= 0.5) return 'salsa'
-
-  // Proteína dominante
   if (proteinCount / total >= 0.30) return 'proteina'
 
-  // Nombre sugiere proteína
   const proteinKeywords = ['pollo', 'carne', 'res', 'cerdo', 'pescado', 'atún', 'atun', 'salmon', 'salmón',
     'camarón', 'camaron', 'huevo', 'huevos', 'tofu', 'lentejas', 'garbanzos', 'frijol', 'lomo', 'pechuga',
-    'filete', 'costilla', 'cerdo', 'chorizo', 'jamón', 'jamon', 'sardinas', 'bacalao', 'langostino']
+    'filete', 'costilla', 'chorizo', 'jamón', 'jamon', 'sardinas', 'bacalao', 'langostino']
   if (proteinKeywords.some(k => nombre.includes(k)) && !nombre.includes('ensalada')) return 'proteina'
 
-  // Carbohidrato
-  if ((granoCount + legumbreCount) / total >= 0.35 && proteinCount / total < 0.2) return 'carbohidrato'
+  if ((granoCount + legumbreCount) / total >= 0.35 && proteinCount / total < 0.2) return 'guarnicion'
   const carbKeywords = ['arroz', 'papa', 'plátano', 'platano', 'yuca', 'pasta', 'arepa', 'pan ', 'quinua', 'maíz', 'maiz', 'patacón', 'patacon']
-  if (carbKeywords.some(k => nombre.includes(k)) && proteinCount / total < 0.2) return 'carbohidrato'
+  if (carbKeywords.some(k => nombre.includes(k)) && proteinCount / total < 0.2) return 'guarnicion'
 
-  // Ensalada/vegetal
   if (veggieCount / total >= 0.50 && proteinCount / total < 0.15) return 'ensalada'
   if (nombre.includes('ensalada') || nombre.includes('slaw')) return 'ensalada'
 
   return 'completo'
 }
 
-/** Recetas de carbohidratos simples como acompañamiento */
+/** Guarnición: carbo o acompañamiento (usa tipo_componente si está disponible) */
 const CARBS_KEYWORDS = ['arroz', 'papa', 'plátano', 'platano', 'patacón', 'patacon', 'yuca', 'pasta', 'pan ', 'arepa', 'quinua', 'maíz', 'maiz']
 export function esCarbohidratoAcompa(recipe: RecipeForMenu): boolean {
+  if (recipe.tipo_componente === 'guarnicion') return true
   const nombre = normalizar(recipe.nombre)
-  return CARBS_KEYWORDS.some(k => nombre.includes(k)) || clasificarComponente(recipe) === 'carbohidrato'
+  return CARBS_KEYWORDS.some(k => nombre.includes(k)) || ['carbohidrato', 'guarnicion'].includes(clasificarComponente(recipe))
 }
+// Alias semántico
+export const esGuarnicion = esCarbohidratoAcompa
+
 export function esEnsalada(recipe: RecipeForMenu): boolean {
+  if (recipe.tipo_componente === 'ensalada') return true
   const nombre = normalizar(recipe.nombre)
   return nombre.includes('ensalada') || nombre.includes('slaw') || clasificarComponente(recipe) === 'ensalada'
+}
+
+export function esSalsa(recipe: RecipeForMenu): boolean {
+  return recipe.tipo_componente === 'salsa' || recipe.tipo_componente === 'vinagreta' || clasificarComponente(recipe) === 'salsa'
 }
 
 /** Detecta si dos recetas son "similares" por nombre (evita duplicados temáticos) */
@@ -573,11 +613,10 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           components.push({ component: mainComponent, recipe: alt.recipe, memberId: alt.memberId, servings: 1 })
         }
       } else {
-        // Almuerzo/cena con proteína + acompañamientos por miembro
+        // ── Almuerzo/cena: proteína + guarniciones + ensalada + salsa opcional ─
         components.push({ component: 'proteina', recipe: bestRecipe, memberId: null, servings: slotServings })
 
-        // Acompañamientos por miembro según side_prefs
-        // Reglas: no mismo día, no días consecutivos, máx MAX_ACCOMPA_WEEK veces en la semana
+        // Filtro base de acompañamientos: no repetir mismo día, no consecutivos, máx 2/semana
         const filterAcompa = (track: Map<string, { count: number; lastDay: number }>, r: RecipeForMenu) => {
           if (usedToday.has(r.id)) return false
           if (r.id === bestRecipe.id) return false
@@ -585,55 +624,101 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           const t = track.get(r.id)
           if (!t) return true
           if (t.count >= MAX_ACCOMPA_WEEK) return false
-          if (day - t.lastDay <= 1) return false   // no días consecutivos
+          if (day - t.lastDay <= 1) return false
           return true
         }
 
-        const carbRecipes  = allRecipes.filter(r => esCarbohidratoAcompa(r) && filterAcompa(carbWeekTrack, r))
-        const saladRecipes = allRecipes.filter(r => esEnsalada(r)            && filterAcompa(saladWeekTrack, r))
+        const guarnicionPool = allRecipes.filter(r => esGuarnicion(r) && filterAcompa(carbWeekTrack, r))
+        const saladPool      = allRecipes.filter(r => esEnsalada(r)   && filterAcompa(saladWeekTrack, r))
+        const salsaPool      = allRecipes.filter(r => esSalsa(r) && !usedToday.has(r.id) && r.id !== bestRecipe.id)
 
-        // Carbohidrato: uno compartido para quienes lo quieren
-        const membersWantCarbs = slotMembers.filter(m => m.side_prefs?.include_carbs !== false)
-        if (membersWantCarbs.length > 0 && carbRecipes.length > 0) {
-          let bestCarb: RecipeForMenu | null = null, bestCarbScore = -Infinity
-          for (const r of carbRecipes) {
-            // Pasa usedThisWeekProtOnly: los carbos no están ahí, así pueden tener score positivo
+        // Leer plantilla por miembro (Capa 2)
+        const membersWantG1   = slotMembers.filter(m => plantillaDeComponentes(m).guarniciones >= 1)
+        const membersWantG2   = slotMembers.filter(m => plantillaDeComponentes(m).guarniciones >= 2)
+        const membersWantSalad = slotMembers.filter(m => plantillaDeComponentes(m).quiereEnsalada)
+        const membersWantSalsa = slotMembers.filter(m => plantillaDeComponentes(m).quiereSalsa)
+
+        // Guarnición 1
+        let guarn1: RecipeForMenu | null = null
+        if (membersWantG1.length > 0 && guarnicionPool.length > 0) {
+          let bestS = -Infinity
+          for (const r of guarnicionPool) {
             const s = calcularScore(r, input, usedThisWeekProtOnly, proteinDaysUsed,
-              new Set(membersWantCarbs.map(m => m.id!)), isDayFinde, tipo)
-            if (s > bestCarbScore) { bestCarbScore = s; bestCarb = r }
+              new Set(membersWantG1.map(m => m.id!)), isDayFinde, tipo)
+            if (s > bestS) { bestS = s; guarn1 = r }
           }
-          if (bestCarb) {
-            const carbServings = membersWantCarbs.length
-            if (carbServings === slotMembers.length) {
-              components.push({ component: 'carbohidrato', recipe: bestCarb, memberId: null, servings: carbServings })
+          if (guarn1) {
+            const servings = membersWantG1.length
+            if (servings === slotMembers.length) {
+              components.push({ component: 'guarnicion', recipe: guarn1, memberId: null, servings })
             } else {
-              for (const m of membersWantCarbs) {
-                components.push({ component: 'carbohidrato', recipe: bestCarb, memberId: m.id!, servings: 1 })
+              for (const m of membersWantG1) {
+                components.push({ component: 'guarnicion', recipe: guarn1, memberId: m.id!, servings: 1 })
               }
             }
-            usedToday.add(bestCarb.id)
-            usedTodayNames.push(bestCarb.nombre)
-            // Registrar en carbWeekTrack (no en usedThisWeek — permite repetición controlada)
-            const ct = carbWeekTrack.get(bestCarb.id) ?? { count: 0, lastDay: 0 }
-            carbWeekTrack.set(bestCarb.id, { count: ct.count + 1, lastDay: day })
+            usedToday.add(guarn1.id); usedTodayNames.push(guarn1.nombre)
+            const ct = carbWeekTrack.get(guarn1.id) ?? { count: 0, lastDay: 0 }
+            carbWeekTrack.set(guarn1.id, { count: ct.count + 1, lastDay: day })
           }
         }
 
-        // Ensalada: compartida para quienes la quieren
-        const membersWantSalad = slotMembers.filter(m => m.side_prefs?.include_salad !== false)
-        if (membersWantSalad.length > 0 && saladRecipes.length > 0) {
-          let bestSalad: RecipeForMenu | null = null, bestSaladScore = -Infinity
-          for (const r of saladRecipes) {
+        // Guarnición 2 (distinta de la 1ª)
+        if (membersWantG2.length > 0) {
+          const pool2 = guarnicionPool.filter(r => r.id !== guarn1?.id)
+          let bestG2: RecipeForMenu | null = null, bestS2 = -Infinity
+          for (const r of pool2) {
+            const s = calcularScore(r, input, usedThisWeekProtOnly, proteinDaysUsed,
+              new Set(membersWantG2.map(m => m.id!)), isDayFinde, tipo)
+            if (s > bestS2) { bestS2 = s; bestG2 = r }
+          }
+          if (bestG2) {
+            const servings = membersWantG2.length
+            if (servings === slotMembers.length) {
+              components.push({ component: 'guarnicion', recipe: bestG2, memberId: null, servings })
+            } else {
+              for (const m of membersWantG2) {
+                components.push({ component: 'guarnicion', recipe: bestG2, memberId: m.id!, servings: 1 })
+              }
+            }
+            usedToday.add(bestG2.id); usedTodayNames.push(bestG2.nombre)
+            const ct = carbWeekTrack.get(bestG2.id) ?? { count: 0, lastDay: 0 }
+            carbWeekTrack.set(bestG2.id, { count: ct.count + 1, lastDay: day })
+          }
+        }
+
+        // Ensalada
+        if (membersWantSalad.length > 0 && saladPool.length > 0) {
+          let bestSalad: RecipeForMenu | null = null, bestSs = -Infinity
+          for (const r of saladPool) {
             const s = calcularScore(r, input, usedThisWeekProtOnly, proteinDaysUsed,
               new Set(membersWantSalad.map(m => m.id!)), isDayFinde, tipo)
-            if (s > bestSaladScore) { bestSaladScore = s; bestSalad = r }
+            if (s > bestSs) { bestSs = s; bestSalad = r }
           }
           if (bestSalad) {
-            components.push({ component: 'ensalada', recipe: bestSalad, memberId: null, servings: membersWantSalad.length })
-            usedToday.add(bestSalad.id)
-            usedTodayNames.push(bestSalad.nombre)
+            const servings = membersWantSalad.length
+            if (servings === slotMembers.length) {
+              components.push({ component: 'ensalada', recipe: bestSalad, memberId: null, servings })
+            } else {
+              for (const m of membersWantSalad) {
+                components.push({ component: 'ensalada', recipe: bestSalad, memberId: m.id!, servings: 1 })
+              }
+            }
+            usedToday.add(bestSalad.id); usedTodayNames.push(bestSalad.nombre)
             const st = saladWeekTrack.get(bestSalad.id) ?? { count: 0, lastDay: 0 }
             saladWeekTrack.set(bestSalad.id, { count: st.count + 1, lastDay: day })
+          }
+        }
+
+        // Salsa / vinagreta (opcional por plantilla)
+        if (membersWantSalsa.length > 0 && salsaPool.length > 0) {
+          let bestSalsa: RecipeForMenu | null = null, bestSss = -Infinity
+          for (const r of salsaPool) {
+            const s = calcularScore(r, input, usedThisWeekProtOnly, proteinDaysUsed,
+              new Set(membersWantSalsa.map(m => m.id!)), isDayFinde, tipo)
+            if (s > bestSss) { bestSss = s; bestSalsa = r }
+          }
+          if (bestSalsa) {
+            components.push({ component: 'salsa', recipe: bestSalsa, memberId: null, servings: membersWantSalsa.length })
           }
         }
 
