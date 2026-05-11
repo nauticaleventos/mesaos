@@ -9,12 +9,26 @@ import ShareMemberModal from '../../components/recipes/ShareMemberModal'
 import BottomNav from '../../components/ui/BottomNav'
 import ImportModal from '../../components/recipes/import/ImportModal'
 
-type Tab   = 'mis' | 'guardadas' | 'descubrir'
-type Vista = 'tabs' | 'importar'
+type Tab      = 'mis' | 'guardadas' | 'descubrir'
+type Vista    = 'tabs' | 'importar'
+type Categoria = 'todos' | 'desayuno' | 'almuerzo' | 'cena' | 'snack' | 'bebida' | 'smoothie' | 'ensalada' | 'acompañamiento'
+
+const CATEGORIAS: { id: Categoria; emoji: string; label: string }[] = [
+  { id: 'todos',          emoji: '🍳', label: 'Todos'           },
+  { id: 'desayuno',       emoji: '☀️', label: 'Desayunos'       },
+  { id: 'almuerzo',       emoji: '🍽️', label: 'Almuerzos'       },
+  { id: 'cena',           emoji: '🌙', label: 'Cenas'            },
+  { id: 'snack',          emoji: '🍎', label: 'Snacks'           },
+  { id: 'bebida',         emoji: '🥤', label: 'Bebidas'          },
+  { id: 'smoothie',       emoji: '🥤', label: 'Smoothies'        },
+  { id: 'ensalada',       emoji: '🥗', label: 'Ensaladas'        },
+  { id: 'acompañamiento', emoji: '🍚', label: 'Acompañamientos'  },
+]
 
 const TIPO_ICONS: Record<string, string> = {
   desayuno: '☀️', almuerzo: '🍽️', cena: '🌙',
   snack: '🍎', postre: '🍰', brunch: '🥞',
+  bebida: '🥤', smoothie: '🥤', ensalada: '🥗', acompañamiento: '🍚',
 }
 
 const DIFICULTAD_COLOR: Record<string, string> = {
@@ -34,6 +48,7 @@ export default function RecetasPage() {
   const [tab, setTab]             = useState<Tab>('descubrir')
   const [memberIdx, setMemberIdx] = useState(0)
   const [busqueda, setBusqueda]   = useState('')
+  const [categoria, setCategoria] = useState<Categoria>('todos')
 
   // Reacciones del miembro activo
   const [reactions, setReactions] = useState<Record<string, ReactionData>>({})
@@ -143,11 +158,29 @@ export default function RecetasPage() {
     (reactions[r.id]?.reaction === 'like' || reactions[r.id]?.reaction === 'bookmark')
   )
 
-  const applySearch = (list: Recipe[]) =>
-    !busqueda ? list : list.filter(r =>
+  const matchesCategoria = (r: Recipe): boolean => {
+    if (categoria === 'todos') return true
+    const nombre = r.nombre.toLowerCase()
+    if (r.tipo_comida.includes(categoria)) return true
+    if (categoria === 'ensalada')
+      return nombre.includes('ensalada') || nombre.includes('slaw')
+    if (categoria === 'smoothie')
+      return ['smoothie', 'batido', 'shake'].some(k => nombre.includes(k))
+    if (categoria === 'bebida')
+      return ['jugo', 'agua', 'té', 'cafe', 'café', 'limonada', 'infusion', 'refresco', 'bebida'].some(k => nombre.includes(k))
+    if (categoria === 'acompañamiento')
+      return ['arroz', 'papa', 'plátano', 'platano', 'patacón', 'patacon', 'yuca', 'pasta', 'arepa', 'quinua'].some(k => nombre.includes(k))
+    return false
+  }
+
+  const applySearch = (list: Recipe[]) => {
+    let result = categoria !== 'todos' ? list.filter(matchesCategoria) : list
+    if (busqueda) result = result.filter(r =>
       r.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       r.tags.some(t => t.toLowerCase().includes(busqueda.toLowerCase()))
     )
+    return result
+  }
 
   // Miembros que también guardaron una receta (excluyendo al miembro activo)
   const othersSaved = (recipeId: string): FamilyMember[] => {
@@ -229,12 +262,27 @@ export default function RecetasPage() {
         </div>
 
         {tab !== 'descubrir' && (
-          <input
-            type="search"
-            placeholder="Buscar receta..."
-            value={busqueda}
-            onChange={e => setBusqueda(e.target.value)}
-          />
+          <>
+            <input
+              type="search"
+              placeholder="Buscar receta..."
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+            />
+            {/* Chips de categoría */}
+            <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1">
+              {CATEGORIAS.map(cat => (
+                <button key={cat.id}
+                  onClick={() => setCategoria(cat.id)}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0
+                    ${categoria === cat.id
+                      ? 'bg-accent text-white shadow-sm'
+                      : 'bg-white border border-border text-muted hover:border-accent hover:text-accent'}`}>
+                  {cat.emoji} {cat.label}
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

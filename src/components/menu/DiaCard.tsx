@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, SkipForward, Clock, ChefHat, ExternalLink, RefreshCw } from 'lucide-react'
+import { Check, SkipForward, Clock, ChefHat, ExternalLink, RefreshCw, Plus } from 'lucide-react'
 import { useMenuStore, type EnrichedMenuEntry } from '../../store/menuStore'
 import { useFamilyStore } from '../../store/familyStore'
 import type { FamilyMember } from '../../lib/types'
+import type { Leftover } from '../../store/leftoversStore'
 import { DAY_NAMES_FULL } from '../../lib/motorMenu'
 import CambiarSheet from './CambiarSheet'
 
 interface Props {
-  dayOfWeek: number
-  date:      Date
-  entries:   EnrichedMenuEntry[]   // TODOS los entries del día (todos los componentes)
+  dayOfWeek:      number
+  date:           Date
+  entries:        EnrichedMenuEntry[]
+  leftovers?:     Leftover[]
+  onAddSobrante?: () => void
 }
 
 const MEAL_LABELS: Record<string, string> = {
@@ -35,7 +38,7 @@ const DIFICULTAD_COLOR: Record<string, string> = {
   dificil: 'bg-red-100 text-red-700',
 }
 
-export default function DiaCard({ dayOfWeek, date, entries }: Props) {
+export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAddSobrante }: Props) {
   const { marcarCocinada, saltarReceta } = useMenuStore()
   const members = useFamilyStore(s => s.members)
 
@@ -72,6 +75,9 @@ export default function DiaCard({ dayOfWeek, date, entries }: Props) {
         const main = mainEntry(components)
         if (!main) return null
 
+        // Sobrantes disponibles: solo mostrar en slots que tengan ensalada
+        const hasSalad = components.some(c => c.meal_component === 'ensalada')
+
         return (
           <RecetaSlot
             key={tipo}
@@ -79,6 +85,8 @@ export default function DiaCard({ dayOfWeek, date, entries }: Props) {
             main={main}
             allComponents={components}
             members={members}
+            leftovers={hasSalad ? leftovers : []}
+            onAddSobrante={hasSalad ? onAddSobrante : undefined}
             onCocinada={() => marcarCocinada(main.id)}
             onSaltar={() => saltarReceta(main.id)}
           />
@@ -88,13 +96,15 @@ export default function DiaCard({ dayOfWeek, date, entries }: Props) {
   )
 }
 
-function RecetaSlot({ tipo, main, allComponents, members, onCocinada, onSaltar }: {
-  tipo:          string
-  main:          EnrichedMenuEntry
-  allComponents: EnrichedMenuEntry[]
-  members:       FamilyMember[]
-  onCocinada:    () => void
-  onSaltar:      () => void
+function RecetaSlot({ tipo, main, allComponents, members, leftovers, onAddSobrante, onCocinada, onSaltar }: {
+  tipo:           string
+  main:           EnrichedMenuEntry
+  allComponents:  EnrichedMenuEntry[]
+  members:        FamilyMember[]
+  leftovers:      Leftover[]
+  onAddSobrante?: () => void
+  onCocinada:     () => void
+  onSaltar:       () => void
 }) {
   const [expanded,    setExpanded]    = useState(false)
   const [showCambiar, setShowCambiar] = useState(false)
@@ -164,6 +174,31 @@ function RecetaSlot({ tipo, main, allComponents, members, onCocinada, onSaltar }
               <ExternalLink size={10} className="text-muted flex-shrink-0 ml-auto" />
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Sobrantes disponibles para agregar a la ensalada */}
+      {leftovers.length > 0 && (
+        <div className="px-3 pb-2 flex flex-col gap-1 border-t border-oliva/20 bg-oliva-claro/20">
+          <p className="text-[10px] text-oliva font-semibold uppercase tracking-wider pt-1.5">
+            + Sobrantes disponibles para la ensalada
+          </p>
+          <div className="flex flex-wrap gap-1.5 pb-1">
+            {leftovers.map(l => (
+              <span key={l.id}
+                className="px-2.5 py-1 rounded-full bg-oliva/10 border border-oliva/20 text-xs text-oliva font-medium">
+                🍗 {l.ingredient_name}{l.quantity ? ` · ${l.quantity}` : ''}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {leftovers.length === 0 && onAddSobrante && (
+        <div className="px-3 pb-2 border-t border-border/40">
+          <button onClick={onAddSobrante}
+            className="flex items-center gap-1.5 mt-1.5 text-xs text-muted hover:text-oliva transition-colors">
+            <Plus size={12} /> Agregar proteína sobrante a esta ensalada
+          </button>
         </div>
       )}
 
