@@ -114,7 +114,9 @@ export default function ImportModal({ familyId, onSaved, onClose }: Props) {
   // ── Formas individuales ─────────────────────────────────────────────────────
   if (forma === 'social') return <FormaSocial onExtracted={handleExtracted} onBack={handleBack} />
   if (forma === 'foto')   return <FormaFoto   onExtracted={handleExtracted} onBack={handleBack} />
-  if (forma === 'url')    return <FormaUrl     onExtracted={handleExtracted} onBack={handleBack} />
+  if (forma === 'url')    return <FormaUrl     onExtracted={handleExtracted} onBack={handleBack}
+                                              onGoToTexto={() => setForma('texto')}
+                                              onGoToFoto={() => setForma('foto')} />
   if (forma === 'texto')  return <FormaTexto   onExtracted={handleExtracted} onBack={handleBack} />
   if (forma === 'manual') return <FormaManual  onExtracted={handleExtracted} onBack={handleBack} />
 
