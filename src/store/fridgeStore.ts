@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { normalizeIngrediente, isSameIngrediente } from '../lib/normalizeIngrediente'
 
 export interface FridgeItem {
   id: string
@@ -32,7 +33,7 @@ interface FridgeState {
   deleteItem:  (id: string) => Promise<void>
 }
 
-export const useFridgeStore = create<FridgeState>((set) => ({
+export const useFridgeStore = create<FridgeState>((set, get) => ({
   items:   [],
   loading: true,
 
@@ -47,9 +48,37 @@ export const useFridgeStore = create<FridgeState>((set) => ({
   },
 
   addItem: async (item, familyId) => {
+    // Normalizar nombre antes de guardar
+    const normalizedName = normalizeIngrediente(item.name)
+    const normalizedItem = { ...item, name: normalizedName }
+
+    // Buscar si ya existe el mismo ingrediente en la misma ubicación
+    const duplicate = get().items.find(i =>
+      isSameIngrediente(i.name, normalizedName) && i.location === item.location
+    )
+
+    if (duplicate) {
+      // Mismo ingrediente, misma ubicación → sumar cantidad y tomar la fecha de vencimiento más lejana
+      const mergedQty    = (duplicate.quantity ?? 1) + (item.quantity ?? 1)
+      const mergedExpiry = laterExpiry(duplicate.expiry_date, item.expiry_date)
+      await supabase
+        .from('fridge_items')
+        .update({ quantity: mergedQty, expiry_date: mergedExpiry, updated_at: new Date().toISOString() })
+        .eq('id', duplicate.id)
+      set(s => ({
+        items: s.items.map(i =>
+          i.id === duplicate.id
+            ? { ...i, quantity: mergedQty, expiry_date: mergedExpiry }
+            : i
+        )
+      }))
+      return null
+    }
+
+    // Nuevo ítem
     const { data, error } = await supabase
       .from('fridge_items')
-      .insert({ ...item, family_id: familyId })
+      .insert({ ...normalizedItem, family_id: familyId })
       .select()
       .single()
     if (error) return error.message
@@ -60,7 +89,6 @@ export const useFridgeStore = create<FridgeState>((set) => ({
         return a.expiry_date.localeCompare(b.expiry_date)
       })
     }))
-    return null
     return null
   },
 
@@ -74,6 +102,16 @@ export const useFridgeStore = create<FridgeState>((set) => ({
     set(s => ({ items: s.items.filter(i => i.id !== id) }))
   },
 }))
+
+// ── Helpers internos ─────────────────────────────────────────────────────────
+
+/** Devuelve la fecha de vencimiento más lejana entre las dos (o la que exista) */
+function laterExpiry(a: string | null, b: string | null): string | null {
+  if (!a && !b) return null
+  if (!a) return b
+  if (!b) return a
+  return a > b ? a : b
+}
 
 // ── Helpers de vencimiento ────────────────────────────────────────────────────
 export function expiryStatus(dateStr: string | null): 'expired' | 'critical' | 'warning' | 'ok' | 'none' {
