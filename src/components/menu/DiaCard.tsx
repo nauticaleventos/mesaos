@@ -9,6 +9,7 @@ import type { Leftover } from '../../store/leftoversStore'
 import { DAY_NAMES_FULL } from '../../lib/motorMenu'
 import { calcularMatch, matchBadge } from '../../lib/matchReceta'
 import CambiarSheet from './CambiarSheet'
+import AgregarProteinaSheet from './AgregarProteinaSheet'
 
 interface Props {
   dayOfWeek:      number
@@ -117,8 +118,17 @@ function RecetaSlot({ tipo, main, allComponents, members, membersInSlot, leftove
   onCocinada:     () => void
   onSaltar:       () => void
 }) {
-  const [expanded,    setExpanded]    = useState(false)
-  const [showCambiar, setShowCambiar] = useState(false)
+  const [expanded,         setExpanded]         = useState(false)
+  const [showCambiar,      setShowCambiar]      = useState(false)
+  const [showAgregarProt,  setShowAgregarProt]  = useState(false)
+
+  // Detectar si el slot tiene ensalada/guarnición pero no proteína propia
+  const hasProtein = allComponents.some(e =>
+    e.meal_component === 'proteina' || e.meal_component === 'completo'
+  )
+  const hasOnlySides = !hasProtein && allComponents.some(e =>
+    e.meal_component === 'ensalada' || e.meal_component === 'guarnicion'
+  )
   const navigate            = useNavigate()
   const { restaurarReceta } = useMenuStore()
   const fridgeItems         = useFridgeStore(s => s.items)
@@ -216,11 +226,11 @@ function RecetaSlot({ tipo, main, allComponents, members, membersInSlot, leftove
         </div>
       )}
 
-      {/* Sobrantes disponibles para agregar a la ensalada */}
+      {/* Sobrantes registrados de la semana */}
       {leftovers.length > 0 && (
         <div className="px-3 pb-2 flex flex-col gap-1 border-t border-oliva/20 bg-oliva-claro/20">
           <p className="text-[10px] text-oliva font-semibold uppercase tracking-wider pt-1.5">
-            + Sobrantes disponibles para la ensalada
+            + Sobrantes disponibles
           </p>
           <div className="flex flex-wrap gap-1.5 pb-1">
             {leftovers.map(l => (
@@ -232,11 +242,14 @@ function RecetaSlot({ tipo, main, allComponents, members, membersInSlot, leftove
           </div>
         </div>
       )}
-      {leftovers.length === 0 && onAddSobrante && (
+
+      {/* Botón agregar proteína: siempre en ensaladas + cuando no hay proteína en el slot */}
+      {!isSkipped && (hasOnlySides || onAddSobrante) && (
         <div className="px-3 pb-2 border-t border-border/40">
-          <button onClick={onAddSobrante}
-            className="flex items-center gap-1.5 mt-1.5 text-xs text-muted hover:text-oliva transition-colors">
-            <Plus size={12} /> Agregar proteína sobrante a esta ensalada
+          <button onClick={() => setShowAgregarProt(true)}
+            className="flex items-center gap-1.5 mt-1.5 text-xs text-accent hover:text-accent/70 transition-colors font-medium">
+            <Plus size={12} />
+            {hasOnlySides ? 'Agregar proteína a esta comida' : 'Agregar proteína a esta ensalada'}
           </button>
         </div>
       )}
@@ -377,9 +390,8 @@ function RecetaSlot({ tipo, main, allComponents, members, membersInSlot, leftove
         </div>
       )}
 
-      {showCambiar && (
-        <CambiarSheet entry={main} onClose={() => setShowCambiar(false)} />
-      )}
+      {showCambiar     && <CambiarSheet          entry={main} onClose={() => setShowCambiar(false)} />}
+      {showAgregarProt && <AgregarProteinaSheet              onClose={() => setShowAgregarProt(false)} />}
     </div>
   )
 }

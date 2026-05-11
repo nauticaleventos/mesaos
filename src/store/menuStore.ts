@@ -290,9 +290,26 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     }
   },
 
-  // ── Marcar cocinada ─────────────────────────────────────────────────────────
+  // ── Marcar cocinada + auto-registrar sobra de proteína ──────────────────────
   marcarCocinada: async (id) => {
     await supabase.from('weekly_menu').update({ status: 'cooked' }).eq('id', id)
+
+    // Si es una proteína o plato completo, registrar sobra automáticamente
+    const entry = get().menu.find(e => e.id === id)
+    if (entry && entry.is_main_recipe && (entry.meal_component === 'proteina' || entry.meal_component === 'completo')) {
+      const { data: wm } = await supabase
+        .from('weekly_menu').select('family_id').eq('id', id).maybeSingle()
+      if (wm?.family_id) {
+        await supabase.from('leftover_proteins').insert({
+          family_id:      wm.family_id,
+          recipe_id:      entry.recipe_id,
+          protein_nombre: entry.recipe.nombre,
+          cooking_date:   new Date().toISOString().split('T')[0],
+          available:      true,
+        })
+      }
+    }
+
     set(s => ({
       menu: s.menu.map(e => e.id === id ? { ...e, status: 'cooked' } : e)
     }))
