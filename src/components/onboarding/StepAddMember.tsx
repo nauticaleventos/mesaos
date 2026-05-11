@@ -101,13 +101,6 @@ export default function StepAddMember({ familyName, memberCount, onAdded, onFini
   const set = (field: string, value: unknown) =>
     setForm(f => ({ ...f, [field]: value }))
 
-  const _toggleCondition = (c: string) =>
-    setForm(f => ({
-      ...f,
-      conditions: f.conditions.includes(c)
-        ? f.conditions.filter((x: string) => x !== c)
-        : [...f.conditions, c]
-    }))
 
   const addTag = (field: 'allergies' | 'prohibited' | 'dislikes', val: string, clear: () => void) => {
     const trimmed = val.trim()
