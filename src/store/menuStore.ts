@@ -19,7 +19,10 @@ export interface EnrichedMenuEntry {
   recipe:         RecipeForMenu
 }
 
-export type { MenuConfig } from '../lib/motorMenu'
+export type { MenuConfig, RecipeForMenu } from '../lib/motorMenu'
+export type SwapReason = 'no_ingredientes' | 'no_apetece' | 'muy_dificil' | 'variedad'
+
+const RECIPE_SELECT = 'id, nombre, tipo_comida, dificultad, tiempo_total_min, porciones, imagen_url, ingredientes, info_nutricional_aprox, perfiles, filtros_nutricionales'
 
 interface MenuState {
   config:     MenuConfig | null
@@ -28,12 +31,14 @@ interface MenuState {
   generating: boolean
   progress:   number   // 0-100
 
-  loadConfig:     (familyId: string) => Promise<void>
-  saveConfig:     (familyId: string, patch: Partial<MenuConfig>) => Promise<void>
-  loadMenu:       (familyId: string, weekStart?: string) => Promise<void>
-  generarMenu:    (familyId: string, fridgeItems: FridgeItem[], healthyMode: boolean) => Promise<string | null>
-  marcarCocinada: (id: string) => Promise<void>
-  saltarReceta:   (id: string) => Promise<void>
+  loadConfig:           (familyId: string) => Promise<void>
+  saveConfig:           (familyId: string, patch: Partial<MenuConfig>) => Promise<void>
+  loadMenu:             (familyId: string, weekStart?: string) => Promise<void>
+  generarMenu:          (familyId: string, fridgeItems: FridgeItem[], healthyMode: boolean) => Promise<string | null>
+  marcarCocinada:       (id: string) => Promise<void>
+  saltarReceta:         (id: string) => Promise<void>
+  buscarAlternativas:   (entryId: string, razon: SwapReason) => Promise<RecipeForMenu[]>
+  cambiarReceta:        (entryId: string, newRecipeId: string) => Promise<void>
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -297,5 +302,64 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     set(s => ({
       menu: s.menu.map(e => e.id === id ? { ...e, status: 'skipped' } : e)
     }))
+  },
+
+  // ── Buscar alternativas para cambiar una receta ─────────────────────────────
+  buscarAlternativas: async (entryId, razon) => {
+    const entry = get().menu.find(e => e.id === entryId)
+    if (!entry) return []
+
+    const usedIds = new Set(get().menu.map(e => e.recipe_id))
+
+    let query = supabase
+      .from('recipes')
+      .select(RECIPE_SELECT)
+      .eq('is_active_for_menu', true)
+      .not('tipo_comida', 'is', null)
+
+    if (razon === 'muy_dificil') query = query.eq('dificultad', 'facil')
+
+    const { data } = await query.limit(80)
+    if (!data) return []
+
+    const mealType = entry.meal_type
+    let candidates = (data as RecipeForMenu[]).filter(r =>
+      !usedIds.has(r.id) &&
+      r.tipo_comida?.includes(mealType)
+    )
+
+    // Para "no_apetece": excluir recetas con nombre similar a la actual
+    if (razon === 'no_apetece') {
+      const currentName = entry.recipe.nombre.toLowerCase()
+      candidates = candidates.filter(r =>
+        !r.nombre.toLowerCase().split(' ').some(w => w.length > 4 && currentName.includes(w))
+      )
+    }
+
+    // Mezclar aleatoriamente y devolver 5
+    return candidates.sort(() => Math.random() - 0.5).slice(0, 5)
+  },
+
+  // ── Cambiar receta por una alternativa ──────────────────────────────────────
+  cambiarReceta: async (entryId, newRecipeId) => {
+    await supabase
+      .from('weekly_menu')
+      .update({ recipe_id: newRecipeId, status: 'swapped' })
+      .eq('id', entryId)
+
+    const { data: recipe } = await supabase
+      .from('recipes')
+      .select(RECIPE_SELECT)
+      .eq('id', newRecipeId)
+      .single()
+
+    if (recipe) {
+      set(s => ({
+        menu: s.menu.map(e => e.id === entryId
+          ? { ...e, recipe_id: newRecipeId, status: 'swapped', recipe: recipe as RecipeForMenu }
+          : e
+        )
+      }))
+    }
   },
 }))

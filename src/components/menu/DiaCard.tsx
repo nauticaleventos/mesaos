@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, SkipForward, Clock, ChefHat, ExternalLink } from 'lucide-react'
+import { Check, SkipForward, Clock, ChefHat, ExternalLink, RefreshCw } from 'lucide-react'
 import { useMenuStore, type EnrichedMenuEntry } from '../../store/menuStore'
 import { useFamilyStore } from '../../store/familyStore'
 import type { FamilyMember } from '../../lib/types'
 import { DAY_NAMES_FULL } from '../../lib/motorMenu'
+import CambiarSheet from './CambiarSheet'
 
 interface Props {
   dayOfWeek: number
@@ -95,7 +96,8 @@ function RecetaSlot({ tipo, main, allComponents, members, onCocinada, onSaltar }
   onCocinada:    () => void
   onSaltar:      () => void
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded,    setExpanded]    = useState(false)
+  const [showCambiar, setShowCambiar] = useState(false)
   const navigate  = useNavigate()
   const r         = main.recipe
   const isCooked  = main.status === 'cooked'
@@ -200,6 +202,12 @@ function RecetaSlot({ tipo, main, allComponents, members, onCocinada, onSaltar }
               </button>
             )}
             {!isCooked && (
+              <button onClick={() => setShowCambiar(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-accent font-medium hover:bg-accent/5 transition-colors border-l border-border">
+                <RefreshCw size={15} /> Cambiar
+              </button>
+            )}
+            {!isCooked && (
               <button onClick={onSaltar}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-muted hover:bg-gray-50 transition-colors border-l border-border">
                 <SkipForward size={15} /> Saltar
@@ -207,6 +215,10 @@ function RecetaSlot({ tipo, main, allComponents, members, onCocinada, onSaltar }
             )}
           </div>
         </div>
+      )}
+
+      {showCambiar && (
+        <CambiarSheet entry={main} onClose={() => setShowCambiar(false)} />
       )}
     </div>
   )
