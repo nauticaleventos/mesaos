@@ -238,11 +238,38 @@ export function clasificarComponente(recipe: RecipeForMenu): MealComponent {
   }
 
   // ── Fallback: heurística por nombre e ingredientes ────────────────────────
+  // ORDEN IMPORTANTE: nombre primero, ratios de ingredientes después.
+  // Esto evita que "Arroz con Coco" sea clasificado como salsa por tener
+  // muchos condimentos, y que "Pollo con Yuca y Ensalada" sea ensalada.
+
   const nombre = normalizar(recipe.nombre)
 
+  // 1. Bebidas
   if (recipe.tipo_comida.includes('bebida')) return 'completo'
-  if (['leche', 'jugo', 'agua', 'té ', 'te ', 'café', 'cafe', 'smoothie', 'batido', 'bebida', 'limonada', 'infusion'].some(k => nombre.includes(k))) return 'completo'
+  if (['leche', 'jugo', 'agua', 'té ', 'te ', 'café', 'cafe', 'smoothie', 'batido',
+       'bebida', 'limonada', 'infusion'].some(k => nombre.includes(k))) return 'completo'
 
+  // 2. Proteína por nombre (ANTES de los ratios)
+  // Excepción solo si el nombre EMPIEZA con 'ensalada' (ej: "Ensalada de Pollo")
+  const proteinKeywords = ['pollo', 'carne', 'res', 'cerdo', 'pescado', 'atún', 'atun', 'salmon', 'salmón',
+    'camarón', 'camaron', 'huevo', 'huevos', 'tofu', 'lentejas', 'garbanzos', 'frijol', 'lomo', 'pechuga',
+    'filete', 'costilla', 'chorizo', 'jamón', 'jamon', 'sardinas', 'bacalao', 'langostino']
+  if (proteinKeywords.some(k => nombre.includes(k)) && !nombre.startsWith('ensalada')) return 'proteina'
+
+  // 3. Guarnición/carbo por nombre (ANTES de ratios — evita que "Arroz con Coco" sea salsa)
+  const carbKeywords = ['arroz', 'papa', 'plátano', 'platano', 'yuca', 'pasta', 'arepa', 'pan ', 'quinua',
+    'maíz', 'maiz', 'patacón', 'patacon', 'puré', 'pure', 'coliflor', 'brócoli', 'brocoli', 'tapioca']
+  if (carbKeywords.some(k => nombre.includes(k))) return 'guarnicion'
+
+  // 4. Ensalada por nombre
+  if (nombre.includes('ensalada') || nombre.includes('slaw') ||
+      nombre.includes('tabule') || nombre.includes('tabulé')) return 'ensalada'
+
+  // 5. Salsa/aderezo por nombre
+  const salsaKeywords = ['salsa ', 'aderezo', 'vinagreta', 'mojo ', 'chimichurri', 'hogao']
+  if (salsaKeywords.some(k => nombre.includes(k))) return 'salsa'
+
+  // 6. Ratios de ingredientes (fallback final)
   const cats = recipe.ingredientes.map(i => i.categoria)
   const total = cats.length || 1
 
@@ -254,18 +281,8 @@ export function clasificarComponente(recipe: RecipeForMenu): MealComponent {
 
   if (condCount / total >= 0.5) return 'salsa'
   if (proteinCount / total >= 0.30) return 'proteina'
-
-  const proteinKeywords = ['pollo', 'carne', 'res', 'cerdo', 'pescado', 'atún', 'atun', 'salmon', 'salmón',
-    'camarón', 'camaron', 'huevo', 'huevos', 'tofu', 'lentejas', 'garbanzos', 'frijol', 'lomo', 'pechuga',
-    'filete', 'costilla', 'chorizo', 'jamón', 'jamon', 'sardinas', 'bacalao', 'langostino']
-  if (proteinKeywords.some(k => nombre.includes(k)) && !nombre.includes('ensalada')) return 'proteina'
-
   if ((granoCount + legumbreCount) / total >= 0.35 && proteinCount / total < 0.2) return 'guarnicion'
-  const carbKeywords = ['arroz', 'papa', 'plátano', 'platano', 'yuca', 'pasta', 'arepa', 'pan ', 'quinua', 'maíz', 'maiz', 'patacón', 'patacon']
-  if (carbKeywords.some(k => nombre.includes(k)) && proteinCount / total < 0.2) return 'guarnicion'
-
   if (veggieCount / total >= 0.50 && proteinCount / total < 0.15) return 'ensalada'
-  if (nombre.includes('ensalada') || nombre.includes('slaw')) return 'ensalada'
 
   return 'completo'
 }
