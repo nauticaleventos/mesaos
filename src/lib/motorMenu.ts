@@ -146,6 +146,12 @@ function tieneProteinaAnimal(recipe: RecipeForMenu): boolean {
  * Heurística basada en categorías de ingredientes dominantes.
  */
 export function clasificarComponente(recipe: RecipeForMenu): MealComponent {
+  const nombre = normalizar(recipe.nombre)
+
+  // Bebidas → excluir de slots de comida principal
+  if (recipe.tipo_comida.includes('bebida')) return 'completo'  // se tratará como inválido en filtros
+  if (['leche', 'jugo', 'agua', 'té ', 'te ', 'café', 'cafe', 'smoothie', 'batido', 'bebida', 'limonada', 'infusion'].some(k => nombre.includes(k))) return 'completo'
+
   const cats = recipe.ingredientes.map(i => i.categoria)
   const total = cats.length || 1
 
@@ -153,14 +159,29 @@ export function clasificarComponente(recipe: RecipeForMenu): MealComponent {
   const granoCount    = cats.filter(c => c === 'grano').length
   const veggieCount   = cats.filter(c => c === 'vegetal' || c === 'fruta').length
   const legumbreCount = cats.filter(c => c === 'legumbre').length
+  const condCount     = cats.filter(c => c === 'condimento').length
 
-  // Si más del 35% son proteínas animales → componente proteína
-  if (proteinCount / total >= 0.35) return 'proteina'
-  // Si más del 40% son granos o legumbres con pocas proteínas → carbohidrato
-  if ((granoCount + legumbreCount) / total >= 0.40 && proteinCount / total < 0.2) return 'carbohidrato'
-  // Si más del 55% son vegetales → ensalada/acompañamiento
-  if (veggieCount / total >= 0.55 && proteinCount / total < 0.15) return 'ensalada'
-  // Todo lo demás es un plato completo
+  // Salsas y bases líquidas (mayoría condimentos)
+  if (condCount / total >= 0.5) return 'salsa'
+
+  // Proteína dominante
+  if (proteinCount / total >= 0.30) return 'proteina'
+
+  // Nombre sugiere proteína
+  const proteinKeywords = ['pollo', 'carne', 'res', 'cerdo', 'pescado', 'atún', 'atun', 'salmon', 'salmón',
+    'camarón', 'camaron', 'huevo', 'huevos', 'tofu', 'lentejas', 'garbanzos', 'frijol', 'lomo', 'pechuga',
+    'filete', 'costilla', 'cerdo', 'chorizo', 'jamón', 'jamon', 'sardinas', 'bacalao', 'langostino']
+  if (proteinKeywords.some(k => nombre.includes(k)) && !nombre.includes('ensalada')) return 'proteina'
+
+  // Carbohidrato
+  if ((granoCount + legumbreCount) / total >= 0.35 && proteinCount / total < 0.2) return 'carbohidrato'
+  const carbKeywords = ['arroz', 'papa', 'plátano', 'platano', 'yuca', 'pasta', 'arepa', 'pan ', 'quinua', 'maíz', 'maiz', 'patacón', 'patacon']
+  if (carbKeywords.some(k => nombre.includes(k)) && proteinCount / total < 0.2) return 'carbohidrato'
+
+  // Ensalada/vegetal
+  if (veggieCount / total >= 0.50 && proteinCount / total < 0.15) return 'ensalada'
+  if (nombre.includes('ensalada') || nombre.includes('slaw')) return 'ensalada'
+
   return 'completo'
 }
 
@@ -328,13 +349,29 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
       // ── Construir componentes del slot ──────────────────────────────────────
       const components: MenuComponent[] = []
 
-      // El plato principal: si es 'completo' no se desglosa
-      const mainComponent = clasificarComponente(bestRecipe)
+      // ── Determinar si desglosa en componentes o plato único ─────────────────
+      // Para almuerzo/cena: siempre buscar proteína ancla primero
+      let mainComponent = clasificarComponente(bestRecipe)
+
+      // Si el "mejor" no es proteína/completo (p.ej. una bebida o carbo ganó el score),
+      // buscar explícitamente una proteína entre los compatibles
+      if ((tipo === 'almuerzo' || tipo === 'cena') && mainComponent !== 'proteina' && mainComponent !== 'completo') {
+        const proteinaCandidates = compatibleConTodos.filter(r =>
+          clasificarComponente(r) === 'proteina' &&
+          !r.tipo_comida.includes('bebida') &&
+          !usedThisWeek.has(r.id)
+        )
+        let bestProt: RecipeForMenu | null = null, bestProtScore = -Infinity
+        for (const r of proteinaCandidates) {
+          const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
+          if (s > bestProtScore) { bestProtScore = s; bestProt = r }
+        }
+        if (bestProt) { bestRecipe = bestProt; mainComponent = 'proteina' }
+      }
 
       if (mainComponent === 'completo' || tipo === 'desayuno' || tipo === 'snack') {
         // Plato único para todos
         components.push({ component: mainComponent, recipe: bestRecipe, memberId: null, servings: slotServings })
-        // Alternativas para incompatibles
         for (const alt of alternativas) {
           components.push({ component: mainComponent, recipe: alt.recipe, memberId: alt.memberId, servings: 1 })
         }
