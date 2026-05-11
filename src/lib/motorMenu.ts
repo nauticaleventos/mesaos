@@ -606,23 +606,45 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         usedThisWeekProtOnly.add(bestRecipe.id)
       }
 
-      // Alternativas para miembros incompatibles con el plato principal (almuerzo/cena)
+      // Alternativas para miembros incompatibles — siempre buscar PROTEÍNA primero
       const alternativas: MenuSlot['alternativas'] = []
       const altUsedIds = new Set<string>([bestRecipe.id])
 
       for (const m of slotMembers) {
         if (esCompatibleConMiembro(bestRecipe, m)) continue
+
+        // 1. Buscar proteína compatible con este miembro
+        const proteinCandidates = allRecipes.filter(r =>
+          !altUsedIds.has(r.id) &&
+          esCompatibleConMiembro(r, m) &&
+          !r.tipo_comida.includes('bebida') &&
+          (clasificarComponente(r) === 'proteina' || r.tipo_componente === 'proteina_principal')
+        )
         let altScore = -Infinity, altRecipe: RecipeForMenu | null = null
-        for (const r of allRecipes) {
-          if (altUsedIds.has(r.id) || !esCompatibleConMiembro(r, m)) continue
+        for (const r of proteinCandidates) {
           const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed, new Set([m.id!]), isDayFinde, tipo)
           if (s > altScore) { altScore = s; altRecipe = r }
         }
+
+        // 2. Fallback: si no hay proteína disponible, buscar plato completo
+        if (!altRecipe) {
+          for (const r of allRecipes) {
+            if (altUsedIds.has(r.id) || !esCompatibleConMiembro(r, m)) continue
+            const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed, new Set([m.id!]), isDayFinde, tipo)
+            if (s > altScore) { altScore = s; altRecipe = r }
+          }
+        }
+
         if (altRecipe) {
           alternativas.push({ memberId: m.id!, recipe: altRecipe })
           altUsedIds.add(altRecipe.id)
+          usedThisWeek.add(altRecipe.id)
+          usedThisWeekProtOnly.add(altRecipe.id)
         }
       }
+
+      // IDs de miembros incompatibles — se excluyen de los acompañamientos familiares
+      const incompatibleIds = new Set(alternativas.map(a => a.memberId))
 
       // ── Construir componentes del slot ──────────────────────────────────────
       const components: MenuComponent[] = []
@@ -668,7 +690,9 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         }
       } else {
         // ── Almuerzo/cena: proteína + guarniciones + ensalada + salsa opcional ─
-        components.push({ component: 'proteina', recipe: bestRecipe, memberId: null, servings: slotServings })
+        // La proteína base solo es para los miembros COMPATIBLES con ella
+        const compatibleServings = slotMembers.filter(m => !incompatibleIds.has(m.id!)).length || slotServings
+        components.push({ component: 'proteina', recipe: bestRecipe, memberId: null, servings: compatibleServings })
 
         // Filtro base de acompañamientos: no repetir mismo día, no consecutivos, máx 2/semana
         const filterAcompa = (track: Map<string, { count: number; lastDay: number }>, r: RecipeForMenu) => {
@@ -686,11 +710,13 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         const saladPool      = allRecipes.filter(r => esEnsalada(r)   && filterAcompa(saladWeekTrack, r))
         const salsaPool      = allRecipes.filter(r => esSalsa(r) && !usedToday.has(r.id) && r.id !== bestRecipe.id)
 
-        // Leer plantilla por miembro (Capa 2)
-        const membersWantG1   = slotMembers.filter(m => plantillaDeComponentes(m).guarniciones >= 1)
-        const membersWantG2   = slotMembers.filter(m => plantillaDeComponentes(m).guarniciones >= 2)
-        const membersWantSalad = slotMembers.filter(m => plantillaDeComponentes(m).quiereEnsalada)
-        const membersWantSalsa = slotMembers.filter(m => plantillaDeComponentes(m).quiereSalsa)
+        // Acompañamientos familiares: solo miembros que comen la proteína base
+        // (los incompatibles reciben su propia comida completa más abajo)
+        const compatibleMembers = slotMembers.filter(m => !incompatibleIds.has(m.id!))
+        const membersWantG1   = compatibleMembers.filter(m => plantillaDeComponentes(m).guarniciones >= 1)
+        const membersWantG2   = compatibleMembers.filter(m => plantillaDeComponentes(m).guarniciones >= 2)
+        const membersWantSalad = compatibleMembers.filter(m => plantillaDeComponentes(m).quiereEnsalada)
+        const membersWantSalsa = compatibleMembers.filter(m => plantillaDeComponentes(m).quiereSalsa)
 
         // Guarnición 1
         let guarn1: RecipeForMenu | null = null
@@ -776,9 +802,30 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           }
         }
 
-        // Alternativas de proteína para incompatibles
+        // Comida completa para miembros incompatibles: proteína + acompañamientos propios
         for (const alt of alternativas) {
-          components.push({ component: 'proteina', recipe: alt.recipe, memberId: alt.memberId, servings: 1 })
+          const m = slotMembers.find(mb => mb.id === alt.memberId)
+          if (!m) continue
+
+          // Proteína del miembro
+          components.push({ component: 'proteina', recipe: alt.recipe, memberId: m.id!, servings: 1 })
+
+          // Acompañamientos según SU plantilla (no la familiar)
+          const pMember = plantillaDeComponentes(m)
+          const memberUsed = new Set([alt.recipe.id, bestRecipe.id])
+
+          if (pMember.guarniciones >= 1) {
+            const mg1 = guarnicionPool.find(r => !memberUsed.has(r.id) && esCompatibleConMiembro(r, m))
+            if (mg1) { components.push({ component: 'guarnicion', recipe: mg1, memberId: m.id!, servings: 1 }); memberUsed.add(mg1.id) }
+          }
+          if (pMember.guarniciones >= 2) {
+            const mg2 = guarnicionPool.find(r => !memberUsed.has(r.id) && esCompatibleConMiembro(r, m))
+            if (mg2) { components.push({ component: 'guarnicion', recipe: mg2, memberId: m.id!, servings: 1 }); memberUsed.add(mg2.id) }
+          }
+          if (pMember.quiereEnsalada) {
+            const ms = saladPool.find(r => !memberUsed.has(r.id) && esCompatibleConMiembro(r, m))
+            if (ms) { components.push({ component: 'ensalada', recipe: ms, memberId: m.id!, servings: 1 }) }
+          }
         }
       }
 
