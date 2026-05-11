@@ -19,7 +19,7 @@ interface LeftoversState {
   removeLeftover: (id: string) => Promise<void>
 }
 
-export const useLeftoversStore = create<LeftoversState>((set, get) => ({
+export const useLeftoversStore = create<LeftoversState>((set) => ({
   leftovers: [],
   loading:   false,
 

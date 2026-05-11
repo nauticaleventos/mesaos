@@ -351,13 +351,12 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   // ── Simplificar las próximas N comidas (modo día difícil) ──────────────────
-  simplificarComidas: async (familyId, cuantas) => {
-    const weekStart   = getMondayOfWeek()
-    const todayDate   = new Date()
-    const mondayDate  = new Date(weekStart + 'T00:00:00')
+  simplificarComidas: async (_familyId, cuantas) => {
+    const weekStart  = getMondayOfWeek()
+    const todayDate  = new Date()
     // day_of_week 1=lun … 7=dom; getDay() 0=dom
-    const jsDay       = todayDate.getDay()
-    const todayDow    = jsDay === 0 ? 7 : jsDay
+    const jsDay      = todayDate.getDay()
+    const todayDow   = jsDay === 0 ? 7 : jsDay
 
     // Orden cronológico de comidas dentro de la semana
     const MEAL_ORDER  = ['desayuno', 'almuerzo', 'cena', 'snack']

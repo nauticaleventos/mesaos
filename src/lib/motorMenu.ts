@@ -4,7 +4,7 @@
 // ════════════════════════════════════════════════════════════════
 
 import type { FamilyMember } from './types'
-import { calcularMatch, inventarioTiene } from './matchReceta'
+import { calcularMatch } from './matchReceta'
 
 export type MealType = 'desayuno' | 'almuerzo' | 'cena' | 'snack'
 export type MealComponent = 'completo' | 'proteina' | 'carbohidrato' | 'guarnicion' | 'ensalada' | 'salsa' | 'vinagreta'
@@ -606,8 +606,8 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         }
       }
 
-      if (mainComponent === 'completo' || tipo === 'desayuno' || tipo === 'snack') {
-        // Plato único para todos
+      if (mainComponent === 'completo') {
+        // Plato único para todos (proteína no encontrada → se sirve como plato completo)
         components.push({ component: mainComponent, recipe: bestRecipe, memberId: null, servings: slotServings })
         for (const alt of alternativas) {
           components.push({ component: mainComponent, recipe: alt.recipe, memberId: alt.memberId, servings: 1 })
