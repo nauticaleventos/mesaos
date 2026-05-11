@@ -64,7 +64,9 @@ export default function CambiarSheet({ entry, onClose }: Props) {
               {RAZONES.map(({ id, label, desc }) => (
                 <button key={id} onClick={() => selectRazon(id)}
                   className={`py-2.5 px-3 rounded-xl border-2 text-left transition-all
-                    ${razon === id ? 'border-accent bg-accent-light' : 'border-border hover:border-accent/40'}`}>
+                    ${razon === id
+                      ? 'border-accent bg-accent-light'
+                      : 'border-border bg-white hover:border-accent/60'}`}>
                   <p className={`text-sm font-medium ${razon === id ? 'text-accent' : 'text-text'}`}>{label}</p>
                   <p className="text-xs text-muted">{desc}</p>
                 </button>
