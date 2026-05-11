@@ -217,6 +217,16 @@ function calcularScore(
   // Filtro base de tipo_comida
   if (!recipe.tipo_comida.includes(tipo === 'snack' ? 'snack' : tipo)) return -1
 
+  // Excluir bebidas de almuerzo y cena (leche de ajonjolí, jugos, etc. no son platos principales)
+  if (tipo === 'almuerzo' || tipo === 'cena') {
+    if (recipe.tipo_comida.includes('bebida')) return -1
+    const n = normalizar(recipe.nombre)
+    const esBebida = ['leche', 'jugo', 'agua', 'té ', 'te ', 'café', 'cafe',
+      'smoothie', 'batido', 'bebida', 'limonada', 'infusion', 'zumo', 'refresco',
+      'tizana', 'chicha', 'aguapanela', 'agua de'].some(k => n.includes(k))
+    if (esBebida) return -1
+  }
+
   // Variedad: no repetir misma semana
   if (usedThisWeek.has(recipe.id)) return -1
 

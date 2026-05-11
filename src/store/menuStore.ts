@@ -39,6 +39,7 @@ interface MenuState {
   saltarReceta:         (id: string) => Promise<void>
   buscarAlternativas:   (entryId: string, razon: SwapReason) => Promise<RecipeForMenu[]>
   cambiarReceta:        (entryId: string, newRecipeId: string) => Promise<void>
+  restaurarReceta:      (id: string) => Promise<void>
   simplificarComidas:   (familyId: string, cuantas: number) => Promise<number>
 }
 
@@ -302,6 +303,14 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     await supabase.from('weekly_menu').update({ status: 'skipped' }).eq('id', id)
     set(s => ({
       menu: s.menu.map(e => e.id === id ? { ...e, status: 'skipped' } : e)
+    }))
+  },
+
+  // ── Restaurar receta saltada ─────────────────────────────────────────────────
+  restaurarReceta: async (id) => {
+    await supabase.from('weekly_menu').update({ status: 'planned' }).eq('id', id)
+    set(s => ({
+      menu: s.menu.map(e => e.id === id ? { ...e, status: 'planned' } : e)
     }))
   },
 

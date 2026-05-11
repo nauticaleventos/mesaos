@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, SkipForward, Clock, ChefHat, ExternalLink, RefreshCw, Plus } from 'lucide-react'
+import { Check, SkipForward, Clock, ChefHat, ExternalLink, RefreshCw, Plus, RotateCcw } from 'lucide-react'
 import { useMenuStore, type EnrichedMenuEntry } from '../../store/menuStore'
 import { useFamilyStore } from '../../store/familyStore'
 import type { FamilyMember } from '../../lib/types'
@@ -75,8 +75,13 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
         const main = mainEntry(components)
         if (!main) return null
 
-        // Sobrantes disponibles: solo mostrar en slots que tengan ensalada
         const hasSalad = components.some(c => c.meal_component === 'ensalada')
+
+        // Miembros que comen en este slot:
+        // - si hay entries con member_id != null → esos miembros tienen variación propia
+        // - el resto come el plato compartido (member_id=null)
+        const memberIdsWithAlt = new Set(components.filter(c => c.member_id !== null).map(c => c.member_id!))
+        const membersInSlot    = members.filter(m => !memberIdsWithAlt.has(m.id!))
 
         return (
           <RecetaSlot
@@ -85,6 +90,7 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
             main={main}
             allComponents={components}
             members={members}
+            membersInSlot={membersInSlot}
             leftovers={hasSalad ? leftovers : []}
             onAddSobrante={hasSalad ? onAddSobrante : undefined}
             onCocinada={() => marcarCocinada(main.id)}
@@ -96,11 +102,12 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
   )
 }
 
-function RecetaSlot({ tipo, main, allComponents, members, leftovers, onAddSobrante, onCocinada, onSaltar }: {
+function RecetaSlot({ tipo, main, allComponents, members, membersInSlot, leftovers, onAddSobrante, onCocinada, onSaltar }: {
   tipo:           string
   main:           EnrichedMenuEntry
   allComponents:  EnrichedMenuEntry[]
   members:        FamilyMember[]
+  membersInSlot:  FamilyMember[]
   leftovers:      Leftover[]
   onAddSobrante?: () => void
   onCocinada:     () => void
@@ -108,7 +115,8 @@ function RecetaSlot({ tipo, main, allComponents, members, leftovers, onAddSobran
 }) {
   const [expanded,    setExpanded]    = useState(false)
   const [showCambiar, setShowCambiar] = useState(false)
-  const navigate  = useNavigate()
+  const navigate            = useNavigate()
+  const { restaurarReceta } = useMenuStore()
   const r         = main.recipe
   const isCooked  = main.status === 'cooked'
   const isSkipped = main.status === 'skipped'
@@ -121,7 +129,7 @@ function RecetaSlot({ tipo, main, allComponents, members, leftovers, onAddSobran
   return (
     <div className={`rounded-xl overflow-hidden border transition-all
       ${isCooked  ? 'border-oliva/40 bg-oliva-claro/30 opacity-75' : ''}
-      ${isSkipped ? 'border-border opacity-40' : ''}
+      ${isSkipped ? 'border-border bg-gray-50' : ''}
       ${!isCooked && !isSkipped ? 'border-border bg-white' : ''}`}>
 
       {/* Cabecera — proteína o plato completo */}
@@ -154,8 +162,20 @@ function RecetaSlot({ tipo, main, allComponents, members, leftovers, onAddSobran
                 {r.dificultad}
               </span>
             )}
-            {isCooked && <span className="text-xs text-oliva font-medium">✓ Cocinada</span>}
+            {isCooked  && <span className="text-xs text-oliva font-medium">✓ Cocinada</span>}
+            {isSkipped && <span className="text-xs text-muted font-medium">↩ Saltada</span>}
           </div>
+          {/* Chips de quién come este slot */}
+          {membersInSlot.length > 1 && !isSkipped && (
+            <div className="flex items-center gap-1 mt-1">
+              {membersInSlot.map(m => (
+                <span key={m.id} title={m.name ?? ''}
+                  className="text-sm leading-none" aria-label={m.name ?? ''}>
+                  {m.emoji}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <span className="text-muted text-xs flex-shrink-0">{expanded ? '▲' : '▼'}</span>
@@ -223,32 +243,48 @@ function RecetaSlot({ tipo, main, allComponents, members, leftovers, onAddSobran
       )}
 
       {/* Acciones expandidas */}
-      {expanded && !isSkipped && (
+      {expanded && (
         <div className="border-t border-border flex flex-col">
           <button onClick={() => navigate(`/receta/${main.recipe_id}`)}
             className="flex items-center justify-center gap-1.5 py-2.5 text-sm text-accent font-medium hover:bg-accent/5 transition-colors border-b border-border">
             <ExternalLink size={14} /> Ver receta completa
           </button>
-          <div className="flex">
-            {!isCooked && (
-              <button onClick={onCocinada}
+
+          {isSkipped ? (
+            /* Opciones para recetas saltadas */
+            <div className="flex">
+              <button onClick={() => restaurarReceta(main.id)}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-oliva font-medium hover:bg-oliva-claro/40 transition-colors">
-                <Check size={15} /> La cociné
+                <RotateCcw size={15} /> Restaurar
               </button>
-            )}
-            {!isCooked && (
               <button onClick={() => setShowCambiar(true)}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-accent font-medium hover:bg-accent/5 transition-colors border-l border-border">
                 <RefreshCw size={15} /> Cambiar
               </button>
-            )}
-            {!isCooked && (
-              <button onClick={onSaltar}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-muted hover:bg-gray-50 transition-colors border-l border-border">
-                <SkipForward size={15} /> Saltar
-              </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            /* Opciones normales */
+            <div className="flex">
+              {!isCooked && (
+                <button onClick={onCocinada}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-oliva font-medium hover:bg-oliva-claro/40 transition-colors">
+                  <Check size={15} /> La cociné
+                </button>
+              )}
+              {!isCooked && (
+                <button onClick={() => setShowCambiar(true)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-accent font-medium hover:bg-accent/5 transition-colors border-l border-border">
+                  <RefreshCw size={15} /> Cambiar
+                </button>
+              )}
+              {!isCooked && (
+                <button onClick={onSaltar}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-muted hover:bg-gray-50 transition-colors border-l border-border">
+                  <SkipForward size={15} /> Saltar
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
