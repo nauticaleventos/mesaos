@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Check, SkipForward, Clock, ChefHat } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Check, SkipForward, Clock, ChefHat, ExternalLink } from 'lucide-react'
 import { useMenuStore, type EnrichedMenuEntry } from '../../store/menuStore'
 import { useFamilyStore } from '../../store/familyStore'
 import type { FamilyMember } from '../../lib/types'
@@ -83,6 +84,7 @@ function RecetaSlot({ tipo, entry, alts, members, onCocinada, onSaltar }: {
   onSaltar:   () => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const navigate = useNavigate()
   const r = entry.recipe
   const isCooked  = entry.status === 'cooked'
   const isSkipped = entry.status === 'skipped'
@@ -148,7 +150,13 @@ function RecetaSlot({ tipo, entry, alts, members, onCocinada, onSaltar }: {
 
       {/* Acciones expandidas */}
       {expanded && !isSkipped && (
-        <div className="border-t border-border flex">
+        <div className="border-t border-border flex flex-col">
+          {/* Ver receta completa */}
+          <button onClick={() => navigate(`/receta/${entry.recipe_id}`)}
+            className="flex items-center justify-center gap-1.5 py-2.5 text-sm text-accent font-medium hover:bg-accent/5 transition-colors border-b border-border">
+            <ExternalLink size={14} /> Ver receta completa
+          </button>
+          <div className="flex">
           {!isCooked && (
             <button onClick={onCocinada}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-oliva font-medium hover:bg-oliva-claro/40 transition-colors">
@@ -161,6 +169,7 @@ function RecetaSlot({ tipo, entry, alts, members, onCocinada, onSaltar }: {
               <SkipForward size={15} /> Saltar
             </button>
           )}
+          </div>
         </div>
       )}
     </div>

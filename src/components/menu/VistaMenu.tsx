@@ -1,4 +1,4 @@
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Printer } from 'lucide-react'
 import { useMenuStore } from '../../store/menuStore'
 import DiaCard from './DiaCard'
 import { getMondayOfWeek, DAY_NAMES } from '../../lib/motorMenu'
@@ -40,11 +40,17 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
             </p>
           )}
         </div>
-        <button onClick={onRegenerar} disabled={generating}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl border border-accent text-accent text-sm font-medium hover:bg-accent/5 transition-colors disabled:opacity-40">
-          <RefreshCw size={15} className={generating ? 'animate-spin' : ''} />
-          Regenerar
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => window.print()}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:border-accent hover:text-accent transition-colors print:hidden">
+            <Printer size={15} />
+          </button>
+          <button onClick={onRegenerar} disabled={generating}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-accent text-accent text-sm font-medium hover:bg-accent/5 transition-colors disabled:opacity-40 print:hidden">
+            <RefreshCw size={15} className={generating ? 'animate-spin' : ''} />
+            Regenerar
+          </button>
+        </div>
       </div>
 
       {/* Progreso semanal */}

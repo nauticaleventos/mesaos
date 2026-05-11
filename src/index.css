@@ -109,3 +109,40 @@
     color: var(--texto-secundario);
   }
 }
+
+/* ── Estilos de impresión ─────────────────────────────────────────────────── */
+@media print {
+  /* Ocultar nav, botones, bottom bar */
+  nav, .print\:hidden, button { display: none !important; }
+
+  body {
+    background: white !important;
+    font-size: 11px;
+    color: black;
+  }
+
+  /* Mostrar los 7 días en grid 2 columnas */
+  .menu-print-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .card {
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  /* Título de la semana */
+  .menu-print-title {
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  /* Ocultar foto en impresión para ahorrar tinta */
+  .menu-print-hide-img { display: none !important; }
+}
