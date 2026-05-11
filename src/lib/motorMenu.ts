@@ -309,14 +309,12 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
   const { config, allMembers, slotAttendance, allRecipes } = input
 
   const result:             MenuSlot[] = []
-  // usedThisWeek: platos principales (proteína/completo) — nunca repiten en la semana
-  const usedThisWeek        = new Set<string>()
-  // usedThisWeekProtOnly: solo proteínas — se pasa al scorer de acompañamientos
-  // para que los carbos usados como plato principal no bloqueen su uso como acompañamiento
-  const usedThisWeekProtOnly = new Set<string>()
-  // Tracking de acompañamientos: cuántas veces se usaron y en qué día
+  const usedThisWeek         = new Set<string>()    // almuerzo/cena platos principales
+  const usedThisWeekProtOnly = new Set<string>()    // solo proteínas (para acompañamientos)
   const carbWeekTrack  = new Map<string, { count: number; lastDay: number }>()
   const saladWeekTrack = new Map<string, { count: number; lastDay: number }>()
+  // Desayuno/snack: cada miembro tiene su propio historial semanal
+  const usedPerMember  = new Map<string, Set<string>>()
   let   proteinDaysUsed = 0
 
   for (let day = 1; day <= 7; day++) {
@@ -343,6 +341,69 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
 
       // Restricciones extra de invitados (por notas)
       const guestRestrictions = slot?.guestRestrictions ?? []
+
+      // ── DESAYUNO Y SNACK: puntuación individual por miembro ─────────────────
+      // No requiere que el usuario llene "favoritos" — diferencia automáticamente
+      // por eating_style, dislikes, alergias, condiciones, etc. de cada persona.
+      if (tipo === 'desayuno' || tipo === 'snack') {
+        const components: MenuComponent[] = []
+        const usedInSlot = new Set<string>()
+
+        for (const m of slotMembers) {
+          const memberId  = m.id!
+          const memberUsed = usedPerMember.get(memberId) ?? new Set<string>()
+
+          // Candidatas: compatibles con ESTE miembro, no usadas por él esta semana,
+          // no usadas hoy, del tipo correcto, sin restricciones de invitados
+          const candidates = allRecipes.filter(r => {
+            if (!esCompatibleConMiembro(r, m)) return false
+            if (!r.tipo_comida.includes(tipo)) return false
+            if (memberUsed.has(r.id)) return false
+            if (usedToday.has(r.id)) return false
+            if (guestRestrictions.includes('vegetariana') && !r.perfiles?.vegetariana) return false
+            if (guestRestrictions.includes('sin_gluten')  && !r.filtros_nutricionales?.sin_gluten)  return false
+            if (guestRestrictions.includes('sin_lacteos') && !r.filtros_nutricionales?.sin_lacteos) return false
+            return true
+          })
+
+          let best: RecipeForMenu | null = null, bestS = -Infinity
+          for (const r of candidates) {
+            // Score individual: usamos memberUsed y activeMemberIds = solo este miembro
+            // proteinDaysUsed=0 para no penalizar proteínas en desayuno
+            const s = calcularScore(r, input, memberUsed, 0, new Set([memberId]), isDayFinde, tipo)
+            if (s > bestS) { bestS = s; best = r }
+          }
+          if (!best) continue
+
+          // Actualizar historial del miembro y del día
+          const updated = new Set(memberUsed)
+          updated.add(best.id)
+          usedPerMember.set(memberId, updated)
+          usedToday.add(best.id)
+          usedTodayNames.push(best.nombre)
+          usedInSlot.add(best.id)
+
+          components.push({ component: 'completo', recipe: best, memberId, servings: 1 })
+        }
+
+        if (components.length === 0) continue
+
+        // Si todos comparten la misma receta → member_id null (se ve más limpio)
+        const uniqueRecipes = new Set(components.map(c => c.recipe.id))
+        if (uniqueRecipes.size === 1) {
+          const shared = components[0].recipe
+          result.push({
+            dayOfWeek: day, tipo, servings: slotServings, alternativas: [],
+            principal: shared,
+            components: [{ component: 'completo', recipe: shared, memberId: null, servings: slotServings }],
+          })
+        } else {
+          result.push({ dayOfWeek: day, tipo, components, servings: slotServings, alternativas: [], principal: components[0].recipe })
+        }
+        continue  // saltar el resto de la lógica (almuerzo/cena)
+      }
+
+      // ── ALMUERZO Y CENA: proteína compartida + acompañamientos por miembro ──
 
       // Filtrar recetas compatibles con los miembros presentes en este slot
       const compatibleConTodos = allRecipes.filter(r => {
@@ -384,33 +445,12 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         usedThisWeekProtOnly.add(bestRecipe.id)
       }
 
-      // Alternativas: (1) por incompatibilidad dura, (2) por preferencia en desayuno/snack
+      // Alternativas para miembros incompatibles con el plato principal (almuerzo/cena)
       const alternativas: MenuSlot['alternativas'] = []
       const altUsedIds = new Set<string>([bestRecipe.id])
 
       for (const m of slotMembers) {
-        if (esCompatibleConMiembro(bestRecipe, m)) {
-          // Para desayuno/snack: ofrecer receta personal si tiene favoritos que coincidan
-          if (tipo === 'desayuno' || tipo === 'snack') {
-            const favMatch = allRecipes.find(r =>
-              esCompatibleConMiembro(r, m) &&
-              !usedThisWeek.has(r.id) &&
-              !usedToday.has(r.id) &&
-              !altUsedIds.has(r.id) &&
-              r.tipo_comida.includes(tipo) &&
-              (
-                (m.favorite_recipes ?? []).some(fav => sonSimilares(r.nombre, fav)) ||
-                (m.loves ?? []).length > 0 && tieneIngrediente(r, m.loves)
-              )
-            )
-            if (favMatch) {
-              alternativas.push({ memberId: m.id!, recipe: favMatch })
-              altUsedIds.add(favMatch.id)
-            }
-          }
-          continue
-        }
-        // Incompatibilidad dura → alternativa obligatoria
+        if (esCompatibleConMiembro(bestRecipe, m)) continue
         let altScore = -Infinity, altRecipe: RecipeForMenu | null = null
         for (const r of allRecipes) {
           if (altUsedIds.has(r.id) || !esCompatibleConMiembro(r, m)) continue
