@@ -145,7 +145,8 @@ function esCompatibleConMiembro(recipe: RecipeForMenu, m: FamilyMember): boolean
   if ((m.prohibited ?? []).length && tieneIngrediente(recipe, m.prohibited)) return false
   // Estilo de alimentación
   const es = m.eating_style
-  if ((es === 'vegetarian' || es === 'vegan') && !recipe.perfiles?.vegetariana) return false
+  if ((es === 'vegetarian' || es === 'vegan') &&
+      (recipe.perfiles?.vegetariana === false || tieneProteinaAnimal(recipe))) return false
   if (es === 'keto'        && !recipe.perfiles?.keto)                           return false
   if (es === 'gluten_free' && !recipe.filtros_nutricionales?.sin_gluten)        return false
   if (es === 'lactose_free'&& !recipe.filtros_nutricionales?.sin_lacteos)       return false
