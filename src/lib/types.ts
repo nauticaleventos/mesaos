@@ -60,6 +60,7 @@ export interface FamilyMember {
   prohibited: string[]
   dislikes: string[]
   loves: string[]
+  favorite_recipes: string[]   // nombres de platos/recetas favoritas
   restrictions_prep: string[]
   meals_per_day: { name: string; time: string }[]
   eating_style: string

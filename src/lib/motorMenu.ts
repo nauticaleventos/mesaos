@@ -240,10 +240,10 @@ function calcularScore(
   )
   if (hasDislike) return -1
 
-  // Score de inventario (40%)
+  // Score de inventario (35%)
   const sInventario = scoreInventario(recipe, input.fridgeItems)
 
-  // Score de sugerencias (25%)
+  // Score de sugerencias (20%)
   const hasSuggestion = input.suggestions.some(s =>
     s.recipe_id === recipe.id &&
     s.status === 'pending' &&
@@ -265,15 +265,28 @@ function calcularScore(
   // Score de variedad (15%): recetas recientes bajan puntaje
   const sVariedad = input.recentRecipeIds.has(recipe.id) ? 20 : 100
 
+  // Bonus por ingredientes favoritos del miembro (10%)
+  const activeMembers = input.allMembers.filter(m => activeMemberIds.has(m.id!))
+  const lovesBonus = activeMembers.some(m =>
+    (m.loves ?? []).some(loved => tieneIngrediente(recipe, [loved]))
+  ) ? 100 : 0
+
+  // Bonus por recetas favoritas explícitas del miembro — match por nombre (extra flat)
+  const favRecipeBonus = activeMembers.some(m =>
+    (m.favorite_recipes ?? []).some(fav => sonSimilares(recipe.nombre, fav))
+  ) ? 60 : 0  // suma fija, no porcentual
+
   // Penalty si ya usamos mucha proteína animal esta semana
   const sProtein = tieneProteinaAnimal(recipe) && proteinDaysUsed >= 3 ? -30 : 0
 
   return (
-    sInventario  * 0.40 +
-    sSugerencia  * 0.25 +
+    sInventario  * 0.35 +
+    sSugerencia  * 0.20 +
     sRating      * 0.20 +
     sVariedad    * 0.15 +
-    sProtein
+    lovesBonus   * 0.10 +
+    sProtein     +
+    favRecipeBonus
   )
 }
 
