@@ -151,7 +151,11 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
   },
 
   deleteMember: async (id) => {
-    await supabase.from('family_members').delete().eq('id', id)
+    const { error } = await supabase.from('family_members').delete().eq('id', id)
+    if (error) {
+      console.error('Error eliminando miembro:', error.message)
+      throw new Error(error.message)
+    }
     set(s => ({ members: s.members.filter(m => m.id !== id) }))
   },
 
