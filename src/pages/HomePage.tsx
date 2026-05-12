@@ -11,6 +11,7 @@ import StepAddMember from '../components/onboarding/StepAddMember'
 import AsistenciaSemanalPanel from '../components/family/AsistenciaSemanalPanel'
 import BottomNav from '../components/ui/BottomNav'
 import SorprenderBanner from '../components/menu/SorprenderBanner'
+import NotificacionesModal from '../components/ui/NotificacionesModal'
 
 export default function HomePage() {
   const navigate                          = useNavigate()
@@ -36,12 +37,49 @@ export default function HomePage() {
   const [familyUsers, setFamilyUsers]         = useState<FamilyUser[]>([])
   const setHealthyMode                        = useFamilyStore(s => s.setHealthyMode)
 
+  // Preferencias de notificaciones
+  const [notifPrefs, setNotifPrefs] = useState<{
+    notificaciones_activas: boolean
+    notif_recordatorio_dom: boolean
+    notif_inventario_bajo:  boolean
+  } | null>(null)
+  const [showNotifModal, setShowNotifModal] = useState(false)
+
   useEffect(() => {
     if (family?.id && isOwner) {
       supabase.from('family_users').select('*').eq('family_id', family.id)
         .then(({ data }) => { if (data) setFamilyUsers(data as FamilyUser[]) })
     }
   }, [family?.id, isOwner])
+
+  // Cargar preferencias de notificaciones
+  useEffect(() => {
+    if (!session?.user?.id) return
+    supabase.from('user_preferences')
+      .select('notificaciones_activas, notif_recordatorio_dom, notif_inventario_bajo')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setNotifPrefs(data as typeof notifPrefs)
+        } else if (members.length > 0) {
+          // Primera vez con miembros → mostrar modal
+          setShowNotifModal(true)
+        }
+      })
+  }, [session?.user?.id, members.length])
+
+  const toggleNotif = async (key: 'notif_recordatorio_dom' | 'notif_inventario_bajo', val: boolean) => {
+    if (!session?.user?.id || !family?.id) return
+    const next = { ...notifPrefs, [key]: val, notificaciones_activas: true }
+    setNotifPrefs(next as typeof notifPrefs)
+    await supabase.from('user_preferences').upsert({
+      user_id:   session.user.id,
+      family_id: family.id,
+      ...next,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' })
+  }
 
   const toggleChefPermission = async (fuId: string, current: boolean) => {
     const fu = familyUsers.find(f => f.id === fuId)
@@ -282,6 +320,35 @@ export default function HomePage() {
                 </button>
               </div>
 
+              {/* Notificaciones */}
+              <div className="flex flex-col gap-2 border-t border-border pt-3">
+                <p className="text-sm font-medium text-text">🔔 Notificaciones</p>
+                {[
+                  { key: 'notif_recordatorio_dom' as const, label: 'Recordatorio dominical', desc: 'Domingos 9am — te armo el menú de la semana' },
+                  { key: 'notif_inventario_bajo'  as const, label: 'Inventario bajo',        desc: 'Cuando te quedan pocos ingredientes' },
+                ].map(({ key, label, desc }) => (
+                  <div key={key} className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-medium text-text">{label}</p>
+                      <p className="text-[11px] text-muted">{desc}</p>
+                    </div>
+                    <button type="button"
+                      onClick={() => toggleNotif(key, !(notifPrefs?.[key] ?? false))}
+                      className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0
+                        ${notifPrefs?.[key] ? 'bg-accent' : 'bg-gray-200'}`}>
+                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all
+                        ${notifPrefs?.[key] ? 'left-5' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+                ))}
+                {!notifPrefs?.notificaciones_activas && (
+                  <button onClick={() => setShowNotifModal(true)}
+                    className="text-xs text-accent font-medium text-left mt-1">
+                    Activar permisos →
+                  </button>
+                )}
+              </div>
+
               {/* Permisos chef */}
               {familyUsers.filter(fu => fu.base_role !== 'owner').length > 0 && (
                 <div>
@@ -378,6 +445,23 @@ export default function HomePage() {
       {/* Sorpréndeme */}
       {members.length > 0 && family?.id && (
         <SorprenderBanner familyId={family.id} />
+      )}
+
+      {/* Modal notificaciones */}
+      {showNotifModal && session?.user?.id && family?.id && (
+        <NotificacionesModal
+          userId={session.user.id}
+          familyId={family.id}
+          onClose={() => {
+            setShowNotifModal(false)
+            // Recargar prefs después de responder
+            supabase.from('user_preferences')
+              .select('notificaciones_activas, notif_recordatorio_dom, notif_inventario_bajo')
+              .eq('user_id', session.user.id)
+              .maybeSingle()
+              .then(({ data }) => { if (data) setNotifPrefs(data as typeof notifPrefs) })
+          }}
+        />
       )}
 
       {/* Modal invitación */}
