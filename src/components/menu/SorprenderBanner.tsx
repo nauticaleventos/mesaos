@@ -64,13 +64,24 @@ export default function SorprenderBanner({ familyId }: { familyId: string }) {
       : { data: [] }
     const ratingAlto = new Set((reactions ?? []).map((r: { recipe_id: string }) => r.recipe_id))
 
-    // Recetas candidatas
+    // Tipos y límites según la próxima comida
+    const tiposPermitidos =
+      proxima.tipo === 'snack'    ? ['merienda', 'bebida'] :
+      proxima.tipo === 'desayuno' ? ['proteina_principal', 'plato_unico', 'merienda'] :
+      ['proteina_principal', 'plato_unico']
+
+    const tiempoMax =
+      proxima.tipo === 'snack'    ? 15 :
+      proxima.tipo === 'desayuno' ? 30 :
+      45
+
+    // Recetas candidatas — nunca salsas ni vinagretas
     const { data: recetas } = await supabase
       .from('recipes')
-      .select('id, nombre, imagen_url, tiempo_total_min, dificultad, porciones, ingredientes, perfiles')
+      .select('id, nombre, imagen_url, tiempo_total_min, dificultad, porciones, ingredientes, perfiles, tipo_comida')
       .eq('is_active_for_menu', true)
-      .in('tipo_componente', ['proteina_principal', 'plato_unico'])
-      .lte('tiempo_total_min', 45)
+      .in('tipo_componente', tiposPermitidos)
+      .lte('tiempo_total_min', tiempoMax)
       .not('tiempo_total_min', 'is', null)
 
     if (!recetas || recetas.length === 0) { setFase('vacio'); return }

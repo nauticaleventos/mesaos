@@ -244,6 +244,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       }
 
       // 8. Correr el algoritmo
+      // Calcular nivel de nevera para threshold escalonado
+      const totalItems = fridgeItems.length
+      const nivelNevera = Math.min(100, Math.round((totalItems / 20) * 100))
+
       const slots: MenuSlot[] = generarMenuSemanal({
         config,
         allMembers,
@@ -254,6 +258,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         reactions:      reactions ?? [],
         recentRecipeIds,
         healthyMode,
+        nivelNevera,
       })
       set({ progress: 85 })
 

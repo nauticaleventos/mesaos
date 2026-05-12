@@ -12,13 +12,14 @@ import ImportModal from '../../components/recipes/import/ImportModal'
 type Tab      = 'mis' | 'guardadas' | 'descubrir'
 type Vista    = 'tabs' | 'importar'
 type Categoria =
-  | 'todos'
+  | 'todos'      | 'estelares'
   | 'proteina'   | 'guarnicion' | 'ensalada'  | 'sopa'
   | 'plato_unico'| 'postre'     | 'bebida'     | 'merienda'
   | 'desayuno'   | 'almuerzo'   | 'cena'       | 'snack'
 
 const CATEGORIAS: { id: Categoria; emoji: string; label: string }[] = [
   { id: 'todos',       emoji: '🍳', label: 'Todas'         },
+  { id: 'estelares',   emoji: '⭐', label: 'Para lucirme'  },
   { id: 'proteina',    emoji: '🍖', label: 'Proteínas'     },
   { id: 'guarnicion',  emoji: '🍚', label: 'Guarniciones'  },
   { id: 'ensalada',    emoji: '🥗', label: 'Ensaladas'     },
@@ -172,6 +173,7 @@ export default function RecetasPage() {
     const tc      = (r as unknown as { tipo_componente?: string }).tipo_componente ?? ''
 
     // Por tipo_componente (más preciso)
+    if (categoria === 'estelares'  ) return !!(r as unknown as { es_para_lucirse?: boolean }).es_para_lucirse
     if (categoria === 'proteina'   ) return tc === 'proteina_principal'
     if (categoria === 'guarnicion' ) return tc === 'guarnicion'
     if (categoria === 'ensalada'   ) return tc === 'ensalada' || nombre.includes('ensalada') || nombre.includes('slaw')
@@ -392,7 +394,12 @@ function RecipeRow({ recipe: r, rating, sharedWith, onClick, onRemove, onShare }
 
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-text">{r.nombre}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-semibold text-text flex-1">{r.nombre}</p>
+            {(r as unknown as { es_para_lucirse?: boolean }).es_para_lucirse && (
+              <span className="text-base flex-shrink-0" title="Receta estelar">⭐</span>
+            )}
+          </div>
           <div className="flex items-center gap-2 flex-wrap mt-1">
             {r.tipo_comida.slice(0, 2).map(t => (
               <span key={t} className="text-xs text-muted">{TIPO_ICONS[t] ?? ''} {t}</span>

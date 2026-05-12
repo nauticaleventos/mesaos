@@ -5,6 +5,7 @@ import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore } from '../../store/fridgeStore'
 import { useMenuStore }   from '../../store/menuStore'
 import { getMondayOfWeek } from '../../lib/motorMenu'
+import { calcularNivelNevera } from '../../lib/nivelNevera'
 import ConfigMenu from '../../components/menu/ConfigMenu'
 import VistaMenu  from '../../components/menu/VistaMenu'
 import BottomNav  from '../../components/ui/BottomNav'
@@ -128,14 +129,62 @@ export default function MenuPage() {
 
             {/* Menú generado */}
             {tieneMenu && !loading && (
-              <VistaMenu
-                onRegenerar={handleGenerar}
-                generating={generating}
-              />
+              <>
+                <WidgetNevera fridgeItems={fridgeItems} menu={menu} />
+                <VistaMenu
+                  onRegenerar={handleGenerar}
+                  generating={generating}
+                />
+              </>
             )}
           </>
         )}
       </div>
+    </div>
+  )
+}
+
+function WidgetNevera({ fridgeItems, menu }: { fridgeItems: import('../../store/fridgeStore').FridgeItem[]; menu: import('../../store/menuStore').EnrichedMenuEntry[] }) {
+  const nivel = calcularNivelNevera(fridgeItems)
+  const nv    = nivel.porcentaje
+
+  // Contar recetas del menú que no tienen 100% match (necesitan compras)
+  const mainEntries = menu.filter(e => e.is_main_recipe && e.member_id === null)
+  const necesitanCompra = mainEntries.filter(e => {
+    const ings = e.recipe?.ingredientes ?? []
+    return ings.length > 0 && !fridgeItems.some(f =>
+      ings.some(i => f.name.toLowerCase().includes(i.nombre.toLowerCase().split(' ')[0]))
+    )
+  }).length
+
+  if (nv >= 60 && necesitanCompra === 0) {
+    return (
+      <div className="mb-4 px-4 py-3 rounded-2xl bg-oliva/10 border border-oliva/30 flex items-center gap-2">
+        <span className="text-base">✅</span>
+        <p className="text-xs text-oliva font-medium">Tu menú aprovecha al máximo tu nevera. No necesitás comprar nada.</p>
+      </div>
+    )
+  }
+  if (nv >= 60 && necesitanCompra > 0) {
+    return (
+      <div className="mb-4 px-4 py-3 rounded-2xl bg-advertencia/10 border border-advertencia/30 flex items-center gap-2">
+        <span className="text-base">⚠️</span>
+        <p className="text-xs text-advertencia font-medium">{necesitanCompra} receta{necesitanCompra > 1 ? 's requieren' : ' requiere'} mercar aunque tu nevera está llena. ¿Cambiamos esas recetas?</p>
+      </div>
+    )
+  }
+  if (nv >= 30) {
+    return (
+      <div className="mb-4 px-4 py-3 rounded-2xl bg-accent/5 border border-accent/20 flex items-center gap-2">
+        <span className="text-base">🛒</span>
+        <p className="text-xs text-muted font-medium">Tu menú combina lo que tenés con algunas compras.</p>
+      </div>
+    )
+  }
+  return (
+    <div className="mb-4 px-4 py-3 rounded-2xl bg-accent/5 border border-accent/20 flex items-center gap-2">
+      <span className="text-base">🛒</span>
+      <p className="text-xs text-muted font-medium">Tu nevera está casi vacía — el menú requiere mercado.</p>
     </div>
   )
 }

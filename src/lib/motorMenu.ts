@@ -94,6 +94,7 @@ export interface AlgorithmInput {
   reactions:       ReactionData[]
   recentRecipeIds: Set<string>
   healthyMode:     boolean
+  nivelNevera:     number   // 0-100: % de llenado de la nevera
 }
 
 export interface MenuComponent {
@@ -365,8 +366,17 @@ function calcularScore(
   )
   if (hasDislike) return -1
 
-  // Score de inventario (35%)
+  // Score de inventario — peso según nivel de nevera
   const sInventario = scoreInventario(recipe, input.fridgeItems)
+
+  // Threshold escalonado: nevera llena → priorizar 100% match
+  const nv = input.nivelNevera ?? 0
+  const threshold = nv >= 60 ? 90 : nv >= 40 ? 70 : nv >= 20 ? 50 : 0
+  if (threshold > 0 && sInventario < threshold) {
+    // No excluir (para mantener fallback), pero penalizar fuerte
+    // Las recetas con 100% match tendrán score mucho mayor
+    if (sInventario < threshold - 20) return -1
+  }
 
   // Score de sugerencias (20%)
   const hasSuggestion = input.suggestions.some(s =>
@@ -404,12 +414,17 @@ function calcularScore(
   // Penalty si ya usamos mucha proteína animal esta semana
   const sProtein = tieneProteinaAnimal(recipe) && proteinDaysUsed >= 3 ? -30 : 0
 
+  // Peso de inventario escala con nivel de nevera
+  const nv2 = input.nivelNevera ?? 0
+  const pesoInventario = nv2 >= 60 ? 0.60 : nv2 >= 40 ? 0.50 : 0.40
+  const pesoOtros      = 1 - pesoInventario
+
   return (
-    sInventario  * 0.35 +
-    sSugerencia  * 0.20 +
-    sRating      * 0.20 +
-    sVariedad    * 0.15 +
-    lovesBonus   * 0.10 +
+    sInventario  * pesoInventario +
+    sSugerencia  * (0.20 * pesoOtros / 0.65) +
+    sRating      * (0.20 * pesoOtros / 0.65) +
+    sVariedad    * (0.15 * pesoOtros / 0.65) +
+    lovesBonus   * (0.10 * pesoOtros / 0.65) +
     sProtein     +
     favRecipeBonus
   )

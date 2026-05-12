@@ -42,16 +42,43 @@ export default function RecetaPage() {
   const [toastMsg, setToastMsg]       = useState<string | null>(null)
   const [imgError, setImgError]       = useState(false)
   const [imgLoaded, setImgLoaded]     = useState(false)
+  const [esEstelar, setEsEstelar]     = useState(false)
+  const [confirmEstelar, setConfirmEstelar] = useState(false)
 
   // Cargar receta
   useEffect(() => {
     const found = recipes.find(r => r.id === id)
-    if (found) { setRecipe(found); return }
+    if (found) {
+      setRecipe(found)
+      setEsEstelar(!!(found as Recipe & { es_para_lucirse?: boolean }).es_para_lucirse)
+      return
+    }
     if (id) {
       supabase.from('recipes').select('*').eq('id', id).single()
-        .then(({ data }) => { if (data) setRecipe(data as Recipe) })
+        .then(({ data }) => {
+          if (data) {
+            setRecipe(data as Recipe)
+            setEsEstelar(!!(data as Recipe & { es_para_lucirse?: boolean }).es_para_lucirse)
+          }
+        })
     }
   }, [id, recipes])
+
+  const isOwner = family?.owner_user_id === session?.user?.id
+
+  const toggleEstelar = async () => {
+    if (!id) return
+    const nuevo = !esEstelar
+    setEsEstelar(nuevo)
+    setConfirmEstelar(false)
+    await supabase.from('recipes').update({
+      es_para_lucirse:    nuevo,
+      lucirse_marcada_por: nuevo ? session?.user?.id : null,
+      lucirse_marcada_en:  nuevo ? new Date().toISOString() : null,
+    }).eq('id', id)
+    setToastMsg(nuevo ? '⭐ Marcada como receta estelar' : 'Marca removida')
+    setTimeout(() => setToastMsg(null), 2000)
+  }
 
   // Cargar recipes del store si está vacío
   useEffect(() => {
@@ -190,7 +217,14 @@ export default function RecetaPage() {
           className="flex items-center gap-1 text-muted hover:text-text transition-colors text-sm">
           ← Volver
         </button>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          {isOwner && (
+            <button onClick={() => confirmEstelar ? toggleEstelar() : setConfirmEstelar(true)}
+              className={`text-xl transition-all ${esEstelar ? 'scale-110' : 'text-muted hover:text-yellow-500'}`}
+              title={esEstelar ? 'Receta estelar · Quitar' : 'Marcar como receta para lucirme'}>
+              {esEstelar ? '⭐' : '☆'}
+            </button>
+          )}
           <button onClick={toggleBookmark}
             className={`text-xl transition-all ${isBookmarked ? 'text-accent scale-110' : 'text-muted hover:text-accent'}`}
             title={isBookmarked ? 'Quitar de guardadas' : 'Guardar'}>
@@ -228,9 +262,28 @@ export default function RecetaPage() {
         </p>
       )}
 
+      {/* Modal confirmar estelar */}
+      {confirmEstelar && !esEstelar && (
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-4 pb-8">
+          <div className="card w-full max-w-sm flex flex-col gap-4">
+            <p className="font-semibold text-text text-center">⭐ Marcar para lucirme</p>
+            <p className="text-muted text-sm text-center">
+              Esta receta quedará marcada como "carta de presentación" para ocasiones especiales o cuando tengas invitados.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmEstelar(false)} className="btn-ghost flex-1">Cancelar</button>
+              <button onClick={toggleEstelar} className="btn-primary flex-1">Sí, marcar ⭐</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Info principal */}
       <div className="px-4 pt-4 pb-3">
-        <h1 className="text-2xl font-serif font-semibold text-text leading-tight">{recipe.nombre}</h1>
+        <div className="flex items-start gap-2">
+          <h1 className="text-2xl font-serif font-semibold text-text leading-tight flex-1">{recipe.nombre}</h1>
+          {esEstelar && <span className="text-xl flex-shrink-0 mt-0.5" title="Receta estelar">⭐</span>}
+        </div>
         {recipe.descripcion_corta && (
           <p className="text-muted text-sm mt-1">{recipe.descripcion_corta}</p>
         )}
