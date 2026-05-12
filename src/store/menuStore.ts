@@ -41,6 +41,8 @@ interface MenuState {
   cambiarReceta:        (entryId: string, newRecipeId: string) => Promise<void>
   restaurarReceta:      (id: string) => Promise<void>
   simplificarComidas:   (familyId: string, cuantas: number) => Promise<number>
+  quitarComponente:     (entryId: string) => Promise<void>
+  agregarComponente:    (familyId: string, weekStart: string, dayOfWeek: number, mealType: string, recipeId: string, component: string) => Promise<void>
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -451,6 +453,44 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           : e
         )
       }))
+    }
+  },
+
+  quitarComponente: async (entryId) => {
+    await supabase.from('weekly_menu').delete().eq('id', entryId)
+    set(s => ({ menu: s.menu.filter(e => e.id !== entryId) }))
+  },
+
+  agregarComponente: async (familyId, weekStart, dayOfWeek, mealType, recipeId, component) => {
+    const { data: recipe } = await supabase
+      .from('recipes').select(RECIPE_SELECT).eq('id', recipeId).single()
+    if (!recipe) return
+
+    const { data: inserted } = await supabase
+      .from('weekly_menu')
+      .insert({
+        family_id:      familyId,
+        week_start:     weekStart,
+        day_of_week:    dayOfWeek,
+        meal_type:      mealType,
+        meal_component: component,
+        recipe_id:      recipeId,
+        member_id:      null,
+        is_main_recipe: false,
+        servings:       1,
+        status:         'planned',
+      })
+      .select()
+      .single()
+
+    if (inserted) {
+      const entry: EnrichedMenuEntry = {
+        ...(inserted as Omit<EnrichedMenuEntry, 'recipe'>),
+        meal_component: component,
+        status: 'planned',
+        recipe: recipe as RecipeForMenu,
+      }
+      set(s => ({ menu: [...s.menu, entry] }))
     }
   },
 }))

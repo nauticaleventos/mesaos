@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, SkipForward, Clock, ChefHat, ExternalLink, RefreshCw, RotateCcw } from 'lucide-react'
+import { Check, SkipForward, Clock, ChefHat, ExternalLink, RefreshCw, RotateCcw, Plus, Trash2 } from 'lucide-react'
 import { useMenuStore, type EnrichedMenuEntry } from '../../store/menuStore'
 import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore } from '../../store/fridgeStore'
+import { supabase } from '../../lib/supabase'
 import type { FamilyMember } from '../../lib/types'
 import type { Leftover } from '../../store/leftoversStore'
-import { DAY_NAMES_FULL } from '../../lib/motorMenu'
+import { DAY_NAMES_FULL, getMondayOfWeek } from '../../lib/motorMenu'
 import { calcularMatch, matchBadge } from '../../lib/matchReceta'
 import CambiarSheet from './CambiarSheet'
 
@@ -95,6 +96,7 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
         <MealSection
           key={tipo}
           tipo={tipo}
+          dayOfWeek={dayOfWeek}
           components={components}
           members={members}
           leftovers={tipo === 'almuerzo' || tipo === 'cena' ? leftovers : []}
@@ -118,8 +120,9 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
   )
 }
 
-function MealSection({ tipo, components, members, leftovers, onAddSobrante, onCocinada, onSaltar, onRestaurar, isLast }: {
+function MealSection({ tipo, dayOfWeek, components, members, leftovers, onAddSobrante, onCocinada, onSaltar, onRestaurar, isLast }: {
   tipo:           string
+  dayOfWeek:      number
   components:     EnrichedMenuEntry[]
   members:        FamilyMember[]
   leftovers:      Leftover[]
@@ -131,8 +134,25 @@ function MealSection({ tipo, components, members, leftovers, onAddSobrante, onCo
 }) {
   const navigate    = useNavigate()
   const fridgeItems = useFridgeStore(s => s.items)
-  const [expanded, setExpanded]     = useState(false)
-  const [showCambiar, setShowCambiar] = useState(false)
+  const family      = useFamilyStore(s => s.family)
+  const { quitarComponente, agregarComponente } = useMenuStore()
+  const [expanded, setExpanded]           = useState(false)
+  const [showCambiar, setShowCambiar]     = useState(false)
+  const [showAgregar, setShowAgregar]     = useState(false)
+  const [busquedaAgregar, setBusquedaAgregar] = useState('')
+  const [recetasAgregar, setRecetasAgregar]   = useState<{id:string;nombre:string;tipo_componente:string}[]>([])
+  const [tipoAgregar, setTipoAgregar]     = useState<'guarnicion'|'ensalada'>('guarnicion')
+
+  const buscarParaAgregar = async (q: string, tc: string) => {
+    if (!q.trim()) { setRecetasAgregar([]); return }
+    const { data } = await supabase.from('recipes')
+      .select('id, nombre, tipo_componente')
+      .eq('tipo_componente', tc)
+      .ilike('nombre', `%${q}%`)
+      .eq('is_active_for_menu', true)
+      .limit(8)
+    setRecetasAgregar(data ?? [])
+  }
 
   // Ignorar salsas/vinagretas como componente visible
   const visibles = components.filter(e =>
@@ -279,17 +299,16 @@ function MealSection({ tipo, components, members, leftovers, onAddSobrante, onCo
           const displayMembers = e.member_id === null ? membersFamilia : eMembers
 
           return (
-            <button key={`${e.meal_component}::${e.recipe_id}`}
-              onClick={() => navigate(`/receta/${e.recipe_id}`)}
-              className="flex items-start gap-2.5 py-2.5 text-left hover:opacity-80 transition-opacity border-b border-border/30 last:border-0">
+            <div key={`${e.meal_component}::${e.recipe_id}`}
+              className="flex items-start gap-2.5 py-2.5 border-b border-border/30 last:border-0">
               {/* Emoji componente */}
               <span className="text-base leading-none mt-0.5 w-5 flex-shrink-0">{emoji}</span>
 
-              <div className="flex-1 min-w-0">
+              <button className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+                onClick={() => navigate(`/receta/${e.recipe_id}`)}>
                 <p className={`text-sm leading-snug ${e.is_main_recipe ? 'font-semibold text-text' : 'font-medium text-text/90'}`}>
                   {isSkipped ? <s>{r.nombre}</s> : r.nombre}
                 </p>
-                {/* Metadata solo en proteína/completo */}
                 {e.is_main_recipe && (
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     {r.tiempo_total_min && (
@@ -307,7 +326,6 @@ function MealSection({ tipo, components, members, leftovers, onAddSobrante, onCo
                     )}
                   </div>
                 )}
-                {/* Emojis de quienes comen este componente */}
                 {displayMembers.length > 0 && (
                   <div className="flex items-center gap-1 mt-1">
                     {displayMembers.length > 3
@@ -318,9 +336,18 @@ function MealSection({ tipo, components, members, leftovers, onAddSobrante, onCo
                     }
                   </div>
                 )}
-              </div>
-              <ExternalLink size={12} className="text-muted flex-shrink-0 mt-1" />
-            </button>
+              </button>
+
+              {/* Botón quitar componente (solo guarnición/ensalada, no proteína principal) */}
+              {!e.is_main_recipe && !isCooked && !isSkipped && (
+                <button onClick={() => quitarComponente(e.id)}
+                  className="p-1 rounded-lg hover:bg-red-50 hover:text-red-500 text-muted transition-colors flex-shrink-0"
+                  title="Quitar">
+                  <Trash2 size={13} />
+                </button>
+              )}
+              {e.is_main_recipe && <ExternalLink size={12} className="text-muted flex-shrink-0 mt-1" />}
+            </div>
           )
         })}
 
@@ -342,6 +369,55 @@ function MealSection({ tipo, components, members, leftovers, onAddSobrante, onCo
             className="flex items-center gap-1.5 pt-1 pl-7 text-xs text-accent font-medium hover:opacity-70">
             + Agregar proteína
           </button>
+        )}
+
+        {/* Agregar guarnición/ensalada */}
+        {!isSkipped && !isCooked && (tipo === 'almuerzo' || tipo === 'cena') && (
+          <div className="pt-2 pl-7">
+            {!showAgregar ? (
+              <div className="flex gap-3">
+                <button onClick={() => { setTipoAgregar('guarnicion'); setShowAgregar(true); setBusquedaAgregar('') }}
+                  className="flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors font-medium">
+                  <Plus size={11} /> Guarnición
+                </button>
+                <button onClick={() => { setTipoAgregar('ensalada'); setShowAgregar(true); setBusquedaAgregar('') }}
+                  className="flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors font-medium">
+                  <Plus size={11} /> Ensalada
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1.5 bg-gray-50 rounded-xl p-2.5 border border-border">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-text">
+                    Agregar {tipoAgregar === 'guarnicion' ? '🍚 guarnición' : '🥗 ensalada'}
+                  </p>
+                  <button onClick={() => { setShowAgregar(false); setRecetasAgregar([]) }}
+                    className="text-xs text-muted hover:text-text">✕</button>
+                </div>
+                <input
+                  className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-border bg-white focus:outline-none focus:border-accent"
+                  placeholder="Buscar receta..."
+                  value={busquedaAgregar}
+                  onChange={e => { setBusquedaAgregar(e.target.value); buscarParaAgregar(e.target.value, tipoAgregar) }}
+                  autoFocus
+                />
+                {recetasAgregar.map(r => (
+                  <button key={r.id}
+                    onClick={async () => {
+                      if (!family?.id) return
+                      await agregarComponente(family.id, getMondayOfWeek(), dayOfWeek, tipo, r.id, tipoAgregar)
+                      setShowAgregar(false); setRecetasAgregar([])
+                    }}
+                    className="text-left text-xs px-2 py-1.5 rounded-lg hover:bg-accent/10 hover:text-accent transition-colors text-text">
+                    {r.nombre}
+                  </button>
+                ))}
+                {busquedaAgregar && recetasAgregar.length === 0 && (
+                  <p className="text-xs text-muted text-center py-1">Sin resultados</p>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
