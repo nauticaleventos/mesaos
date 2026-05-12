@@ -282,12 +282,18 @@ function MealSection({ tipo, dayOfWeek, components, members, leftovers, onAddSob
 
   return (
     <div className={`${!isLast ? 'border-b border-border/60' : ''}`}>
-      <div className="px-4 pt-3 pb-1">
+      <div className="px-4 pt-3 pb-1 flex items-center justify-between">
         <p className={`text-xs font-bold uppercase tracking-widest ${isCooked ? 'text-muted' : 'text-accent'}`}>
           {MEAL_LABELS[tipo]}
         </p>
-        <div className="h-px bg-border/50 mt-1.5" />
+        {!isCooked && !isSkipped && (
+          <button onClick={() => setShowCambiar(true)}
+            className="text-[11px] text-muted hover:text-accent transition-colors font-medium flex items-center gap-1">
+            <RefreshCw size={10} /> Cambiar
+          </button>
+        )}
       </div>
+      <div className="h-px bg-border/50 mx-4 mb-0" />
 
       <div className={`flex flex-col px-4 pb-2 ${isCooked ? 'opacity-60' : ''} ${isSkipped ? 'opacity-40' : ''}`}>
         {[...componentGroups.values()].map(({ entry: e, members: eMembers }) => {

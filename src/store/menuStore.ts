@@ -457,7 +457,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   quitarComponente: async (entryId) => {
-    await supabase.from('weekly_menu').delete().eq('id', entryId)
+    const { error } = await supabase.from('weekly_menu').delete().eq('id', entryId)
+    if (error) {
+      console.error('Error al quitar componente:', error.message)
+      return
+    }
     set(s => ({ menu: s.menu.filter(e => e.id !== entryId) }))
   },
 
