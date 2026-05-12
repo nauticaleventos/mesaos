@@ -32,6 +32,8 @@ const COMPONENT_EMOJI: Record<string, string> = {
   guarnicion:   '🍚',
   carbohidrato: '🍚',
   ensalada:     '🥗',
+  salsa:        '🫙',
+  bebida:       '🥤',
   completo:     '',
 }
 
@@ -41,14 +43,34 @@ const DIFICULTAD_COLOR: Record<string, string> = {
   dificil: 'bg-red-100 text-red-700',
 }
 
-// Agrupa entradas por recipe_id y acumula los member_ids de quienes la comen
+// Tipos de componentes que se pueden agregar por tipo de comida
+const OPCIONES_AGREGAR: Record<string, { tc: string; label: string; emoji: string }[]> = {
+  desayuno: [
+    { tc: 'desayuno',          label: 'Receta desayuno', emoji: '☀️' },
+    { tc: 'bebida',            label: 'Bebida',          emoji: '🥤' },
+  ],
+  snack: [
+    { tc: 'merienda',          label: 'Merienda',        emoji: '🍿' },
+    { tc: 'bebida',            label: 'Bebida',          emoji: '🥤' },
+  ],
+  almuerzo: [
+    { tc: 'guarnicion',        label: 'Guarnición',      emoji: '🍚' },
+    { tc: 'ensalada',          label: 'Ensalada',        emoji: '🥗' },
+    { tc: 'salsa',             label: 'Salsa',           emoji: '🫙' },
+    { tc: 'bebida',            label: 'Bebida',          emoji: '🥤' },
+  ],
+  cena: [
+    { tc: 'guarnicion',        label: 'Guarnición',      emoji: '🍚' },
+    { tc: 'ensalada',          label: 'Ensalada',        emoji: '🥗' },
+    { tc: 'salsa',             label: 'Salsa',           emoji: '🫙' },
+    { tc: 'bebida',            label: 'Bebida',          emoji: '🥤' },
+  ],
+}
+
 function agruparPorReceta(entries: EnrichedMenuEntry[], allMembers: FamilyMember[]): {
-  entry:      EnrichedMenuEntry
-  memberIds:  (string | null)[]  // null = todos sin alternativa
-  members:    FamilyMember[]
+  entry: EnrichedMenuEntry; members: FamilyMember[]
 }[] {
   const map = new Map<string, { entry: EnrichedMenuEntry; memberIds: (string | null)[] }>()
-
   for (const e of entries) {
     if (map.has(e.recipe_id)) {
       map.get(e.recipe_id)!.memberIds.push(e.member_id)
@@ -56,14 +78,11 @@ function agruparPorReceta(entries: EnrichedMenuEntry[], allMembers: FamilyMember
       map.set(e.recipe_id, { entry: e, memberIds: [e.member_id] })
     }
   }
-
   return [...map.values()].map(({ entry, memberIds }) => {
     const hasNull = memberIds.includes(null)
     const specificIds = memberIds.filter((id): id is string => id !== null)
-    const resolvedMembers = hasNull
-      ? allMembers  // null = toda la familia
-      : allMembers.filter(m => specificIds.includes(m.id!))
-    return { entry, memberIds, members: resolvedMembers }
+    const resolvedMembers = hasNull ? allMembers : allMembers.filter(m => specificIds.includes(m.id!))
+    return { entry, members: resolvedMembers }
   })
 }
 
@@ -81,7 +100,6 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
 
   return (
     <div className={`card flex flex-col gap-0 overflow-hidden ${isHoy ? 'border-accent' : ''}`}>
-      {/* Cabecera del día */}
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <div>
           <p className={`font-bold text-base ${isHoy ? 'text-accent' : 'text-text'}`}>
@@ -135,106 +153,158 @@ function MealSection({ tipo, dayOfWeek, components, members, leftovers, onAddSob
   const navigate    = useNavigate()
   const fridgeItems = useFridgeStore(s => s.items)
   const family      = useFamilyStore(s => s.family)
-  const { quitarComponente, agregarComponente } = useMenuStore()
+  const { quitarComponente, agregarComponente, replicarEnSemana } = useMenuStore()
+
   const [expanded, setExpanded]           = useState(false)
   const [showCambiar, setShowCambiar]     = useState(false)
   const [showAgregar, setShowAgregar]     = useState(false)
+  const [tipoAgregar, setTipoAgregar]     = useState('')
   const [busquedaAgregar, setBusquedaAgregar] = useState('')
-  const [recetasAgregar, setRecetasAgregar]   = useState<{id:string;nombre:string;tipo_componente:string}[]>([])
-  const [tipoAgregar, setTipoAgregar]     = useState<'guarnicion'|'ensalada'>('guarnicion')
+  const [recetasAgregar, setRecetasAgregar]   = useState<{id:string;nombre:string}[]>([])
+  const [ultimoAgregado, setUltimoAgregado]   = useState<{recipeId:string;component:string;nombre:string} | null>(null)
+  const [replicando, setReplicando]           = useState(false)
 
-  const buscarParaAgregar = async (q: string, tc: string) => {
-    if (!q.trim()) { setRecetasAgregar([]); return }
-    const { data } = await supabase.from('recipes')
-      .select('id, nombre, tipo_componente')
-      .eq('tipo_componente', tc)
-      .ilike('nombre', `%${q}%`)
-      .eq('is_active_for_menu', true)
-      .limit(8)
-    setRecetasAgregar(data ?? [])
-  }
-
-  // Ignorar salsas/vinagretas como componente visible
-  const visibles = components.filter(e =>
-    e.meal_component !== 'salsa' && e.meal_component !== 'vinagreta'
-  )
-
+  const visibles = components.filter(e => e.meal_component !== 'vinagreta')
   const main = visibles.find(e => e.is_main_recipe) ?? visibles[0]
   if (!main) return null
 
   const isCooked  = main.status === 'cooked'
   const isSkipped = main.status === 'skipped'
+  const isSimple  = tipo === 'desayuno' || tipo === 'snack'
+  const weekStart = getMondayOfWeek()
 
-  const isSimple = tipo === 'desayuno' || tipo === 'snack'
+  const buscarReceta = async (q: string, tc: string) => {
+    if (!q.trim()) { setRecetasAgregar([]); return }
+    // Para desayuno: buscar por tipo_comida, no por tipo_componente
+    let query = supabase.from('recipes').select('id, nombre').eq('is_active_for_menu', true).ilike('nombre', `%${q}%`).limit(8)
+    if (tc === 'desayuno') {
+      query = query.contains('tipo_comida', ['desayuno'])
+    } else {
+      query = query.eq('tipo_componente', tc)
+    }
+    const { data } = await query
+    setRecetasAgregar(data ?? [])
+  }
 
-  // ── DESAYUNO / SNACK: agrupar por receta única ────────────────────────────
-  // Cada miembro puede tener su propia receta o compartir una.
-  // Mostrar cada receta UNA vez con los emojis de quienes la comen debajo.
+  const abrirAgregar = (tc: string) => {
+    setTipoAgregar(tc)
+    setShowAgregar(true)
+    setBusquedaAgregar('')
+    setRecetasAgregar([])
+  }
+
+  const confirmarAgregar = async (recipeId: string, nombre: string) => {
+    if (!family?.id) return
+    const comp = tipoAgregar === 'desayuno' ? 'completo' : tipoAgregar
+    await agregarComponente(family.id, weekStart, dayOfWeek, tipo, recipeId, comp)
+    setUltimoAgregado({ recipeId, component: comp, nombre })
+    setShowAgregar(false)
+    setRecetasAgregar([])
+  }
+
+  const confirmarReplicar = async () => {
+    if (!family?.id || !ultimoAgregado) return
+    setReplicando(true)
+    await replicarEnSemana(family.id, weekStart, dayOfWeek, tipo, ultimoAgregado.recipeId, ultimoAgregado.component)
+    setReplicando(false)
+    setUltimoAgregado(null)
+  }
+
+  const opciones = OPCIONES_AGREGAR[tipo] ?? []
+
+  // ── DESAYUNO / SNACK ──────────────────────────────────────────────────────
   if (isSimple) {
     const grupos = agruparPorReceta(visibles, members)
     return (
       <div className={`${!isLast ? 'border-b border-border/60' : ''}`}>
-        <div className="px-4 pt-3 pb-1">
+        {/* Header */}
+        <div className="px-4 pt-3 pb-1 flex items-center justify-between">
           <p className={`text-xs font-bold uppercase tracking-widest ${isCooked ? 'text-muted' : 'text-accent'}`}>
             {MEAL_LABELS[tipo]}
           </p>
-          <div className="h-px bg-border/50 mt-1.5" />
+          {!isCooked && !isSkipped && (
+            <button onClick={() => setShowCambiar(true)}
+              className="text-[11px] text-muted hover:text-accent transition-colors font-medium flex items-center gap-1">
+              <RefreshCw size={10} /> Cambiar
+            </button>
+          )}
         </div>
+        <div className="h-px bg-border/50 mx-4" />
 
-        <div className={`flex flex-col gap-0 px-4 pb-2 ${isCooked ? 'opacity-60' : ''} ${isSkipped ? 'opacity-40' : ''}`}>
+        {/* Recetas */}
+        <div className={`flex flex-col gap-0 px-4 pb-1 ${isCooked ? 'opacity-60' : ''} ${isSkipped ? 'opacity-40' : ''}`}>
           {grupos.map(({ entry: e, members: eMembers }) => {
             const r    = e.recipe
             const cm   = calcularMatch(r.ingredientes ?? [], fridgeItems)
             const badge = matchBadge(cm.estado)
             return (
-              <button key={e.recipe_id}
-                onClick={() => navigate(`/receta/${e.recipe_id}`)}
-                className="flex items-start gap-3 py-2.5 text-left hover:opacity-80 transition-opacity border-b border-border/30 last:border-0">
-                {/* Imagen */}
-                <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-accent-light">
-                  {r.imagen_url
-                    ? <img src={r.imagen_url} alt={r.nombre} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center"><ChefHat size={16} color="#E76F51" /></div>
-                  }
-                </div>
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-text leading-snug">
-                    {isSkipped ? <s>{r.nombre}</s> : r.nombre}
-                  </p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    {r.tiempo_total_min && (
-                      <span className="flex items-center gap-0.5 text-xs text-muted">
-                        <Clock size={10} />{r.tiempo_total_min}min
-                      </span>
-                    )}
-                    {r.dificultad && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DIFICULTAD_COLOR[r.dificultad]}`}>
-                        {r.dificultad}
-                      </span>
-                    )}
-                    {!isCooked && !isSkipped && (
-                      <span className={`text-[10px] font-medium ${badge.color}`}>{badge.icon}</span>
-                    )}
+              <div key={e.recipe_id} className="flex items-start gap-2.5 py-2.5 border-b border-border/30 last:border-0">
+                <button onClick={() => navigate(`/receta/${e.recipe_id}`)}
+                  className="flex items-start gap-3 flex-1 text-left hover:opacity-80 transition-opacity">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-accent-light">
+                    {r.imagen_url
+                      ? <img src={r.imagen_url} alt={r.nombre} className="w-full h-full object-cover" />
+                      : <div className="w-full h-full flex items-center justify-center"><ChefHat size={16} color="#E76F51" /></div>}
                   </div>
-                  {/* Emojis miembros */}
-                  <div className="flex items-center gap-1 mt-1">
-                    {eMembers.length > 3
-                      ? <span className="text-xs text-muted">Familia ({eMembers.length})</span>
-                      : eMembers.map(m => (
-                          <span key={m.id} title={m.name ?? ''} className="text-sm leading-none">{m.emoji}</span>
-                        ))
-                    }
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-text leading-snug">
+                      {isSkipped ? <s>{r.nombre}</s> : r.nombre}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {r.tiempo_total_min && <span className="flex items-center gap-0.5 text-xs text-muted"><Clock size={10}/>{r.tiempo_total_min}min</span>}
+                      {r.dificultad && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DIFICULTAD_COLOR[r.dificultad]}`}>{r.dificultad}</span>}
+                      {!isCooked && !isSkipped && <span className={`text-[10px] font-medium ${badge.color}`}>{badge.icon}</span>}
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      {eMembers.length > 3
+                        ? <span className="text-xs text-muted">Familia ({eMembers.length})</span>
+                        : eMembers.map(m => <span key={m.id} title={m.name??''} className="text-sm leading-none">{m.emoji}</span>)}
+                    </div>
                   </div>
-                </div>
-                <ExternalLink size={12} className="text-muted flex-shrink-0 mt-1" />
-              </button>
+                </button>
+                {/* Quitar — cualquier receta del desayuno (incluyendo la principal) */}
+                {!isCooked && !isSkipped && (
+                  <button onClick={() => quitarComponente(e.id)}
+                    className="p-1 rounded-lg hover:bg-red-50 hover:text-red-500 text-muted transition-colors flex-shrink-0 mt-1"
+                    title="Quitar">
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
             )
           })}
         </div>
 
-        <AccionesRow
-          expanded={expanded} onExpand={() => setExpanded(e => !e)}
+        {/* Opciones agregar + replicar */}
+        {!isCooked && !isSkipped && (
+          <div className="px-4 pb-2">
+            {!showAgregar ? (
+              <div className="flex gap-3 flex-wrap pt-1">
+                {opciones.map(op => (
+                  <button key={op.tc} onClick={() => abrirAgregar(op.tc)}
+                    className="flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors font-medium">
+                    <Plus size={11}/> {op.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <AgregarPanel
+                tipoLabel={opciones.find(o=>o.tc===tipoAgregar)?.label ?? tipoAgregar}
+                busqueda={busquedaAgregar}
+                onBusqueda={q => { setBusquedaAgregar(q); buscarReceta(q, tipoAgregar) }}
+                resultados={recetasAgregar}
+                onSeleccionar={confirmarAgregar}
+                onCerrar={() => { setShowAgregar(false); setRecetasAgregar([]) }}
+              />
+            )}
+            {ultimoAgregado && (
+              <BannerReplicar nombre={ultimoAgregado.nombre} cargando={replicando}
+                onReplicar={confirmarReplicar} onDescartar={() => setUltimoAgregado(null)} />
+            )}
+          </div>
+        )}
+
+        <AccionesRow expanded={expanded} onExpand={() => setExpanded(e => !e)}
           isCooked={isCooked} isSkipped={isSkipped}
           onVerReceta={() => navigate(`/receta/${main.recipe_id}`)}
           onCocinada={() => { onCocinada(); setExpanded(false) }}
@@ -247,15 +317,13 @@ function MealSection({ tipo, dayOfWeek, components, members, leftovers, onAddSob
     )
   }
 
-  // ── ALMUERZO / CENA: componentes ordenados (proteína → guarnición → ensalada) ──
-  // Agrupar por (meal_component, recipe_id) para no repetir si varios miembros comen lo mismo
-  const componentOrder = ['proteina', 'completo', 'guarnicion', 'carbohidrato', 'ensalada']
+  // ── ALMUERZO / CENA ───────────────────────────────────────────────────────
+  const componentOrder = ['proteina', 'completo', 'guarnicion', 'carbohidrato', 'ensalada', 'salsa', 'bebida']
   const visiblesSorted = [...visibles].sort((a, b) =>
     (componentOrder.indexOf(a.meal_component) + 1 || 99) -
     (componentOrder.indexOf(b.meal_component) + 1 || 99)
   )
 
-  // Agrupar por (component_type + recipe_id) para deduplicar
   const componentGroups = new Map<string, { entry: EnrichedMenuEntry; members: FamilyMember[] }>()
   for (const e of visiblesSorted) {
     const key = `${e.meal_component}::${e.recipe_id}`
@@ -265,23 +333,19 @@ function MealSection({ tipo, dayOfWeek, components, members, leftovers, onAddSob
         if (m) componentGroups.get(key)!.members.push(m)
       }
     } else {
-      const eMembers = e.member_id === null
-        ? [] // se calculan después
-        : [members.find(mb => mb.id === e.member_id)].filter(Boolean) as FamilyMember[]
+      const eMembers = e.member_id === null ? [] : [members.find(mb => mb.id === e.member_id)].filter(Boolean) as FamilyMember[]
       componentGroups.set(key, { entry: e, members: eMembers })
     }
   }
 
-  // Para entradas con member_id=null, inferir quiénes comen: todos menos los que tienen alternativa
   const altMemberIds = new Set(visibles.filter(e => e.member_id !== null && e.is_main_recipe).map(e => e.member_id!))
   const membersFamilia = members.filter(m => !altMemberIds.has(m.id!))
-
-  const hasSalad   = components.some(c => c.meal_component === 'ensalada')
   const hasProtein = components.some(c => c.meal_component === 'proteina' || c.meal_component === 'completo')
-  const hasOnlySides = !hasProtein
+  const hasSalad   = components.some(c => c.meal_component === 'ensalada')
 
   return (
     <div className={`${!isLast ? 'border-b border-border/60' : ''}`}>
+      {/* Header con botón Cambiar */}
       <div className="px-4 pt-3 pb-1 flex items-center justify-between">
         <p className={`text-xs font-bold uppercase tracking-widest ${isCooked ? 'text-muted' : 'text-accent'}`}>
           {MEAL_LABELS[tipo]}
@@ -295,64 +359,51 @@ function MealSection({ tipo, dayOfWeek, components, members, leftovers, onAddSob
       </div>
       <div className="h-px bg-border/50 mx-4 mb-0" />
 
+      {/* Componentes */}
       <div className={`flex flex-col px-4 pb-2 ${isCooked ? 'opacity-60' : ''} ${isSkipped ? 'opacity-40' : ''}`}>
         {[...componentGroups.values()].map(({ entry: e, members: eMembers }) => {
           const r     = e.recipe
           const cm    = calcularMatch(r.ingredientes ?? [], fridgeItems)
           const badge = matchBadge(cm.estado)
           const emoji = COMPONENT_EMOJI[e.meal_component] ?? ''
-          // Si member_id=null, mostrar miembros de la familia (sin alternativa)
           const displayMembers = e.member_id === null ? membersFamilia : eMembers
+          const esProteina = e.is_main_recipe
 
           return (
             <div key={`${e.meal_component}::${e.recipe_id}`}
               className="flex items-start gap-2.5 py-2.5 border-b border-border/30 last:border-0">
-              {/* Emoji componente */}
               <span className="text-base leading-none mt-0.5 w-5 flex-shrink-0">{emoji}</span>
 
               <button className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
                 onClick={() => navigate(`/receta/${e.recipe_id}`)}>
-                <p className={`text-sm leading-snug ${e.is_main_recipe ? 'font-semibold text-text' : 'font-medium text-text/90'}`}>
+                <p className={`text-sm leading-snug ${esProteina ? 'font-semibold text-text' : 'font-medium text-text/90'}`}>
                   {isSkipped ? <s>{r.nombre}</s> : r.nombre}
                 </p>
-                {e.is_main_recipe && (
+                {esProteina && (
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    {r.tiempo_total_min && (
-                      <span className="flex items-center gap-0.5 text-xs text-muted">
-                        <Clock size={10} />{r.tiempo_total_min}min
-                      </span>
-                    )}
-                    {r.dificultad && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DIFICULTAD_COLOR[r.dificultad]}`}>
-                        {r.dificultad}
-                      </span>
-                    )}
-                    {!isCooked && !isSkipped && (
-                      <span className={`text-[10px] font-medium ${badge.color}`}>{badge.icon}</span>
-                    )}
+                    {r.tiempo_total_min && <span className="flex items-center gap-0.5 text-xs text-muted"><Clock size={10}/>{r.tiempo_total_min}min</span>}
+                    {r.dificultad && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DIFICULTAD_COLOR[r.dificultad]}`}>{r.dificultad}</span>}
+                    {!isCooked && !isSkipped && <span className={`text-[10px] font-medium ${badge.color}`}>{badge.icon}</span>}
                   </div>
                 )}
                 {displayMembers.length > 0 && (
                   <div className="flex items-center gap-1 mt-1">
                     {displayMembers.length > 3
                       ? <span className="text-xs text-muted">Familia ({displayMembers.length})</span>
-                      : displayMembers.map(m => (
-                          <span key={m.id} title={m.name ?? ''} className="text-sm leading-none">{m.emoji}</span>
-                        ))
-                    }
+                      : displayMembers.map(m => <span key={m.id} title={m.name??''} className="text-sm leading-none">{m.emoji}</span>)}
                   </div>
                 )}
               </button>
 
-              {/* Botón quitar componente (solo guarnición/ensalada, no proteína principal) */}
-              {!e.is_main_recipe && !isCooked && !isSkipped && (
+              {/* Quitar — todos los componentes incluyendo proteína */}
+              {!isCooked && !isSkipped && (
                 <button onClick={() => quitarComponente(e.id)}
-                  className="p-1 rounded-lg hover:bg-red-50 hover:text-red-500 text-muted transition-colors flex-shrink-0"
+                  className={`p-1 rounded-lg transition-colors flex-shrink-0 mt-0.5
+                    ${esProteina ? 'hover:bg-red-50 hover:text-red-500 text-muted/50' : 'hover:bg-red-50 hover:text-red-500 text-muted'}`}
                   title="Quitar">
                   <Trash2 size={13} />
                 </button>
               )}
-              {e.is_main_recipe && <ExternalLink size={12} className="text-muted flex-shrink-0 mt-1" />}
             </div>
           )
         })}
@@ -361,74 +412,51 @@ function MealSection({ tipo, dayOfWeek, components, members, leftovers, onAddSob
         {leftovers.length > 0 && hasSalad && (
           <div className="flex flex-wrap gap-1.5 pt-1 pl-7">
             {leftovers.map(l => (
-              <span key={l.id}
-                className="px-2 py-1 rounded-full bg-oliva/10 border border-oliva/20 text-xs text-oliva font-medium">
+              <span key={l.id} className="px-2 py-1 rounded-full bg-oliva/10 border border-oliva/20 text-xs text-oliva font-medium">
                 🍗 {l.ingredient_name}{l.quantity ? ` · ${l.quantity}` : ''}
               </span>
             ))}
           </div>
         )}
 
-        {/* Agregar proteína */}
-        {!isSkipped && hasOnlySides && (
+        {!hasProtein && !isSkipped && (
           <button onClick={onAddSobrante}
             className="flex items-center gap-1.5 pt-1 pl-7 text-xs text-accent font-medium hover:opacity-70">
             + Agregar proteína
           </button>
         )}
 
-        {/* Agregar guarnición/ensalada */}
-        {!isSkipped && !isCooked && (tipo === 'almuerzo' || tipo === 'cena') && (
-          <div className="pt-2 pl-7">
+        {/* Opciones agregar */}
+        {!isCooked && !isSkipped && (
+          <div className="pl-7 pt-1">
             {!showAgregar ? (
-              <div className="flex gap-3">
-                <button onClick={() => { setTipoAgregar('guarnicion'); setShowAgregar(true); setBusquedaAgregar('') }}
-                  className="flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors font-medium">
-                  <Plus size={11} /> Guarnición
-                </button>
-                <button onClick={() => { setTipoAgregar('ensalada'); setShowAgregar(true); setBusquedaAgregar('') }}
-                  className="flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors font-medium">
-                  <Plus size={11} /> Ensalada
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-1.5 bg-gray-50 rounded-xl p-2.5 border border-border">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-text">
-                    Agregar {tipoAgregar === 'guarnicion' ? '🍚 guarnición' : '🥗 ensalada'}
-                  </p>
-                  <button onClick={() => { setShowAgregar(false); setRecetasAgregar([]) }}
-                    className="text-xs text-muted hover:text-text">✕</button>
-                </div>
-                <input
-                  className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-border bg-white focus:outline-none focus:border-accent"
-                  placeholder="Buscar receta..."
-                  value={busquedaAgregar}
-                  onChange={e => { setBusquedaAgregar(e.target.value); buscarParaAgregar(e.target.value, tipoAgregar) }}
-                  autoFocus
-                />
-                {recetasAgregar.map(r => (
-                  <button key={r.id}
-                    onClick={async () => {
-                      if (!family?.id) return
-                      await agregarComponente(family.id, getMondayOfWeek(), dayOfWeek, tipo, r.id, tipoAgregar)
-                      setShowAgregar(false); setRecetasAgregar([])
-                    }}
-                    className="text-left text-xs px-2 py-1.5 rounded-lg hover:bg-accent/10 hover:text-accent transition-colors text-text">
-                    {r.nombre}
+              <div className="flex gap-3 flex-wrap">
+                {opciones.map(op => (
+                  <button key={op.tc} onClick={() => abrirAgregar(op.tc)}
+                    className="flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors font-medium">
+                    <Plus size={11}/> {op.label}
                   </button>
                 ))}
-                {busquedaAgregar && recetasAgregar.length === 0 && (
-                  <p className="text-xs text-muted text-center py-1">Sin resultados</p>
-                )}
               </div>
+            ) : (
+              <AgregarPanel
+                tipoLabel={opciones.find(o=>o.tc===tipoAgregar)?.label ?? tipoAgregar}
+                busqueda={busquedaAgregar}
+                onBusqueda={q => { setBusquedaAgregar(q); buscarReceta(q, tipoAgregar) }}
+                resultados={recetasAgregar}
+                onSeleccionar={confirmarAgregar}
+                onCerrar={() => { setShowAgregar(false); setRecetasAgregar([]) }}
+              />
+            )}
+            {ultimoAgregado && (
+              <BannerReplicar nombre={ultimoAgregado.nombre} cargando={replicando}
+                onReplicar={confirmarReplicar} onDescartar={() => setUltimoAgregado(null)} />
             )}
           </div>
         )}
       </div>
 
-      <AccionesRow
-        expanded={expanded} onExpand={() => setExpanded(e => !e)}
+      <AccionesRow expanded={expanded} onExpand={() => setExpanded(e => !e)}
         isCooked={isCooked} isSkipped={isSkipped}
         onVerReceta={() => navigate(`/receta/${main.recipe_id}`)}
         onCocinada={() => { onCocinada(); setExpanded(false) }}
@@ -441,6 +469,69 @@ function MealSection({ tipo, dayOfWeek, components, members, leftovers, onAddSob
   )
 }
 
+// ── Panel de búsqueda para agregar componente ─────────────────────────────────
+function AgregarPanel({ tipoLabel, busqueda, onBusqueda, resultados, onSeleccionar, onCerrar }: {
+  tipoLabel:    string
+  busqueda:     string
+  onBusqueda:   (q: string) => void
+  resultados:   {id:string;nombre:string}[]
+  onSeleccionar:(id:string, nombre:string) => void
+  onCerrar:     () => void
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 bg-gray-50 rounded-xl p-2.5 border border-border mt-1">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-text">Agregar {tipoLabel}</p>
+        <button onClick={onCerrar} className="text-xs text-muted hover:text-text">✕</button>
+      </div>
+      <input
+        className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-border bg-white focus:outline-none focus:border-accent"
+        placeholder="Buscar receta..."
+        value={busqueda}
+        onChange={e => onBusqueda(e.target.value)}
+        autoFocus
+      />
+      {resultados.map(r => (
+        <button key={r.id} onClick={() => onSeleccionar(r.id, r.nombre)}
+          className="text-left text-xs px-2 py-1.5 rounded-lg hover:bg-accent/10 hover:text-accent transition-colors text-text">
+          {r.nombre}
+        </button>
+      ))}
+      {busqueda && resultados.length === 0 && (
+        <p className="text-xs text-muted text-center py-1">Sin resultados</p>
+      )}
+    </div>
+  )
+}
+
+// ── Banner "¿Aplicar al resto de la semana?" ──────────────────────────────────
+function BannerReplicar({ nombre, cargando, onReplicar, onDescartar }: {
+  nombre:     string
+  cargando:   boolean
+  onReplicar: () => void
+  onDescartar:() => void
+}) {
+  return (
+    <div className="mt-2 p-2.5 rounded-xl bg-accent/8 border border-accent/25 flex items-center gap-2">
+      <p className="text-xs text-text flex-1 min-w-0">
+        <span className="font-medium">"{nombre}"</span> agregada.{' '}
+        <span className="text-muted">¿Repetir en toda la semana?</span>
+      </p>
+      <div className="flex gap-1.5 flex-shrink-0">
+        <button onClick={onReplicar} disabled={cargando}
+          className="text-[11px] font-semibold text-accent hover:opacity-70 transition-opacity px-2 py-1 rounded-lg bg-accent/10">
+          {cargando ? '...' : 'Sí'}
+        </button>
+        <button onClick={onDescartar}
+          className="text-[11px] text-muted hover:text-text transition-colors px-2 py-1">
+          No
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Barra de acciones colapsada ───────────────────────────────────────────────
 function AccionesRow({ expanded, onExpand, isCooked, isSkipped, onVerReceta, onCocinada, onSaltar, onRestaurar, onCambiar }: {
   expanded:    boolean
   onExpand:    () => void

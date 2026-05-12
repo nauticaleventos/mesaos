@@ -43,6 +43,7 @@ interface MenuState {
   simplificarComidas:   (familyId: string, cuantas: number) => Promise<number>
   quitarComponente:     (entryId: string) => Promise<void>
   agregarComponente:    (familyId: string, weekStart: string, dayOfWeek: number, mealType: string, recipeId: string, component: string) => Promise<void>
+  replicarEnSemana:     (familyId: string, weekStart: string, fromDay: number, mealType: string, recipeId: string, component: string) => Promise<number>
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -496,5 +497,35 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       }
       set(s => ({ menu: [...s.menu, entry] }))
     }
+  },
+
+  // Replica un componente agregado en todos los días restantes de la semana que tengan ese meal_type
+  replicarEnSemana: async (familyId, weekStart, fromDay, mealType, recipeId, component) => {
+    const { data: recipe } = await supabase.from('recipes').select(RECIPE_SELECT).eq('id', recipeId).single()
+    if (!recipe) return 0
+
+    const existingDays = new Set(
+      get().menu
+        .filter(e => e.meal_type === mealType && e.recipe_id === recipeId && e.meal_component === component)
+        .map(e => e.day_of_week)
+    )
+    // Días que tienen ese meal_type pero aún no tienen esta receta
+    const diasConSlot = [...new Set(get().menu.filter(e => e.meal_type === mealType && e.day_of_week !== fromDay).map(e => e.day_of_week))]
+    const diasAgregar = diasConSlot.filter(d => !existingDays.has(d))
+
+    let added = 0
+    for (const day of diasAgregar) {
+      const { data: inserted } = await supabase.from('weekly_menu').insert({
+        family_id: familyId, week_start: weekStart, day_of_week: day,
+        meal_type: mealType, meal_component: component, recipe_id: recipeId,
+        member_id: null, is_main_recipe: false, servings: 1, status: 'planned',
+      }).select().single()
+      if (inserted) {
+        const entry: EnrichedMenuEntry = { ...(inserted as Omit<EnrichedMenuEntry, 'recipe'>), meal_component: component, status: 'planned', recipe: recipe as RecipeForMenu }
+        set(s => ({ menu: [...s.menu, entry] }))
+        added++
+      }
+    }
+    return added
   },
 }))
