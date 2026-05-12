@@ -10,6 +10,7 @@ import type { FamilyMember, FamilyUser } from '../lib/types'
 import StepAddMember from '../components/onboarding/StepAddMember'
 import AsistenciaSemanalPanel from '../components/family/AsistenciaSemanalPanel'
 import BottomNav from '../components/ui/BottomNav'
+import SorprenderBanner from '../components/menu/SorprenderBanner'
 
 export default function HomePage() {
   const navigate                          = useNavigate()
@@ -373,6 +374,11 @@ export default function HomePage() {
         </button>
       )}
 
+
+      {/* Sorpréndeme */}
+      {members.length > 0 && family?.id && (
+        <SorprenderBanner familyId={family.id} />
+      )}
 
       {/* Modal invitación */}
       {inviteUrl && (

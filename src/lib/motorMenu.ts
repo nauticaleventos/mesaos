@@ -12,14 +12,17 @@ export type MealComponent = 'completo' | 'proteina' | 'carbohidrato' | 'guarnici
 export type TipoComponente = 'proteina_principal' | 'guarnicion' | 'ensalada' | 'salsa' | 'vinagreta' | 'postre' | 'bebida' | 'merienda' | 'plato_unico'
 
 export interface MenuConfig {
-  id:                string
-  family_id:         string
-  planear_desayuno:  boolean
-  planear_almuerzo:  boolean
-  planear_cena:      boolean
-  planear_snacks:    boolean
-  distinguir_finde:  boolean
-  cocina_frequency?: 'daily' | '2x_week' | '1x_week'
+  id:                          string
+  family_id:                   string
+  planear_desayuno:            boolean
+  planear_almuerzo:            boolean
+  planear_cena:                boolean
+  planear_snacks:              boolean
+  distinguir_finde:            boolean
+  cocina_frequency?:           'daily' | '2x_week' | '1x_week'
+  dias_coccion?:               number[]   // 1=Lun … 7=Dom
+  distinguir_dias_especiales?: boolean
+  dias_especiales?:            number[]
 }
 
 export interface RecipeForMenu {
