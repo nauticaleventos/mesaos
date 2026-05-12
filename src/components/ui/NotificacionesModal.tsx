@@ -48,7 +48,7 @@ export default function NotificacionesModal({ userId, familyId, onClose }: Props
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={rechazar} />
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-2xl shadow-xl p-6 pb-10">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-xl p-6 pb-10">
         <button onClick={rechazar} className="absolute top-4 right-4 p-1.5 rounded-xl hover:bg-gray-100">
           <X size={18} className="text-muted" />
         </button>
@@ -65,7 +65,7 @@ export default function NotificacionesModal({ userId, familyId, onClose }: Props
             </p>
           </div>
 
-          <div className="w-full text-left bg-surface border border-border rounded-xl p-4 flex flex-col gap-2">
+          <div className="w-full text-left bg-gray-50 border border-border rounded-xl p-4 flex flex-col gap-2">
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Te aviso cuando:</p>
             {[
               '🗓️ Tu semana va a arrancar — te armo el menú',

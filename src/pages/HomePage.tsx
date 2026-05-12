@@ -54,17 +54,22 @@ export default function HomePage() {
 
   // Cargar preferencias de notificaciones
   useEffect(() => {
-    if (!session?.user?.id) return
+    if (!session?.user?.id || members.length === 0) return
     supabase.from('user_preferences')
-      .select('notificaciones_activas, notif_recordatorio_dom, notif_inventario_bajo')
+      .select('notificaciones_activas, notif_recordatorio_dom, notif_inventario_bajo, updated_at')
       .eq('user_id', session.user.id)
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
           setNotifPrefs(data as typeof notifPrefs)
-        } else if (members.length > 0) {
-          // Primera vez con miembros → mostrar modal
-          setShowNotifModal(true)
+        } else {
+          // Sin preferencias guardadas → primera vez, mostrar modal una sola vez
+          // Usar localStorage para no repetirlo en recargas
+          const yaVisto = localStorage.getItem('notif_modal_visto')
+          if (!yaVisto) {
+            setShowNotifModal(true)
+            localStorage.setItem('notif_modal_visto', '1')
+          }
         }
       })
   }, [session?.user?.id, members.length])
