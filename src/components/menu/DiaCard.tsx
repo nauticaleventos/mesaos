@@ -31,13 +31,39 @@ const COMPONENT_EMOJI: Record<string, string> = {
   guarnicion:   '🍚',
   carbohidrato: '🍚',
   ensalada:     '🥗',
-  completo:     '🍽️',
+  completo:     '',
 }
 
 const DIFICULTAD_COLOR: Record<string, string> = {
   facil:   'bg-green-100 text-green-700',
   media:   'bg-yellow-100 text-yellow-700',
   dificil: 'bg-red-100 text-red-700',
+}
+
+// Agrupa entradas por recipe_id y acumula los member_ids de quienes la comen
+function agruparPorReceta(entries: EnrichedMenuEntry[], allMembers: FamilyMember[]): {
+  entry:      EnrichedMenuEntry
+  memberIds:  (string | null)[]  // null = todos sin alternativa
+  members:    FamilyMember[]
+}[] {
+  const map = new Map<string, { entry: EnrichedMenuEntry; memberIds: (string | null)[] }>()
+
+  for (const e of entries) {
+    if (map.has(e.recipe_id)) {
+      map.get(e.recipe_id)!.memberIds.push(e.member_id)
+    } else {
+      map.set(e.recipe_id, { entry: e, memberIds: [e.member_id] })
+    }
+  }
+
+  return [...map.values()].map(({ entry, memberIds }) => {
+    const hasNull = memberIds.includes(null)
+    const specificIds = memberIds.filter((id): id is string => id !== null)
+    const resolvedMembers = hasNull
+      ? allMembers  // null = toda la familia
+      : allMembers.filter(m => specificIds.includes(m.id!))
+    return { entry, memberIds, members: resolvedMembers }
+  })
 }
 
 export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAddSobrante }: Props) {
@@ -65,7 +91,6 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
         </div>
       </div>
 
-      {/* Comidas */}
       {porTipo.map(({ tipo, components }, idx) => (
         <MealSection
           key={tipo}
@@ -75,15 +100,15 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
           leftovers={tipo === 'almuerzo' || tipo === 'cena' ? leftovers : []}
           onAddSobrante={onAddSobrante}
           onCocinada={() => {
-            const main = components.find(e => e.is_main_recipe && e.member_id === null) ?? components[0]
+            const main = components.find(e => e.is_main_recipe) ?? components[0]
             if (main) marcarCocinada(main.id)
           }}
           onSaltar={() => {
-            const main = components.find(e => e.is_main_recipe && e.member_id === null) ?? components[0]
+            const main = components.find(e => e.is_main_recipe) ?? components[0]
             if (main) saltarReceta(main.id)
           }}
           onRestaurar={() => {
-            const main = components.find(e => e.is_main_recipe && e.member_id === null) ?? components[0]
+            const main = components.find(e => e.is_main_recipe) ?? components[0]
             if (main) restaurarReceta(main.id)
           }}
           isLast={idx === porTipo.length - 1}
@@ -104,43 +129,139 @@ function MealSection({ tipo, components, members, leftovers, onAddSobrante, onCo
   onRestaurar:    () => void
   isLast:         boolean
 }) {
-  const navigate         = useNavigate()
-  const fridgeItems      = useFridgeStore(s => s.items)
-  const [expanded, setExpanded] = useState(false)
+  const navigate    = useNavigate()
+  const fridgeItems = useFridgeStore(s => s.items)
+  const [expanded, setExpanded]     = useState(false)
   const [showCambiar, setShowCambiar] = useState(false)
 
-  const main    = components.find(e => e.is_main_recipe && e.member_id === null) ?? components[0]
+  // Ignorar salsas/vinagretas como componente visible
+  const visibles = components.filter(e =>
+    e.meal_component !== 'salsa' && e.meal_component !== 'vinagreta'
+  )
+
+  const main = visibles.find(e => e.is_main_recipe) ?? visibles[0]
   if (!main) return null
 
   const isCooked  = main.status === 'cooked'
   const isSkipped = main.status === 'skipped'
 
-  // Separar componentes: ignorar salsas/vinagretas (van implícitas en la proteína)
-  const familyComponents = components.filter(e =>
-    e.member_id === null &&
-    e.meal_component !== 'salsa' &&
-    e.meal_component !== 'vinagreta'
+  const isSimple = tipo === 'desayuno' || tipo === 'snack'
+
+  // ── DESAYUNO / SNACK: agrupar por receta única ────────────────────────────
+  // Cada miembro puede tener su propia receta o compartir una.
+  // Mostrar cada receta UNA vez con los emojis de quienes la comen debajo.
+  if (isSimple) {
+    const grupos = agruparPorReceta(visibles, members)
+    return (
+      <div className={`${!isLast ? 'border-b border-border/60' : ''}`}>
+        <div className="px-4 pt-3 pb-1">
+          <p className={`text-xs font-bold uppercase tracking-widest ${isCooked ? 'text-muted' : 'text-accent'}`}>
+            {MEAL_LABELS[tipo]}
+          </p>
+          <div className="h-px bg-border/50 mt-1.5" />
+        </div>
+
+        <div className={`flex flex-col gap-0 px-4 pb-2 ${isCooked ? 'opacity-60' : ''} ${isSkipped ? 'opacity-40' : ''}`}>
+          {grupos.map(({ entry: e, members: eMembers }) => {
+            const r    = e.recipe
+            const cm   = calcularMatch(r.ingredientes ?? [], fridgeItems)
+            const badge = matchBadge(cm.estado)
+            return (
+              <button key={e.recipe_id}
+                onClick={() => navigate(`/receta/${e.recipe_id}`)}
+                className="flex items-start gap-3 py-2.5 text-left hover:opacity-80 transition-opacity border-b border-border/30 last:border-0">
+                {/* Imagen */}
+                <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-accent-light">
+                  {r.imagen_url
+                    ? <img src={r.imagen_url} alt={r.nombre} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center"><ChefHat size={16} color="#E76F51" /></div>
+                  }
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-text leading-snug">
+                    {isSkipped ? <s>{r.nombre}</s> : r.nombre}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    {r.tiempo_total_min && (
+                      <span className="flex items-center gap-0.5 text-xs text-muted">
+                        <Clock size={10} />{r.tiempo_total_min}min
+                      </span>
+                    )}
+                    {r.dificultad && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DIFICULTAD_COLOR[r.dificultad]}`}>
+                        {r.dificultad}
+                      </span>
+                    )}
+                    {!isCooked && !isSkipped && (
+                      <span className={`text-[10px] font-medium ${badge.color}`}>{badge.icon}</span>
+                    )}
+                  </div>
+                  {/* Emojis miembros */}
+                  <div className="flex items-center gap-1 mt-1">
+                    {eMembers.length > 3
+                      ? <span className="text-xs text-muted">Familia ({eMembers.length})</span>
+                      : eMembers.map(m => (
+                          <span key={m.id} title={m.name ?? ''} className="text-sm leading-none">{m.emoji}</span>
+                        ))
+                    }
+                  </div>
+                </div>
+                <ExternalLink size={12} className="text-muted flex-shrink-0 mt-1" />
+              </button>
+            )
+          })}
+        </div>
+
+        <AccionesRow
+          expanded={expanded} onExpand={() => setExpanded(e => !e)}
+          isCooked={isCooked} isSkipped={isSkipped}
+          onVerReceta={() => navigate(`/receta/${main.recipe_id}`)}
+          onCocinada={() => { onCocinada(); setExpanded(false) }}
+          onSaltar={() => { onSaltar(); setExpanded(false) }}
+          onRestaurar={() => { onRestaurar(); setExpanded(false) }}
+          onCambiar={() => setShowCambiar(true)}
+        />
+        {showCambiar && <CambiarSheet entry={main} onClose={() => setShowCambiar(false)} />}
+      </div>
+    )
+  }
+
+  // ── ALMUERZO / CENA: componentes ordenados (proteína → guarnición → ensalada) ──
+  // Agrupar por (meal_component, recipe_id) para no repetir si varios miembros comen lo mismo
+  const componentOrder = ['proteina', 'completo', 'guarnicion', 'carbohidrato', 'ensalada']
+  const visiblesSorted = [...visibles].sort((a, b) =>
+    (componentOrder.indexOf(a.meal_component) + 1 || 99) -
+    (componentOrder.indexOf(b.meal_component) + 1 || 99)
   )
-  const altComponents = components.filter(e => e.member_id !== null)
 
-  // IDs de miembros con alternativa
-  const altMemberIds = new Set(altComponents.map(a => a.member_id!))
+  // Agrupar por (component_type + recipe_id) para deduplicar
+  const componentGroups = new Map<string, { entry: EnrichedMenuEntry; members: FamilyMember[] }>()
+  for (const e of visiblesSorted) {
+    const key = `${e.meal_component}::${e.recipe_id}`
+    if (componentGroups.has(key)) {
+      if (e.member_id) {
+        const m = members.find(mb => mb.id === e.member_id)
+        if (m) componentGroups.get(key)!.members.push(m)
+      }
+    } else {
+      const eMembers = e.member_id === null
+        ? [] // se calculan después
+        : [members.find(mb => mb.id === e.member_id)].filter(Boolean) as FamilyMember[]
+      componentGroups.set(key, { entry: e, members: eMembers })
+    }
+  }
 
-  // Miembros sin alternativa = comen el plato familiar
+  // Para entradas con member_id=null, inferir quiénes comen: todos menos los que tienen alternativa
+  const altMemberIds = new Set(visibles.filter(e => e.member_id !== null && e.is_main_recipe).map(e => e.member_id!))
   const membersFamilia = members.filter(m => !altMemberIds.has(m.id!))
-
-  // Footnotes: miembros con alternativa
-  const altProteins = altComponents.filter(a => a.is_main_recipe)
 
   const hasSalad   = components.some(c => c.meal_component === 'ensalada')
   const hasProtein = components.some(c => c.meal_component === 'proteina' || c.meal_component === 'completo')
-  const hasOnlySides = !hasProtein && components.some(c =>
-    c.meal_component === 'ensalada' || c.meal_component === 'guarnicion'
-  )
+  const hasOnlySides = !hasProtein
 
   return (
     <div className={`${!isLast ? 'border-b border-border/60' : ''}`}>
-      {/* Encabezado de comida */}
       <div className="px-4 pt-3 pb-1">
         <p className={`text-xs font-bold uppercase tracking-widest ${isCooked ? 'text-muted' : 'text-accent'}`}>
           {MEAL_LABELS[tipo]}
@@ -148,108 +269,60 @@ function MealSection({ tipo, components, members, leftovers, onAddSobrante, onCo
         <div className="h-px bg-border/50 mt-1.5" />
       </div>
 
-      {/* Filas de componentes */}
-      <div className={`flex flex-col gap-0 px-4 pb-2 ${isCooked ? 'opacity-60' : ''} ${isSkipped ? 'opacity-40' : ''}`}>
-        {familyComponents.map((comp) => {
-          const isMain = comp.is_main_recipe
-          const r    = comp.recipe
-          const cm   = calcularMatch(r.ingredientes ?? [], fridgeItems)
+      <div className={`flex flex-col px-4 pb-2 ${isCooked ? 'opacity-60' : ''} ${isSkipped ? 'opacity-40' : ''}`}>
+        {[...componentGroups.values()].map(({ entry: e, members: eMembers }) => {
+          const r     = e.recipe
+          const cm    = calcularMatch(r.ingredientes ?? [], fridgeItems)
           const badge = matchBadge(cm.estado)
-          const emoji = COMPONENT_EMOJI[comp.meal_component] ?? '•'
-          const isSimple = tipo === 'desayuno' || tipo === 'snack'
+          const emoji = COMPONENT_EMOJI[e.meal_component] ?? ''
+          // Si member_id=null, mostrar miembros de la familia (sin alternativa)
+          const displayMembers = e.member_id === null ? membersFamilia : eMembers
 
-          // Para desayuno/snack: no mostrar emoji de componente
           return (
-            <button key={comp.id}
-              onClick={() => navigate(`/receta/${comp.recipe_id}`)}
+            <button key={`${e.meal_component}::${e.recipe_id}`}
+              onClick={() => navigate(`/receta/${e.recipe_id}`)}
               className="flex items-start gap-2.5 py-2.5 text-left hover:opacity-80 transition-opacity border-b border-border/30 last:border-0">
-
-              {/* Emoji componente (solo almuerzo/cena) */}
-              {!isSimple && (
-                <span className="text-base leading-none mt-0.5 w-5 flex-shrink-0">{emoji}</span>
-              )}
-
-              {/* Imagen solo en desayuno/snack (plato principal) */}
-              {isSimple && (
-                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-accent-light">
-                  {r.imagen_url
-                    ? <img src={r.imagen_url} alt={r.nombre} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center"><ChefHat size={16} color="#E76F51" /></div>
-                  }
-                </div>
-              )}
+              {/* Emoji componente */}
+              <span className="text-base leading-none mt-0.5 w-5 flex-shrink-0">{emoji}</span>
 
               <div className="flex-1 min-w-0">
-                {/* Nombre */}
-                <p className={`text-sm leading-snug ${isMain ? 'font-semibold text-text' : 'font-medium text-text/90'}`}>
+                <p className={`text-sm leading-snug ${e.is_main_recipe ? 'font-semibold text-text' : 'font-medium text-text/90'}`}>
                   {isSkipped ? <s>{r.nombre}</s> : r.nombre}
                 </p>
-
-                {/* Metadata */}
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  {isMain && r.tiempo_total_min && (
-                    <span className="flex items-center gap-0.5 text-xs text-muted">
-                      <Clock size={10} />{r.tiempo_total_min}min
-                    </span>
-                  )}
-                  {isMain && r.dificultad && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DIFICULTAD_COLOR[r.dificultad]}`}>
-                      {r.dificultad}
-                    </span>
-                  )}
-                  {!isCooked && !isSkipped && (
-                    <span className={`text-[10px] font-medium ${badge.color}`}>{badge.icon}</span>
-                  )}
-                </div>
-
-                {/* Miembros que comen este componente */}
-                {isMain && membersFamilia.length > 0 && (
-                  <div className="flex items-center gap-1 mt-1 flex-wrap">
-                    {membersFamilia.length > 3
-                      ? <span className="text-xs text-muted">Familia ({membersFamilia.length})</span>
-                      : membersFamilia.map(m => (
-                          <span key={m.id} title={m.name ?? ''} className="text-sm leading-none">{m.emoji}</span>
-                        ))
-                    }
-                    {/* Footnote si hay alternativas */}
-                    {altProteins.length > 0 && isMain && (
-                      <span className="text-[10px] text-muted ml-1">
-                        {altProteins.map(a => {
-                          const m = members.find(mb => mb.id === a.member_id)
-                          return m ? <span key={a.id}>{m.emoji}¹</span> : null
-                        })}
+                {/* Metadata solo en proteína/completo */}
+                {e.is_main_recipe && (
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    {r.tiempo_total_min && (
+                      <span className="flex items-center gap-0.5 text-xs text-muted">
+                        <Clock size={10} />{r.tiempo_total_min}min
                       </span>
+                    )}
+                    {r.dificultad && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DIFICULTAD_COLOR[r.dificultad]}`}>
+                        {r.dificultad}
+                      </span>
+                    )}
+                    {!isCooked && !isSkipped && (
+                      <span className={`text-[10px] font-medium ${badge.color}`}>{badge.icon}</span>
                     )}
                   </div>
                 )}
+                {/* Emojis de quienes comen este componente */}
+                {displayMembers.length > 0 && (
+                  <div className="flex items-center gap-1 mt-1">
+                    {displayMembers.length > 3
+                      ? <span className="text-xs text-muted">Familia ({displayMembers.length})</span>
+                      : displayMembers.map(m => (
+                          <span key={m.id} title={m.name ?? ''} className="text-sm leading-none">{m.emoji}</span>
+                        ))
+                    }
+                  </div>
+                )}
               </div>
-
               <ExternalLink size={12} className="text-muted flex-shrink-0 mt-1" />
             </button>
           )
         })}
-
-        {/* Notas al pie — alternativas por miembro */}
-        {altProteins.length > 0 && (
-          <div className="flex flex-col gap-1 pt-1 pl-7">
-            {altProteins.map(alt => {
-              const m = members.find(mb => mb.id === alt.member_id)
-              if (!m) return null
-              return (
-                <button key={alt.id}
-                  onClick={() => navigate(`/receta/${alt.recipe_id}`)}
-                  className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity">
-                  <span className="text-sm">{m.emoji}</span>
-                  <span className="text-xs text-muted">
-                    <span className="text-muted">¹</span> {m.name}:
-                  </span>
-                  <span className="text-xs text-text font-medium truncate">{alt.recipe.nombre}</span>
-                  <ExternalLink size={10} className="text-muted flex-shrink-0" />
-                </button>
-              )
-            })}
-          </div>
-        )}
 
         {/* Sobrantes */}
         {leftovers.length > 0 && hasSalad && (
@@ -263,7 +336,7 @@ function MealSection({ tipo, components, members, leftovers, onAddSobrante, onCo
           </div>
         )}
 
-        {/* Botón agregar proteína */}
+        {/* Agregar proteína */}
         {!isSkipped && hasOnlySides && (
           <button onClick={onAddSobrante}
             className="flex items-center gap-1.5 pt-1 pl-7 text-xs text-accent font-medium hover:opacity-70">
@@ -272,58 +345,75 @@ function MealSection({ tipo, components, members, leftovers, onAddSobrante, onCo
         )}
       </div>
 
-      {/* Acciones */}
-      {!expanded ? (
-        <button onClick={() => setExpanded(true)}
-          className="w-full px-4 py-2 text-xs text-muted text-center hover:text-text transition-colors">
-          ···
-        </button>
-      ) : (
-        <div className="border-t border-border flex">
-          <button onClick={() => navigate(`/receta/${main.recipe_id}`)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs text-accent font-medium hover:bg-accent/5 transition-colors border-r border-border">
-            <ExternalLink size={12} /> Ver receta
+      <AccionesRow
+        expanded={expanded} onExpand={() => setExpanded(e => !e)}
+        isCooked={isCooked} isSkipped={isSkipped}
+        onVerReceta={() => navigate(`/receta/${main.recipe_id}`)}
+        onCocinada={() => { onCocinada(); setExpanded(false) }}
+        onSaltar={() => { onSaltar(); setExpanded(false) }}
+        onRestaurar={() => { onRestaurar(); setExpanded(false) }}
+        onCambiar={() => setShowCambiar(true)}
+      />
+      {showCambiar && <CambiarSheet entry={main} onClose={() => setShowCambiar(false)} />}
+    </div>
+  )
+}
+
+function AccionesRow({ expanded, onExpand, isCooked, isSkipped, onVerReceta, onCocinada, onSaltar, onRestaurar, onCambiar }: {
+  expanded:    boolean
+  onExpand:    () => void
+  isCooked:    boolean
+  isSkipped:   boolean
+  onVerReceta: () => void
+  onCocinada:  () => void
+  onSaltar:    () => void
+  onRestaurar: () => void
+  onCambiar:   () => void
+}) {
+  if (!expanded) {
+    return (
+      <button onClick={onExpand}
+        className="w-full px-4 py-1.5 text-xs text-muted text-center hover:text-text transition-colors">
+        ···
+      </button>
+    )
+  }
+  return (
+    <div className="border-t border-border flex">
+      <button onClick={onVerReceta}
+        className="flex-1 flex items-center justify-center gap-1 py-2.5 text-xs text-accent font-medium hover:bg-accent/5 transition-colors border-r border-border">
+        <ExternalLink size={12} /> Ver receta
+      </button>
+      {isSkipped ? (
+        <>
+          <button onClick={onRestaurar}
+            className="flex-1 flex items-center justify-center gap-1 py-2.5 text-xs text-oliva font-medium hover:bg-oliva-claro/40 transition-colors border-r border-border">
+            <RotateCcw size={12} /> Restaurar
           </button>
-
-          {isSkipped ? (
-            <>
-              <button onClick={() => { onRestaurar(); setExpanded(false) }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs text-oliva font-medium hover:bg-oliva-claro/40 transition-colors border-r border-border">
-                <RotateCcw size={12} /> Restaurar
-              </button>
-              <button onClick={() => setShowCambiar(true)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs text-accent font-medium hover:bg-accent/5 transition-colors">
-                <RefreshCw size={12} /> Cambiar
-              </button>
-            </>
-          ) : (
-            <>
-              {!isCooked && (
-                <button onClick={() => { onCocinada(); setExpanded(false) }}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs text-oliva font-medium hover:bg-oliva-claro/40 transition-colors border-r border-border">
-                  <Check size={12} /> La cociné
-                </button>
-              )}
-              <button onClick={() => setShowCambiar(true)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs text-accent font-medium hover:bg-accent/5 transition-colors">
-                <RefreshCw size={12} /> Cambiar
-              </button>
-              {!isCooked && (
-                <button onClick={() => { onSaltar(); setExpanded(false) }}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted font-medium hover:bg-gray-50 transition-colors border-l border-border">
-                  <SkipForward size={12} /> Saltar
-                </button>
-              )}
-            </>
+          <button onClick={onCambiar}
+            className="flex-1 flex items-center justify-center gap-1 py-2.5 text-xs text-accent font-medium hover:bg-accent/5 transition-colors">
+            <RefreshCw size={12} /> Cambiar
+          </button>
+        </>
+      ) : (
+        <>
+          {!isCooked && (
+            <button onClick={onCocinada}
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 text-xs text-oliva font-medium hover:bg-oliva-claro/40 transition-colors border-r border-border">
+              <Check size={12} /> La cociné
+            </button>
           )}
-        </div>
-      )}
-
-      {showCambiar && (
-        <CambiarSheet
-          entry={main}
-          onClose={() => setShowCambiar(false)}
-        />
+          <button onClick={onCambiar}
+            className="flex-1 flex items-center justify-center gap-1 py-2.5 text-xs text-accent font-medium hover:bg-accent/5 transition-colors border-r border-border">
+            <RefreshCw size={12} /> Cambiar
+          </button>
+          {!isCooked && (
+            <button onClick={onSaltar}
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 text-xs text-muted font-medium hover:bg-gray-50 transition-colors">
+              <SkipForward size={12} /> Saltar
+            </button>
+          )}
+        </>
       )}
     </div>
   )
