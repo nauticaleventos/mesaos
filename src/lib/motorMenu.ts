@@ -317,7 +317,14 @@ export function sonSimilares(a: string, b: string): boolean {
   const words = (s: string) => normalizar(s).split(/\s+/).filter(w => w.length > 3)
   const wa = words(a), wb = words(b)
   const common = wa.filter(w => wb.includes(w))
-  return common.length >= 2
+  if (common.length === 0) return false
+  // Si comparten 2+ palabras significativas → misma preparación base
+  if (common.length >= 2) return true
+  // Si la palabra compartida es la "estrella" (primera palabra sustantiva del nombre) → similar
+  // Ej: "Avena con chía y plátano" vs "Avena nocturna con cacao" → ambas son avena
+  const primeraA = wa[0], primeraB = wb[0]
+  if (primeraA && primeraB && primeraA === primeraB) return true
+  return false
 }
 
 /** Calcular score combinado para una receta en un slot dado */
@@ -446,6 +453,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
   // Desayuno/snack: cada miembro tiene su propio historial semanal
   const usedPerMember  = new Map<string, Set<string>>()
   let   proteinDaysUsed = 0
+  let   usedYesterdayNames: string[] = []  // nombres del día anterior para evitar repetir
 
   for (let day = 1; day <= 7; day++) {
     const isDayFinde     = day >= 6
@@ -479,13 +487,15 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
       if (tipo === 'desayuno' || tipo === 'snack') {
         const isBatch = config.cocina_frequency === '1x_week' || config.cocina_frequency === '2x_week'
 
-        // Pool general: compatable con al menos un miembro, tipo correcto, no usada hoy
+        // Pool general: compatible con al menos un miembro, tipo correcto, no usada hoy ni ayer
         const pool = allRecipes.filter(r => {
           if (!r.tipo_comida.includes(tipo)) return false
           if (usedToday.has(r.id)) return false
           if (guestRestrictions.includes('vegetariana') && !r.perfiles?.vegetariana) return false
           if (guestRestrictions.includes('sin_gluten')  && !r.filtros_nutricionales?.sin_gluten)  return false
           if (guestRestrictions.includes('sin_lacteos') && !r.filtros_nutricionales?.sin_lacteos) return false
+          // No repetir preparación del día anterior
+          if (usedYesterdayNames.some(n => sonSimilares(r.nombre, n))) return false
           return slotMembers.some(m => esCompatibleConMiembro(r, m))
         })
 
@@ -535,21 +545,28 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         }
 
         // 3. Variantes para quienes no se adaptan a la base
-        //    → solo recetas RÁPIDAS/FÁCILES para no añadir carga al chef
+        //    → solo recetas RÁPIDAS/FÁCILES, distintas a la base y entre sí
         const altUsed  = new Set<string>([baseRecipe.id])
         const altMap   = new Map<string, RecipeForMenu>()   // memberId → recipe
 
         for (const m of needAlt) {
           const mUsed = usedPerMember.get(m.id!) ?? new Set<string>()
+          // Excluir recetas similares a la base O a alternativas ya asignadas hoy
+          const noSimilarHoy = (r: RecipeForMenu) =>
+            !usedTodayNames.some(n => sonSimilares(r.nombre, n)) &&
+            !usedYesterdayNames.some(n => sonSimilares(r.nombre, n))
+
           // Candidatas simples primero (≤25min o fácil); si no hay, abrir más
           const simple = pool.filter(r =>
             esCompatibleConMiembro(r, m) && !mUsed.has(r.id) &&
             !usedToday.has(r.id) && !altUsed.has(r.id) &&
+            noSimilarHoy(r) &&
             (r.dificultad === 'facil' || (r.tiempo_total_min ?? 999) <= 25)
           )
           const broader = pool.filter(r =>
             esCompatibleConMiembro(r, m) && !mUsed.has(r.id) &&
-            !usedToday.has(r.id) && !altUsed.has(r.id)
+            !usedToday.has(r.id) && !altUsed.has(r.id) &&
+            noSimilarHoy(r)
           )
           const candidates = simple.length > 0 ? simple : broader
 
@@ -867,6 +884,8 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
 
       result.push({ dayOfWeek: day, tipo, components, principal: bestRecipe, servings: slotServings, alternativas })
     }
+    // Actualizar historial del día anterior para el siguiente día
+    usedYesterdayNames = [...usedTodayNames]
   }
 
   return result
