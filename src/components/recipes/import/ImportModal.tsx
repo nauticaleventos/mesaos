@@ -1,15 +1,16 @@
 import { useState } from 'react'
-import { X, Share2, Camera, Link, ClipboardList, PenLine, HelpCircle } from 'lucide-react'
+import { X, Share2, Camera, Link, ClipboardList, PenLine, HelpCircle, FileText } from 'lucide-react'
 import type { RecipeImport } from '../../../lib/claudeImport'
 import FormaTexto  from './FormaTexto'
 import FormaUrl    from './FormaUrl'
 import FormaFoto   from './FormaFoto'
 import FormaSocial from './FormaSocial'
 import FormaManual from './FormaManual'
+import FormaPDF    from './FormaPDF'
 import ConfirmacionReceta from './ConfirmacionReceta'
 import ClasificacionWizard from '../ClasificacionWizard'
 
-type Forma = 'menu' | 'social' | 'foto' | 'url' | 'texto' | 'manual' | 'wizard' | 'confirmar' | 'ayuda'
+type Forma = 'menu' | 'social' | 'foto' | 'url' | 'texto' | 'manual' | 'pdf' | 'wizard' | 'confirmar' | 'ayuda'
 
 interface Props {
   familyId: string
@@ -57,6 +58,14 @@ const OPCIONES = [
     desc:     'Receta propia o de memoria',
     color:    '#888780',
     bg:       '#F0EFED',
+  },
+  {
+    id:       'pdf' as Forma,
+    icon:     FileText,
+    titulo:   'Desde PDF',
+    desc:     'Libro de recetas, menú escaneado',
+    color:    '#C0392B',
+    bg:       '#FDECEA',
   },
 ]
 
@@ -139,6 +148,11 @@ export default function ImportModal({ familyId, onSaved, onClose }: Props) {
                                               onGoToFoto={() => setForma('foto')} />
   if (forma === 'texto')  return <FormaTexto   onExtracted={handleExtracted} onBack={handleBack} />
   if (forma === 'manual') return <FormaManual  onExtracted={handleExtracted} onBack={handleBack} />
+  if (forma === 'pdf')    return (
+    <ModalWrap onClose={onClose} titulo="Importar desde PDF">
+      <FormaPDF onExtracted={handleExtracted} onBack={handleBack} />
+    </ModalWrap>
+  )
 
   // ── Menú principal ──────────────────────────────────────────────────────────
   return (

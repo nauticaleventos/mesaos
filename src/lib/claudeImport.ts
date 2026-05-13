@@ -87,6 +87,18 @@ export async function importFromPhoto(base64: string, mime = 'image/jpeg'): Prom
   return callImportApi({ type: 'photo', imageBase64: base64, imageMime: mime })
 }
 
+/** Extrae 1 o más recetas de un PDF — usa /api/import-pdf */
+export async function importFromPDF(pdfBase64: string): Promise<RecipeImport[]> {
+  const res = await fetch('/api/import-pdf', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ pdfBase64 }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`)
+  return (data.recipes ?? []) as RecipeImport[]
+}
+
 /** Convierte File a base64 data (sin el prefijo data:image/...) */
 export async function fileToBase64(file: File): Promise<{ base64: string; mime: string }> {
   return new Promise((resolve, reject) => {
