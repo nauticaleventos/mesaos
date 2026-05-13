@@ -6,6 +6,7 @@ import { useRecipesStore, type Recipe } from '../../store/recipesStore'
 import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore, type FridgeItem } from '../../store/fridgeStore'
 import ClasificacionWizard from '../../components/recipes/ClasificacionWizard'
+import { calcularNutricion } from '../../lib/claudeImport'
 import { Minus, Plus, Check } from 'lucide-react'
 
 const DIFICULTAD_COLOR: Record<string, string> = {
@@ -65,7 +66,8 @@ export default function RecetaPage() {
   const [porcionesActual, setPorcionesActual] = useState<number>(4)
 
   // Pasos completados (modo cocina)
-  const [pasosCheck, setPasosCheck] = useState(new Set<number>())
+  const [pasosCheck, setPasosCheck]   = useState(new Set<number>())
+  const [calculandoNut, setCalculandoNut] = useState(false)
 
   // ── Cargar receta ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -151,6 +153,31 @@ export default function RecetaPage() {
 
   const togglePasoCheck = (i: number) =>
     setPasosCheck(prev => { const s = new Set(prev); s.has(i) ? s.delete(i) : s.add(i); return s })
+
+  const handleCalcularNutricion = async () => {
+    if (!id || !recipe) return
+    setCalculandoNut(true)
+    try {
+      const resultado = await calcularNutricion({
+        nombre:       recipe.nombre,
+        porciones:    recipe.porciones,
+        ingredientes: recipe.ingredientes ?? [],
+        dificultad:   recipe.dificultad,
+      })
+      await supabase.from('recipes').update({
+        info_nutricional_aprox: resultado.info_nutricional_aprox,
+        filtros_nutricionales:  resultado.filtros_nutricionales,
+        perfiles: { ...(recipe as Recipe & { perfiles?: object }).perfiles ?? {}, ...resultado.perfiles },
+      }).eq('id', id)
+      setRecipe(r => r ? { ...r,
+        info_nutricional_aprox: resultado.info_nutricional_aprox as unknown as Recipe['info_nutricional_aprox'],
+      } : r)
+      showToast('🔢 Nutrición calculada ✓')
+    } catch {
+      showToast('Error calculando nutrición')
+    }
+    setCalculandoNut(false)
+  }
 
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (!recipe) {
@@ -497,11 +524,32 @@ export default function RecetaPage() {
       )}
 
       {/* ── Nutrición ─────────────────────────────────────────────────── */}
+      {!nut && recipe.ingredientes?.length > 0 && (
+        <>
+          <Divider />
+          <div className="px-4 py-3">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Nutrición por porción</p>
+            <div className="p-3 rounded-xl border border-border bg-gray-50 flex items-center justify-between gap-3">
+              <p className="text-xs text-muted">Sin información nutricional registrada.</p>
+              <button onClick={handleCalcularNutricion} disabled={calculandoNut}
+                className="text-xs font-semibold text-accent hover:opacity-70 transition-opacity flex items-center gap-1 flex-shrink-0">
+                {calculandoNut ? '...' : '🔄 Calcular'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
       {nut && (
         <>
           <Divider />
           <div className="px-4 py-3">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Nutrición por porción</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-muted uppercase tracking-wider">Nutrición por porción</p>
+              <button onClick={handleCalcularNutricion} disabled={calculandoNut}
+                className="text-[10px] text-muted hover:text-accent transition-colors">
+                {calculandoNut ? '...' : '🔄 Recalcular'}
+              </button>
+            </div>
             <div className="grid grid-cols-4 gap-2 mb-3">
               {[
                 { label: 'Calorías', value: nut.calorias_porcion, unit: 'kcal' },

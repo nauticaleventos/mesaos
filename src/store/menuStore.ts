@@ -10,14 +10,16 @@ import type { FridgeItem } from './fridgeStore'
 export interface EnrichedMenuEntry {
   id:             string
   day_of_week:    number
-  meal_type:      string
+  meal_type:      string   // puede ser nombre personalizado: "Merienda mañana"
+  meal_time?:     string   // hora configurada: "09:00"
   meal_component: string   // 'completo' | 'proteina' | 'carbohidrato' | 'ensalada' | 'salsa'
   recipe_id:      string
   member_id:      string | null
   is_main_recipe: boolean
   servings:       number
-  status:         'planned' | 'cooked' | 'skipped' | 'swapped'
-  recipe:         RecipeForMenu
+  status:               'planned' | 'cooked' | 'skipped' | 'swapped'
+  accion_preparacion?:  'cocinar' | 'calentar' | 'ensamblar' | 'descongelar' | 'preparar_fresco'
+  recipe:               RecipeForMenu
 }
 
 export type { MenuConfig, RecipeForMenu } from '../lib/motorMenu'
@@ -269,18 +271,37 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       await supabase.from('weekly_menu').delete()
         .eq('family_id', familyId).eq('week_start', weekStart)
 
+      // Calcular acción de preparación según días de cocción configurados
+      const diasCoccion = new Set(config.dias_coccion ?? [])
+      const decidirAccion = (day: number): string => {
+        if (diasCoccion.size === 0 || diasCoccion.has(day)) return 'cocinar'
+        // Buscar el día de cocción más reciente
+        let diasAtras = 0
+        for (let d = day - 1; d >= 1; d--) {
+          diasAtras++
+          if (diasCoccion.has(d)) break
+        }
+        if (diasAtras <= 1) return 'calentar'
+        if (diasAtras <= 2) return 'calentar'
+        return 'descongelar'
+      }
+
       const rows = slots.flatMap(slot =>
         slot.components.map(comp => ({
-          family_id:      familyId,
-          week_start:     weekStart,
-          day_of_week:    slot.dayOfWeek,
-          meal_type:      slot.tipo,
-          meal_component: comp.component,
-          recipe_id:      comp.recipe.id,
-          member_id:      comp.memberId,
-          is_main_recipe: comp.component === 'proteina' || comp.component === 'completo',
-          servings:       comp.servings,
-          status:         'planned',
+          family_id:           familyId,
+          week_start:          weekStart,
+          day_of_week:         slot.dayOfWeek,
+          meal_type:           slot.mealName ?? slot.tipo,
+          meal_time:           slot.mealTime ?? null,
+          meal_component:      comp.component,
+          recipe_id:           comp.recipe.id,
+          member_id:           comp.memberId,
+          is_main_recipe:      comp.component === 'proteina' || comp.component === 'completo',
+          servings:            comp.servings,
+          status:              'planned',
+          accion_preparacion:  (comp.component === 'proteina' || comp.component === 'completo')
+                               ? decidirAccion(slot.dayOfWeek)
+                               : 'preparar_fresco',
         }))
       )
 

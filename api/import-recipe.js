@@ -212,6 +212,44 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: `Tipo desconocido: ${type}` })
     }
 
+    // ── Post-procesado: garantizar nutrición completa ──────────────────────────
+    // Si Claude no calculó los macros, llamamos al endpoint dedicado
+    const nut = recipe.info_nutricional_aprox
+    const nutVacia = !nut || nut.calorias_porcion == null || nut.calorias_porcion === 0
+
+    if (nutVacia && recipe.ingredientes?.length > 0) {
+      try {
+        const nutRes = await fetch(`${req.headers.origin ?? 'http://localhost:3000'}/api/calcular-nutricion`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: recipe.nombre,
+            porciones: recipe.porciones,
+            ingredientes: recipe.ingredientes,
+            dificultad: recipe.dificultad,
+          }),
+        })
+        if (nutRes.ok) {
+          const nutData = await nutRes.json()
+          if (nutData.info_nutricional_aprox) {
+            recipe.info_nutricional_aprox = nutData.info_nutricional_aprox
+            recipe.filtros_nutricionales  = nutData.filtros_nutricionales
+            recipe.perfiles               = { ...nutData.perfiles, ...recipe.perfiles }
+          }
+        }
+      } catch (nutErr) {
+        console.warn('calcular-nutricion fallback falló:', nutErr.message)
+      }
+    }
+
+    // Garantizar perfiles.vegetariana nunca sea null
+    if (recipe.perfiles && recipe.perfiles.vegetariana == null) {
+      const tieneProtAnimal = (recipe.ingredientes ?? []).some(i =>
+        i.categoria === 'proteina_animal' || i.categoria === 'embutido'
+      )
+      recipe.perfiles.vegetariana = !tieneProtAnimal
+    }
+
     return res.status(200).json({ recipe, source_url })
 
   } catch (e) {

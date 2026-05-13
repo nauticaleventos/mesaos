@@ -20,12 +20,37 @@ interface Props {
 }
 
 const MEAL_LABELS: Record<string, string> = {
-  desayuno: '☀️ Desayuno',
-  almuerzo: '🍽️ Almuerzo',
-  cena:     '🌙 Cena',
-  snack:    '🍿 Snack',
+  desayuno:         '☀️ Desayuno',
+  almuerzo:         '🍽️ Almuerzo',
+  cena:             '🌙 Cena',
+  snack:            '🍿 Snack',
+  merienda:         '🍎 Merienda',
+  'merienda mañana':  '🌅 Merienda mañana',
+  'merienda tarde':   '☕ Merienda tarde',
+  'snack noche':      '🌙 Snack noche',
 }
-const MEAL_ORDER = ['desayuno', 'almuerzo', 'cena', 'snack']
+const MEAL_ORDER = ['desayuno', 'merienda mañana', 'almuerzo', 'merienda tarde', 'cena', 'snack noche', 'snack', 'merienda']
+
+function getMealLabel(tipo: string, hora?: string): string {
+  const key = tipo.toLowerCase()
+  const label = MEAL_LABELS[key] ?? `🍴 ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`
+  if (hora) {
+    const [h, m] = hora.split(':')
+    const hNum   = parseInt(h)
+    const ampm   = hNum < 12 ? 'am' : 'pm'
+    const h12    = hNum === 0 ? 12 : hNum > 12 ? hNum - 12 : hNum
+    return `${label} · ${h12}:${m} ${ampm}`
+  }
+  return label
+}
+
+const ACCION_BADGE: Record<string, { icon: string; label: string; color: string }> = {
+  cocinar:        { icon: '🔪', label: 'Cocinar hoy',    color: 'text-accent' },
+  calentar:       { icon: '🔥', label: 'Calentar',       color: 'text-orange-500' },
+  descongelar:    { icon: '❄️', label: 'Descongelar',    color: 'text-blue-500' },
+  ensamblar:      { icon: '🥗', label: 'Ensamblar',      color: 'text-oliva' },
+  preparar_fresco:{ icon: '⚡', label: 'Rápida',         color: 'text-muted' },
+}
 
 const COMPONENT_EMOJI: Record<string, string> = {
   proteina:     '🍖',
@@ -88,13 +113,30 @@ function agruparPorReceta(entries: EnrichedMenuEntry[], allMembers: FamilyMember
 
 export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAddSobrante }: Props) {
   const { marcarCocinada, saltarReceta, restaurarReceta } = useMenuStore()
-  const members  = useFamilyStore(s => s.members)
+  const members   = useFamilyStore(s => s.members)
+  const menuConfig = useMenuStore(s => s.config)
   const isHoy    = new Date().toDateString() === date.toDateString()
   const fechaStr = date.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
+  const esDiaCoccion = (menuConfig?.dias_coccion ?? []).includes(dayOfWeek)
 
-  const porTipo = MEAL_ORDER
-    .map(tipo => ({ tipo, components: entries.filter(e => e.meal_type === tipo) }))
+  // Agrupar por meal_type, ordenar: primero por MEAL_ORDER, luego por hora si es custom
+  const tiposUnicos = [...new Set(entries.map(e => e.meal_type))]
+  const porTipo = tiposUnicos
+    .map(tipo => ({
+      tipo,
+      mealTime: entries.find(e => e.meal_type === tipo)?.meal_time,
+      components: entries.filter(e => e.meal_type === tipo),
+    }))
     .filter(({ components }) => components.length > 0)
+    .sort((a, b) => {
+      const iA = MEAL_ORDER.indexOf(a.tipo.toLowerCase())
+      const iB = MEAL_ORDER.indexOf(b.tipo.toLowerCase())
+      if (iA !== -1 && iB !== -1) return iA - iB
+      if (iA !== -1) return -1
+      if (iB !== -1) return 1
+      // ambos custom → ordenar por hora
+      return (a.mealTime ?? '99') < (b.mealTime ?? '99') ? -1 : 1
+    })
 
   if (porTipo.length === 0) return null
 
@@ -108,12 +150,16 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
           </p>
           <p className="text-xs text-muted">{fechaStr}</p>
         </div>
+        {esDiaCoccion && (
+          <span className="text-[11px] font-semibold text-accent flex items-center gap-1">🔪 Cocinar</span>
+        )}
       </div>
 
-      {porTipo.map(({ tipo, components }, idx) => (
+      {porTipo.map(({ tipo, mealTime, components }, idx) => (
         <MealSection
           key={tipo}
           tipo={tipo}
+          mealTime={mealTime}
           dayOfWeek={dayOfWeek}
           components={components}
           members={members}
@@ -138,8 +184,9 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
   )
 }
 
-function MealSection({ tipo, dayOfWeek, components, members, leftovers, onAddSobrante, onCocinada, onSaltar, onRestaurar, isLast }: {
+function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers, onAddSobrante, onCocinada, onSaltar, onRestaurar, isLast }: {
   tipo:           string
+  mealTime?:      string
   dayOfWeek:      number
   components:     EnrichedMenuEntry[]
   members:        FamilyMember[]
@@ -170,7 +217,9 @@ function MealSection({ tipo, dayOfWeek, components, members, leftovers, onAddSob
 
   const isCooked  = main.status === 'cooked'
   const isSkipped = main.status === 'skipped'
-  const isSimple  = tipo === 'desayuno' || tipo === 'snack'
+  const tipoBase  = tipo.toLowerCase()
+  const isSimple  = tipoBase === 'desayuno' || tipoBase === 'snack' ||
+                    tipoBase.includes('merienda') || tipoBase.includes('snack')
   const weekStart = getMondayOfWeek()
 
   const buscarReceta = async (q: string, tc: string) => {
@@ -220,7 +269,7 @@ function MealSection({ tipo, dayOfWeek, components, members, leftovers, onAddSob
         {/* Header */}
         <div className="px-4 pt-3 pb-1 flex items-center justify-between">
           <p className={`text-xs font-bold uppercase tracking-widest ${isCooked ? 'text-muted' : 'text-accent'}`}>
-            {MEAL_LABELS[tipo]}
+            {getMealLabel(tipo, mealTime)}
           </p>
           {!isCooked && !isSkipped && (
             <button onClick={() => setShowCambiar(true)}
@@ -384,6 +433,13 @@ function MealSection({ tipo, dayOfWeek, components, members, leftovers, onAddSob
                     {r.tiempo_total_min && <span className="flex items-center gap-0.5 text-xs text-muted"><Clock size={10}/>{r.tiempo_total_min}min</span>}
                     {r.dificultad && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DIFICULTAD_COLOR[r.dificultad]}`}>{r.dificultad}</span>}
                     {!isCooked && !isSkipped && <span className={`text-[10px] font-medium ${badge.color}`}>{badge.icon}</span>}
+                    {(() => {
+                      const accion = e.accion_preparacion
+                      const ab = accion ? ACCION_BADGE[accion] : null
+                      return ab && !isCooked && accion !== 'cocinar' ? (
+                        <span className={`text-[10px] font-medium ${ab.color}`}>{ab.icon} {ab.label}</span>
+                      ) : null
+                    })()}
                   </div>
                 )}
                 {displayMembers.length > 0 && (

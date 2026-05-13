@@ -7,7 +7,7 @@ import type { FamilyMember } from './types'
 import { calcularMatch } from './matchReceta'
 import { getFiltrosParaCondiciones } from './condicionesMotor'
 
-export type MealType = 'desayuno' | 'almuerzo' | 'cena' | 'snack'
+export type MealType = 'desayuno' | 'almuerzo' | 'cena' | 'snack' | string
 export type MealComponent = 'completo' | 'proteina' | 'carbohidrato' | 'guarnicion' | 'ensalada' | 'salsa' | 'vinagreta'
 export type TipoComponente = 'proteina_principal' | 'guarnicion' | 'ensalada' | 'salsa' | 'vinagreta' | 'postre' | 'bebida' | 'merienda' | 'plato_unico'
 
@@ -79,9 +79,78 @@ export interface FridgeItemMin {
 export interface SlotAttendance {
   dayOfWeek:          number
   mealType:           MealType
+  mealTime?:          string        // hora configurada, ej: "09:00"
   memberIds:          string[]
   totalServings:      number
   guestRestrictions:  string[]   // restricciones detectadas en notas de invitados
+}
+
+/**
+ * Mapea el nombre de comida del miembro (p.ej. "Merienda mañana") al tipo base del motor.
+ * Usado para filtrar recetas por tipo_comida.
+ */
+export function normalizarTipoComida(mealName: string, hora?: string): MealType {
+  const n = mealName.toLowerCase().trim()
+  if (n.includes('desayuno'))  return 'desayuno'
+  if (n.includes('almuerzo'))  return 'almuerzo'
+  if (n.includes('cena'))      return 'cena'
+  // Cualquier merienda/snack → 'snack'
+  if (n.includes('merienda') || n.includes('snack') || n.includes('onces')) return 'snack'
+  // Fallback por hora
+  if (hora) {
+    const h = parseInt(hora.split(':')[0] ?? '12')
+    if (h < 10) return 'desayuno'
+    if (h < 15) return 'almuerzo'
+    if (h < 18) return 'snack'
+    return 'cena'
+  }
+  return 'snack'
+}
+
+/**
+ * Genera los meal slots únicos para la semana a partir de las comidas configuradas
+ * por los miembros. Fusiona miembros que comparten el mismo nombre de comida.
+ * Si los miembros no tienen comidas configuradas, usa los flags del config.
+ */
+export function buildMealSlots(
+  allMembers: FamilyMember[],
+  config: MenuConfig,
+): { mealName: string; mealType: MealType; mealTime: string }[] {
+  // Recolectar comidas únicas de todos los miembros
+  const slotMap = new Map<string, { mealType: MealType; mealTime: string }>()
+
+  for (const m of allMembers) {
+    const meals = (m.meals_per_day ?? []) as { name: string; time: string }[]
+    for (const meal of meals) {
+      if (!meal.name) continue
+      const key = meal.name.toLowerCase().trim()
+      if (!slotMap.has(key)) {
+        slotMap.set(key, {
+          mealType: normalizarTipoComida(meal.name, meal.time),
+          mealTime: meal.time ?? '',
+        })
+      }
+    }
+  }
+
+  if (slotMap.size > 0) {
+    // Ordenar por hora
+    return [...slotMap.entries()]
+      .map(([name, { mealType, mealTime }]) => ({
+        mealName: name.charAt(0).toUpperCase() + name.slice(1),
+        mealType,
+        mealTime,
+      }))
+      .sort((a, b) => (a.mealTime < b.mealTime ? -1 : 1))
+  }
+
+  // Fallback: usar flags de config
+  const fallback: { mealName: string; mealType: MealType; mealTime: string }[] = []
+  if (config.planear_desayuno) fallback.push({ mealName: 'desayuno', mealType: 'desayuno', mealTime: '07:00' })
+  if (config.planear_almuerzo) fallback.push({ mealName: 'almuerzo', mealType: 'almuerzo', mealTime: '13:00' })
+  if (config.planear_cena)     fallback.push({ mealName: 'cena',     mealType: 'cena',     mealTime: '19:00' })
+  if (config.planear_snacks)   fallback.push({ mealName: 'snack',    mealType: 'snack',    mealTime: '16:00' })
+  return fallback
 }
 
 export interface AlgorithmInput {
@@ -106,7 +175,9 @@ export interface MenuComponent {
 
 export interface MenuSlot {
   dayOfWeek:    number
-  tipo:         MealType
+  tipo:         MealType    // tipo base: 'desayuno' | 'almuerzo' | 'cena' | 'snack'
+  mealName?:    string      // nombre configurado por el miembro, ej: "Merienda mañana"
+  mealTime?:    string      // hora configurada, ej: "09:00"
   components:   MenuComponent[]   // proteína + carbs por miembro + ensalada
   /** @deprecated usar components */
   principal:    RecipeForMenu
@@ -453,20 +524,19 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
   let   proteinDaysUsed = 0
   let   usedYesterdayNames: string[] = []  // nombres del día anterior para evitar repetir
 
+  // Construir lista de comidas a planificar (respeta meals_per_day de miembros)
+  const mealSlots = buildMealSlots(allMembers, config)
+
   for (let day = 1; day <= 7; day++) {
     const isDayFinde     = day >= 6
     const usedToday      = new Set<string>()   // resetea cada día — evita repetir en mismo día
     const usedTodayNames: string[] = []         // para detectar recetas similares en el mismo día
 
-    const mealTypes: MealType[] = []
-    if (config.planear_desayuno) mealTypes.push('desayuno')
-    if (config.planear_almuerzo) mealTypes.push('almuerzo')
-    if (config.planear_cena)     mealTypes.push('cena')
-    if (config.planear_snacks)   mealTypes.push('snack')
-
-    for (const tipo of mealTypes) {
-      // Obtener asistencia específica para este día/comida
-      const slot = slotAttendance.find(s => s.dayOfWeek === day && s.mealType === tipo)
+    for (const { mealName, mealType: tipo, mealTime } of mealSlots) {
+      // Obtener asistencia específica para este día/comida (buscar por mealName O tipo)
+      const slot = slotAttendance.find(s =>
+        s.dayOfWeek === day && (s.mealType === tipo || s.mealType === mealName)
+      )
       const slotMemberIds  = slot?.memberIds  ?? allMembers.map(m => m.id!)
       const slotServings   = slot?.totalServings ?? allMembers.length
       const slotMembers    = allMembers.filter(m => slotMemberIds.includes(m.id!))
@@ -477,6 +547,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
 
       // Restricciones extra de invitados (por notas)
       const guestRestrictions = slot?.guestRestrictions ?? []
+      void mealTime // usado en el resultado final
 
       // ── DESAYUNO Y SNACK: optimizado para preparación ──────────────────────
       // Estrategia: (1) encontrar la receta que MÁS gente puede compartir,
@@ -614,7 +685,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         }
 
         if (components.length === 0) continue
-        result.push({ dayOfWeek: day, tipo, components, servings: slotServings, alternativas: [], principal: baseRecipe })
+        result.push({ dayOfWeek: day, tipo, mealName, mealTime, components, servings: slotServings, alternativas: [], principal: baseRecipe })
         continue
       }
 
@@ -883,7 +954,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         }
       }
 
-      result.push({ dayOfWeek: day, tipo, components, principal: bestRecipe, servings: slotServings, alternativas })
+      result.push({ dayOfWeek: day, tipo, mealName, mealTime, components, principal: bestRecipe, servings: slotServings, alternativas })
     }
     // Actualizar historial del día anterior para el siguiente día
     usedYesterdayNames = [...usedTodayNames]

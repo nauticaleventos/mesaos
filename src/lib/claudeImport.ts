@@ -87,6 +87,27 @@ export async function importFromPhoto(base64: string, mime = 'image/jpeg'): Prom
   return callImportApi({ type: 'photo', imageBase64: base64, imageMime: mime })
 }
 
+/** Calcula info nutricional + filtros + perfiles para una receta */
+export async function calcularNutricion(receta: {
+  nombre: string
+  porciones?: number | null
+  ingredientes: { nombre: string; cantidad?: number | null; unidad?: string | null; categoria?: string }[]
+  dificultad?: string | null
+}): Promise<{
+  info_nutricional_aprox: Record<string, number>
+  filtros_nutricionales:  Record<string, boolean>
+  perfiles:               Record<string, boolean>
+}> {
+  const res = await fetch('/api/calcular-nutricion', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(receta),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`)
+  return data
+}
+
 /** Extrae 1 o más recetas de un PDF — usa /api/import-pdf */
 export async function importFromPDF(pdfBase64: string): Promise<RecipeImport[]> {
   const res = await fetch('/api/import-pdf', {
