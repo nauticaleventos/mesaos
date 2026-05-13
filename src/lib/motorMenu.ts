@@ -220,8 +220,18 @@ function esCompatibleConMiembro(recipe: RecipeForMenu, m: FamilyMember): boolean
   if ((m.prohibited ?? []).length && tieneIngrediente(recipe, m.prohibited)) return false
   // Estilo de alimentación
   const es = m.eating_style
-  if ((es === 'vegetarian' || es === 'vegan') &&
-      (recipe.perfiles?.vegetariana === false || tieneProteinaAnimal(recipe))) return false
+  // vegetarian (lacto-ovo): puede comer huevo y lácteos, no carne ni pescado
+  if (es === 'vegetarian') {
+    if (recipe.perfiles?.vegetariana === false) return false  // explícitamente no-vegetariana
+    // Excluir si tiene proteína animal que NO sea huevo (carne, pescado, mariscos, embutido)
+    const tieneCarneOPescado = recipe.ingredientes.some(i =>
+      (i.categoria === 'proteina_animal' || i.categoria === 'embutido') &&
+      !normalizar(i.nombre).includes('huevo')
+    )
+    if (tieneCarneOPescado) return false
+  }
+  // vegan: excluir si no-vegetariana O si tiene cualquier proteína animal (incluye huevo, lácteos)
+  if (es === 'vegan' && (recipe.perfiles?.vegetariana === false || tieneProteinaAnimal(recipe))) return false
   if (es === 'keto'        && !recipe.perfiles?.keto)                           return false
   if (es === 'gluten_free' && !recipe.filtros_nutricionales?.sin_gluten)        return false
   if (es === 'lactose_free'&& !recipe.filtros_nutricionales?.sin_lacteos)       return false
