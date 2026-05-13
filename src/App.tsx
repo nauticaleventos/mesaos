@@ -10,6 +10,7 @@ import HomePage       from './pages/HomePage'
 import FridgePage     from './pages/fridge/FridgePage'
 import RecetasPage    from './pages/recipes/RecetasPage'
 import RecetaPage     from './pages/recipes/RecetaPage'
+import RecetaImprimir from './pages/recipes/RecetaImprimir'
 import UnirsePage        from './pages/invite/UnirsePage'
 import MenuPage          from './pages/menu/MenuPage'
 import RecetasAutoPage   from './pages/admin/RecetasAutoPage'
@@ -56,6 +57,7 @@ function AppRoutes() {
       } />
       {/* Pública — muestra preview si no hay sesión */}
       <Route path="/receta/:id" element={<RecetaPage />} />
+      <Route path="/receta/:id/imprimir" element={<RecetaImprimir />} />
       {/* Pública — link de invitación */}
       <Route path="/unirse/:token" element={<UnirsePage />} />
 

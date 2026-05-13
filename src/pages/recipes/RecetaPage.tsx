@@ -237,6 +237,10 @@ export default function RecetaPage() {
               className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors border-b border-border">
               ✏️ Editar etiquetas
             </button>
+            <button onClick={() => { window.open(`/receta/${id}/imprimir`, '_blank'); setShowMenu(false) }}
+              className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors border-b border-border">
+              📄 Exportar PDF
+            </button>
             <button onClick={handleShare}
               className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors">
               📤 Compartir
