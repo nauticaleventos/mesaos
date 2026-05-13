@@ -215,8 +215,9 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
   const main = visibles.find(e => e.is_main_recipe) ?? visibles[0]
   if (!main) return null
 
-  const isCooked  = main.status === 'cooked'
-  const isSkipped = main.status === 'skipped'
+  const isCooked     = main.status === 'cooked'
+  const isSkipped    = main.status === 'skipped'
+  const isDiaDificil = !!(main as typeof main & { dia_dificil?: boolean }).dia_dificil
   const tipoBase  = tipo.toLowerCase()
   const isSimple  = tipoBase === 'desayuno' || tipoBase === 'snack' ||
                     tipoBase.includes('merienda') || tipoBase.includes('snack')
@@ -267,13 +268,21 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
     return (
       <div className={`${!isLast ? 'border-b border-border/60' : ''}`}>
         {/* Header */}
-        <div className="px-4 pt-3 pb-1 flex items-center justify-between">
-          <p className={`text-xs font-bold uppercase tracking-widest ${isCooked ? 'text-muted' : 'text-accent'}`}>
-            {getMealLabel(tipo, mealTime)}
-          </p>
+        <div className="px-4 pt-3 pb-1 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <p className={`text-xs font-bold uppercase tracking-widest ${isCooked ? 'text-muted' : 'text-accent'}`}>
+              {getMealLabel(tipo, mealTime)}
+            </p>
+            {isDiaDificil && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                style={{ background: '#FEF3C7', color: '#92400E' }}>
+                ⚡ Día difícil
+              </span>
+            )}
+          </div>
           {!isCooked && !isSkipped && (
             <button onClick={() => setShowCambiar(true)}
-              className="text-[11px] text-muted hover:text-accent transition-colors font-medium flex items-center gap-1">
+              className="text-[11px] text-muted hover:text-accent transition-colors font-medium flex items-center gap-1 flex-shrink-0">
               <RefreshCw size={10} /> Cambiar
             </button>
           )}
@@ -395,13 +404,21 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
   return (
     <div className={`${!isLast ? 'border-b border-border/60' : ''}`}>
       {/* Header con botón Cambiar */}
-      <div className="px-4 pt-3 pb-1 flex items-center justify-between">
-        <p className={`text-xs font-bold uppercase tracking-widest ${isCooked ? 'text-muted' : 'text-accent'}`}>
-          {MEAL_LABELS[tipo]}
-        </p>
+      <div className="px-4 pt-3 pb-1 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <p className={`text-xs font-bold uppercase tracking-widest ${isCooked ? 'text-muted' : 'text-accent'}`}>
+            {MEAL_LABELS[tipo]}
+          </p>
+          {isDiaDificil && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0"
+              style={{ background: '#FEF3C7', color: '#92400E' }}>
+              ⚡ Día difícil
+            </span>
+          )}
+        </div>
         {!isCooked && !isSkipped && (
           <button onClick={() => setShowCambiar(true)}
-            className="text-[11px] text-muted hover:text-accent transition-colors font-medium flex items-center gap-1">
+            className="text-[11px] text-muted hover:text-accent transition-colors font-medium flex items-center gap-1 flex-shrink-0">
             <RefreshCw size={10} /> Cambiar
           </button>
         )}
@@ -465,7 +482,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
         })}
 
         {/* Sobrantes */}
-        {leftovers.length > 0 && hasSalad && (
+        {leftovers.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1 pl-7">
             {leftovers.map(l => (
               <span key={l.id} className="px-2 py-1 rounded-full bg-oliva/10 border border-oliva/20 text-xs text-oliva font-medium">

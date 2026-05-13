@@ -33,10 +33,9 @@ export default function SobradosSheet({ onClose }: Props) {
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-2xl shadow-xl max-h-[85vh] overflow-y-auto">
-        <div className="flex flex-col gap-4 p-4 pb-10">
-
-          <div className="w-10 h-1 rounded-full bg-border mx-auto" />
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pointer-events-none">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[85vh] overflow-y-auto pointer-events-auto">
+        <div className="flex flex-col gap-4 p-4 pb-6">
 
           <div className="flex items-center justify-between">
             <div>
@@ -119,6 +118,7 @@ export default function SobradosSheet({ onClose }: Props) {
             </p>
           )}
 
+        </div>
         </div>
       </div>
     </>

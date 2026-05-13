@@ -19,6 +19,7 @@ export interface EnrichedMenuEntry {
   servings:       number
   status:               'planned' | 'cooked' | 'skipped' | 'swapped'
   accion_preparacion?:  'cocinar' | 'calentar' | 'ensamblar' | 'descongelar' | 'preparar_fresco'
+  dia_dificil?:         boolean
   recipe:               RecipeForMenu
 }
 
@@ -440,7 +441,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       const chosen = candidates[Math.floor(Math.random() * Math.min(3, candidates.length))]
       await supabase
         .from('weekly_menu')
-        .update({ recipe_id: chosen.id, status: 'swapped' })
+        .update({ recipe_id: chosen.id, status: 'swapped', dia_dificil: true })
         .eq('id', entry.id)
 
       set(s => ({
@@ -459,7 +460,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   cambiarReceta: async (entryId, newRecipeId) => {
     await supabase
       .from('weekly_menu')
-      .update({ recipe_id: newRecipeId, status: 'swapped' })
+      .update({ recipe_id: newRecipeId, status: 'swapped', dia_dificil: false })
       .eq('id', entryId)
 
     const { data: recipe } = await supabase
