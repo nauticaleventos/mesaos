@@ -7,8 +7,9 @@ import FormaFoto   from './FormaFoto'
 import FormaSocial from './FormaSocial'
 import FormaManual from './FormaManual'
 import ConfirmacionReceta from './ConfirmacionReceta'
+import ClasificacionWizard from '../ClasificacionWizard'
 
-type Forma = 'menu' | 'social' | 'foto' | 'url' | 'texto' | 'manual' | 'confirmar' | 'ayuda'
+type Forma = 'menu' | 'social' | 'foto' | 'url' | 'texto' | 'manual' | 'wizard' | 'confirmar' | 'ayuda'
 
 interface Props {
   familyId: string
@@ -65,7 +66,7 @@ export default function ImportModal({ familyId, onSaved, onClose }: Props) {
 
   const handleExtracted = (r: RecipeImport) => {
     setReceta(r)
-    setForma('confirmar')
+    setForma('wizard')  // siempre pasar por wizard primero
   }
 
   const handleBack = () => {
@@ -73,14 +74,33 @@ export default function ImportModal({ familyId, onSaved, onClose }: Props) {
     setForma('menu')
   }
 
-  // ── Confirmación ────────────────────────────────────────────────────────────
+  const handleWizardConfirm = (tipoComida: string[], tipoComponente: string) => {
+    if (!receta) return
+    setReceta({ ...receta, tipo_comida: tipoComida, tipo_componente: tipoComponente } as RecipeImport & { tipo_componente: string })
+    setForma('confirmar')
+  }
+
+  // ── Wizard de clasificación ─────────────────────────────────────────────────
+  if (forma === 'wizard' && receta) {
+    return (
+      <ClasificacionWizard
+        titulo="Clasificá esta receta"
+        initialTipoComida={(receta.tipo_comida ?? []) as string[]}
+        initialTipoComponente={(receta as RecipeImport & { tipo_componente?: string }).tipo_componente ?? null}
+        onConfirm={handleWizardConfirm}
+        onClose={handleBack}
+      />
+    )
+  }
+
+  // ── Confirmación completa ───────────────────────────────────────────────────
   if (forma === 'confirmar' && receta) {
     return (
       <ConfirmacionReceta
         receta={receta}
         familyId={familyId}
         onSaved={onSaved}
-        onBack={handleBack}
+        onBack={() => setForma('wizard')}
       />
     )
   }

@@ -486,8 +486,11 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         const isBatch = config.cocina_frequency === '1x_week' || config.cocina_frequency === '2x_week'
 
         // Pool general: compatible con al menos un miembro, tipo correcto, no usada hoy ni ayer
+        // Para desayuno: excluir guarniciones y ensaladas sueltas (no son platos de desayuno)
+        const TC_INVALIDOS_DESAYUNO = new Set(['guarnicion', 'ensalada', 'salsa', 'vinagreta'])
         const pool = allRecipes.filter(r => {
           if (!r.tipo_comida.includes(tipo)) return false
+          if (tipo === 'desayuno' && r.tipo_componente && TC_INVALIDOS_DESAYUNO.has(r.tipo_componente)) return false
           if (usedToday.has(r.id)) return false
           if (guestRestrictions.includes('vegetariana') && !r.perfiles?.vegetariana) return false
           if (guestRestrictions.includes('sin_gluten')  && !r.filtros_nutricionales?.sin_gluten)  return false

@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore'
 import { useRecipesStore, type Recipe } from '../../store/recipesStore'
 import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore, type FridgeItem } from '../../store/fridgeStore'
+import ClasificacionWizard from '../../components/recipes/ClasificacionWizard'
 
 type Tab = 'ingredientes' | 'pasos' | 'nutricion'
 
@@ -44,6 +45,9 @@ export default function RecetaPage() {
   const [imgLoaded, setImgLoaded]     = useState(false)
   const [esEstelar, setEsEstelar]     = useState(false)
   const [confirmEstelar, setConfirmEstelar] = useState(false)
+  const [showWizard, setShowWizard]   = useState(false)
+  const [familyRatings, setFamilyRatings] = useState<{ member_id: string; rating: number }[]>([])
+  const [loadedRatings, setLoadedRatings] = useState(false)
 
   // Cargar receta
   useEffect(() => {
@@ -65,6 +69,29 @@ export default function RecetaPage() {
   }, [id, recipes])
 
   const isOwner = family?.owner_user_id === session?.user?.id
+
+  // Owner: cargar ratings de toda la familia al abrir
+  useEffect(() => {
+    if (!isOwner || !id || loadedRatings) return
+    supabase.from('recipe_reactions')
+      .select('member_id, rating')
+      .eq('recipe_id', id)
+      .not('rating', 'is', null)
+      .then(({ data }) => {
+        setFamilyRatings((data ?? []) as { member_id: string; rating: number }[])
+        setLoadedRatings(true)
+      })
+  }, [isOwner, id, loadedRatings])
+
+  // Guardar clasificación desde el wizard
+  const handleWizardConfirm = async (tipoComida: string[], tipoComponente: string) => {
+    if (!id) return
+    await supabase.from('recipes').update({ tipo_comida: tipoComida, tipo_componente: tipoComponente }).eq('id', id)
+    setRecipe(r => r ? { ...r, tipo_comida: tipoComida, tipo_componente: tipoComponente } as Recipe : r)
+    setShowWizard(false)
+    setToastMsg('Etiquetas actualizadas ✓')
+    setTimeout(() => setToastMsg(null), 2000)
+  }
 
   const toggleEstelar = async () => {
     if (!id) return
@@ -262,6 +289,17 @@ export default function RecetaPage() {
         </p>
       )}
 
+      {/* Wizard de clasificación */}
+      {showWizard && (
+        <ClasificacionWizard
+          titulo="Editar etiquetas"
+          initialTipoComida={(recipe.tipo_comida ?? []) as string[]}
+          initialTipoComponente={(recipe as Recipe & { tipo_componente?: string }).tipo_componente ?? null}
+          onConfirm={handleWizardConfirm}
+          onClose={() => setShowWizard(false)}
+        />
+      )}
+
       {/* Modal confirmar estelar */}
       {confirmEstelar && !esEstelar && (
         <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-4 pb-8">
@@ -287,10 +325,22 @@ export default function RecetaPage() {
         {recipe.descripcion_corta && (
           <p className="text-muted text-sm mt-1">{recipe.descripcion_corta}</p>
         )}
-        <div className="flex flex-wrap gap-2 mt-3">
+        {/* Etiquetas editables */}
+        <div className="flex flex-wrap gap-2 mt-3 items-center">
           {recipe.tipo_comida.slice(0,2).map(t => (
             <span key={t} className="text-xs text-muted">{TIPO_ICONS[t] ?? ''} {t}</span>
           ))}
+          {(recipe as Recipe & { tipo_componente?: string }).tipo_componente && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20 font-medium">
+              {(recipe as Recipe & { tipo_componente?: string }).tipo_componente}
+            </span>
+          )}
+          <button onClick={() => setShowWizard(true)}
+            className="text-xs text-muted hover:text-accent transition-colors" title="Editar etiquetas">
+            ✏️
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-2">
           {recipe.origen && <Chip>🌎 {recipe.origen}</Chip>}
           {recipe.tiempo_total_min && <Chip>⏱ {recipe.tiempo_total_min}min</Chip>}
           {recipe.dificultad && (
@@ -300,6 +350,26 @@ export default function RecetaPage() {
           )}
           {recipe.porciones && <Chip>👥 {recipe.porciones} porciones</Chip>}
         </div>
+
+        {/* Sección de roles — solo visible para el owner */}
+        {isOwner && familyRatings.length > 0 && (
+          <div className="mt-3 p-3 rounded-xl bg-gray-50 border border-border">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Valoraciones de la familia</p>
+            {familyRatings.map(r => {
+              const member = (family as unknown as { members?: { id: string; name: string; emoji: string }[] })
+              const m = Array.isArray(member?.members)
+                ? member.members.find(mb => mb.id === r.member_id)
+                : null
+              return (
+                <div key={r.member_id} className="flex items-center gap-2 text-xs text-text py-0.5">
+                  <span>{m?.emoji ?? '👤'}</span>
+                  <span className="flex-1">{m?.name ?? 'Miembro'}</span>
+                  <span className="text-yellow-500">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {/* Rating del miembro */}
         {memberId && (
