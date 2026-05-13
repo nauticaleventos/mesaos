@@ -4,6 +4,7 @@ import {
   generarMenuSemanal, getMondayOfWeek, getMondayNWeeksAgo,
   type MenuConfig, type RecipeForMenu, type MenuSlot,
 } from '../lib/motorMenu'
+import { calcularNivelNevera } from '../lib/nivelNevera'
 import type { FridgeItem } from './fridgeStore'
 
 export interface EnrichedMenuEntry {
@@ -247,9 +248,8 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       }
 
       // 8. Correr el algoritmo
-      // Calcular nivel de nevera para threshold escalonado
-      const totalItems = fridgeItems.length
-      const nivelNevera = Math.min(100, Math.round((totalItems / 20) * 100))
+      // Usar la misma función que el widget para nivel de nevera
+      const nivelNevera = calcularNivelNevera(fridgeItems).porcentaje
 
       const slots: MenuSlot[] = generarMenuSemanal({
         config,

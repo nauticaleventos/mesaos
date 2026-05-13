@@ -189,7 +189,8 @@ function esCompatibleConMiembro(recipe: RecipeForMenu, m: FamilyMember): boolean
 
 /** Score de inventario usando calcularMatch (esenciales 80% + opcionales 20% + sustituciones) */
 function scoreInventario(recipe: RecipeForMenu, fridge: FridgeItemMin[]): number {
-  if (recipe.ingredientes.length === 0) return 60
+  // Sin ingredientes → no podemos verificar disponibilidad → penalizar (no premiar)
+  if (recipe.ingredientes.length === 0) return 10
   const result = calcularMatch(recipe.ingredientes, fridge)
   return result.porcentaje
 }
@@ -376,14 +377,11 @@ function calcularScore(
   // Score de inventario — peso según nivel de nevera
   const sInventario = scoreInventario(recipe, input.fridgeItems)
 
-  // Threshold escalonado: nevera llena → priorizar 100% match
+  // Threshold escalonado: nevera llena → excluir recetas sin match
   const nv = input.nivelNevera ?? 0
-  const threshold = nv >= 60 ? 90 : nv >= 40 ? 70 : nv >= 20 ? 50 : 0
-  if (threshold > 0 && sInventario < threshold) {
-    // No excluir (para mantener fallback), pero penalizar fuerte
-    // Las recetas con 100% match tendrán score mucho mayor
-    if (sInventario < threshold - 20) return -1
-  }
+  if (nv >= 60 && sInventario < 50) return -1   // nevera llena: excluir si <50% match
+  if (nv >= 40 && sInventario < 30) return -1   // nevera media: excluir si <30% match
+  if (nv >= 20 && sInventario < 15) return -1   // nevera baja: excluir si <15% match
 
   // Score de sugerencias (20%)
   const hasSuggestion = input.suggestions.some(s =>
