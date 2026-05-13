@@ -378,6 +378,7 @@ export function clasificarComponente(recipe: RecipeForMenu): MealComponent {
 const CARBS_KEYWORDS = ['arroz', 'papa', 'plátano', 'platano', 'patacón', 'patacon', 'yuca', 'pasta', 'pan ', 'arepa', 'quinua', 'maíz', 'maiz']
 export function esCarbohidratoAcompa(recipe: RecipeForMenu): boolean {
   if (recipe.tipo_componente === 'guarnicion') return true
+  if (recipe.tipo_componente) return false  // tipo explícito != guarnicion → no es guarnición
   const nombre = normalizar(recipe.nombre)
   return CARBS_KEYWORDS.some(k => nombre.includes(k)) || ['carbohidrato', 'guarnicion'].includes(clasificarComponente(recipe))
 }
@@ -386,12 +387,15 @@ export const esGuarnicion = esCarbohidratoAcompa
 
 export function esEnsalada(recipe: RecipeForMenu): boolean {
   if (recipe.tipo_componente === 'ensalada') return true
+  if (recipe.tipo_componente) return false  // tipo explícito != ensalada → no es ensalada
   const nombre = normalizar(recipe.nombre)
   return nombre.includes('ensalada') || nombre.includes('slaw') || clasificarComponente(recipe) === 'ensalada'
 }
 
 export function esSalsa(recipe: RecipeForMenu): boolean {
-  return recipe.tipo_componente === 'salsa' || recipe.tipo_componente === 'vinagreta' || clasificarComponente(recipe) === 'salsa'
+  if (recipe.tipo_componente === 'salsa' || recipe.tipo_componente === 'vinagreta') return true
+  if (recipe.tipo_componente) return false  // tipo explícito → no es salsa
+  return clasificarComponente(recipe) === 'salsa'
 }
 
 /** Detecta si dos recetas son "similares" por nombre (evita duplicados temáticos) */
