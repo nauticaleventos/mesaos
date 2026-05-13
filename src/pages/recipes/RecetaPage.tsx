@@ -6,8 +6,7 @@ import { useRecipesStore, type Recipe } from '../../store/recipesStore'
 import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore, type FridgeItem } from '../../store/fridgeStore'
 import ClasificacionWizard from '../../components/recipes/ClasificacionWizard'
-
-type Tab = 'ingredientes' | 'pasos' | 'nutricion'
+import { Minus, Plus, Check } from 'lucide-react'
 
 const DIFICULTAD_COLOR: Record<string, string> = {
   facil:   'bg-green-50 text-green-700 border-green-200',
@@ -15,14 +14,27 @@ const DIFICULTAD_COLOR: Record<string, string> = {
   dificil: 'bg-red-50 text-red-700 border-red-200',
 }
 
+const TC_EMOJI: Record<string, string> = {
+  proteina_principal: '🍖', guarnicion: '🍚', ensalada: '🥗',
+  salsa: '🫙', plato_unico: '🥘', postre: '🍰', bebida: '🥤', merienda: '🥪',
+}
+
 const TIPO_ICONS: Record<string, string> = {
   desayuno: '☀️', almuerzo: '🍽️', cena: '🌙',
-  snack: '🍎', postre: '🍰', brunch: '🥞',
+  snack: '🍎', postre: '🍰', brunch: '🥞', bebida: '🥤',
 }
 
 function inFridge(name: string, items: FridgeItem[]) {
   const n = name.toLowerCase()
   return items.some(f => f.name.toLowerCase().includes(n) || n.includes(f.name.toLowerCase()))
+}
+
+function redondear(val: number | null, factor: number): string {
+  if (!val) return ''
+  const r = val * factor
+  if (r < 1) return r.toFixed(1)
+  if (Number.isInteger(r)) return String(r)
+  return r.toFixed(1)
 }
 
 export default function RecetaPage() {
@@ -33,27 +45,34 @@ export default function RecetaPage() {
 
   const { session }                       = useAuthStore()
   const { recipes, loadRecipes }          = useRecipesStore()
-  const { family }                        = useFamilyStore()
+  const { family, members }               = useFamilyStore()
   const { items: fridgeItems, loadItems } = useFridgeStore()
 
-  const [recipe, setRecipe]           = useState<Recipe | null>(null)
-  const [activeTab, setActiveTab]     = useState<Tab>('ingredientes')
+  const [recipe, setRecipe]       = useState<Recipe | null>(null)
   const [memberRating, setMemberRating] = useState<number | undefined>()
   const [isBookmarked, setIsBookmarked] = useState(false)
-  const [toastMsg, setToastMsg]       = useState<string | null>(null)
-  const [imgError, setImgError]       = useState(false)
-  const [imgLoaded, setImgLoaded]     = useState(false)
-  const [esEstelar, setEsEstelar]     = useState(false)
+  const [toastMsg, setToastMsg]   = useState<string | null>(null)
+  const [imgError, setImgError]   = useState(false)
+  const [imgLoaded, setImgLoaded] = useState(false)
+  const [esEstelar, setEsEstelar] = useState(false)
   const [confirmEstelar, setConfirmEstelar] = useState(false)
-  const [showWizard, setShowWizard]   = useState(false)
+  const [showWizard, setShowWizard] = useState(false)
+  const [showMenu, setShowMenu]   = useState(false)  // ⋯ menu
   const [familyRatings, setFamilyRatings] = useState<{ member_id: string; rating: number }[]>([])
   const [loadedRatings, setLoadedRatings] = useState(false)
 
-  // Cargar receta
+  // Porciones dinámicas
+  const [porcionesActual, setPorcionesActual] = useState<number>(4)
+
+  // Pasos completados (modo cocina)
+  const [pasosCheck, setPasosCheck] = useState(new Set<number>())
+
+  // ── Cargar receta ──────────────────────────────────────────────────────────
   useEffect(() => {
     const found = recipes.find(r => r.id === id)
     if (found) {
       setRecipe(found)
+      setPorcionesActual(found.porciones ?? 4)
       setEsEstelar(!!(found as Recipe & { es_para_lucirse?: boolean }).es_para_lucirse)
       return
     }
@@ -62,6 +81,7 @@ export default function RecetaPage() {
         .then(({ data }) => {
           if (data) {
             setRecipe(data as Recipe)
+            setPorcionesActual((data as Recipe).porciones ?? 4)
             setEsEstelar(!!(data as Recipe & { es_para_lucirse?: boolean }).es_para_lucirse)
           }
         })
@@ -70,111 +90,71 @@ export default function RecetaPage() {
 
   const isOwner = family?.owner_user_id === session?.user?.id
 
-  // Owner: cargar ratings de toda la familia al abrir
   useEffect(() => {
     if (!isOwner || !id || loadedRatings) return
-    supabase.from('recipe_reactions')
-      .select('member_id, rating')
-      .eq('recipe_id', id)
-      .not('rating', 'is', null)
-      .then(({ data }) => {
-        setFamilyRatings((data ?? []) as { member_id: string; rating: number }[])
-        setLoadedRatings(true)
-      })
+    supabase.from('recipe_reactions').select('member_id, rating').eq('recipe_id', id).not('rating', 'is', null)
+      .then(({ data }) => { setFamilyRatings((data ?? []) as typeof familyRatings); setLoadedRatings(true) })
   }, [isOwner, id, loadedRatings])
 
-  // Guardar clasificación desde el wizard
-  const handleWizardConfirm = async (tipoComida: string[], tipoComponente: string) => {
-    if (!id) return
-    await supabase.from('recipes').update({ tipo_comida: tipoComida, tipo_componente: tipoComponente }).eq('id', id)
-    setRecipe(r => r ? { ...r, tipo_comida: tipoComida, tipo_componente: tipoComponente } as Recipe : r)
-    setShowWizard(false)
-    setToastMsg('Etiquetas actualizadas ✓')
-    setTimeout(() => setToastMsg(null), 2000)
-  }
+  useEffect(() => { if (family?.id && recipes.length === 0) loadRecipes(family.id) }, [family?.id, recipes.length, loadRecipes])
+  useEffect(() => { if (family?.id) loadItems(family.id) }, [family?.id, loadItems])
 
-  const toggleEstelar = async () => {
-    if (!id) return
-    const nuevo = !esEstelar
-    setEsEstelar(nuevo)
-    setConfirmEstelar(false)
-    await supabase.from('recipes').update({
-      es_para_lucirse:    nuevo,
-      lucirse_marcada_por: nuevo ? session?.user?.id : null,
-      lucirse_marcada_en:  nuevo ? new Date().toISOString() : null,
-    }).eq('id', id)
-    setToastMsg(nuevo ? '⭐ Marcada como receta estelar' : 'Marca removida')
-    setTimeout(() => setToastMsg(null), 2000)
-  }
-
-  // Cargar recipes del store si está vacío
-  useEffect(() => {
-    if (family?.id && recipes.length === 0) loadRecipes(family.id)
-  }, [family?.id, recipes.length, loadRecipes])
-
-  // Cargar items de nevera
-  useEffect(() => {
-    if (family?.id) loadItems(family.id)
-  }, [family?.id, loadItems])
-
-  // Cargar reacción del miembro
   useEffect(() => {
     if (!memberId || !id) return
-    supabase.from('recipe_reactions')
-      .select('reaction, rating')
-      .eq('recipe_id', id).eq('member_id', memberId)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          setMemberRating(data.rating ?? undefined)
-          setIsBookmarked(data.reaction === 'bookmark')
-        }
-      })
+    supabase.from('recipe_reactions').select('reaction, rating').eq('recipe_id', id).eq('member_id', memberId).single()
+      .then(({ data }) => { if (data) { setMemberRating(data.rating ?? undefined); setIsBookmarked(data.reaction === 'bookmark') } })
   }, [id, memberId])
 
-  const showToast = (msg: string) => {
-    setToastMsg(msg)
-    setTimeout(() => setToastMsg(null), 2500)
-  }
+  // ── Handlers ────────────────────────────────────────────────────────────────
+  const showToast = (msg: string) => { setToastMsg(msg); setTimeout(() => setToastMsg(null), 2500) }
 
   const toggleBookmark = async () => {
     if (!memberId || !id) return
     const newState = !isBookmarked
     setIsBookmarked(newState)
-    await supabase.from('recipe_reactions').upsert({
-      recipe_id: id, member_id: memberId,
-      reaction: newState ? 'bookmark' : 'dislike',
-    }, { onConflict: 'recipe_id,member_id' })
-    showToast(newState ? '🔖 Guardada en tu lista' : 'Eliminada de guardadas')
+    await supabase.from('recipe_reactions').upsert({ recipe_id: id, member_id: memberId, reaction: newState ? 'bookmark' : 'dislike' }, { onConflict: 'recipe_id,member_id' })
+    showToast(newState ? '🔖 Guardada' : 'Eliminada de guardadas')
   }
 
   const handleShare = async () => {
     const url = window.location.href
-    if (navigator.share) {
-      await navigator.share({ title: recipe?.nombre ?? '', url })
-    } else {
-      await navigator.clipboard.writeText(url)
-      showToast('🔗 Enlace copiado')
-    }
+    if (navigator.share) await navigator.share({ title: recipe?.nombre ?? '', url })
+    else { await navigator.clipboard.writeText(url); showToast('🔗 Enlace copiado') }
   }
-
-  const handleAddToList = () => showToast('🛒 Lista de mercado próximamente')
 
   const handleRating = async (rating: number) => {
     if (!memberId || !id) return
-    await supabase.from('recipe_reactions').upsert({
-      recipe_id: id, member_id: memberId, reaction: 'like', rating,
-    }, { onConflict: 'recipe_id,member_id' })
+    await supabase.from('recipe_reactions').upsert({ recipe_id: id, member_id: memberId, reaction: 'like', rating }, { onConflict: 'recipe_id,member_id' })
     setMemberRating(rating)
-    showToast(`⭐ Valoración guardada`)
+    showToast('⭐ Valoración guardada')
   }
 
+  const handleWizardConfirm = async (tipoComida: string[], tipoComponente: string) => {
+    if (!id) return
+    await supabase.from('recipes').update({ tipo_comida: tipoComida, tipo_componente: tipoComponente }).eq('id', id)
+    setRecipe(r => r ? { ...r, tipo_comida: tipoComida, tipo_componente: tipoComponente } as Recipe : r)
+    setShowWizard(false)
+    showToast('Etiquetas actualizadas ✓')
+  }
+
+  const toggleEstelar = async () => {
+    if (!id) return
+    const nuevo = !esEstelar
+    setEsEstelar(nuevo); setConfirmEstelar(false)
+    await supabase.from('recipes').update({
+      es_para_lucirse: nuevo,
+      lucirse_marcada_por: nuevo ? session?.user?.id : null,
+      lucirse_marcada_en: nuevo ? new Date().toISOString() : null,
+    }).eq('id', id)
+    showToast(nuevo ? '⭐ Marcada como receta estelar' : 'Marca removida')
+  }
+
+  const togglePasoCheck = (i: number) =>
+    setPasosCheck(prev => { const s = new Set(prev); s.has(i) ? s.delete(i) : s.add(i); return s })
+
+  // ── Loading ─────────────────────────────────────────────────────────────────
   if (!recipe) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted text-sm">Cargando receta...</p>
-      </div>
-    )
+    return <div className="min-h-screen flex items-center justify-center"><p className="text-muted text-sm">Cargando receta...</p></div>
   }
 
   // ── Vista pública (sin sesión) ────────────────────────────────────────────
@@ -183,131 +163,51 @@ export default function RecetaPage() {
     return (
       <div className="min-h-screen max-w-lg mx-auto">
         <div className="relative h-56 bg-accent-light overflow-hidden">
-          <img
-            src={`https://source.unsplash.com/featured/800x500/?${encodeURIComponent(recipe.nombre + ' food')}`}
-            alt={recipe.nombre}
-            className="w-full h-full object-cover"
-            onError={e => (e.currentTarget.style.display = 'none')}
-          />
+          <img src={recipe.imagen_url ?? `https://source.unsplash.com/featured/800x500/?${encodeURIComponent(recipe.nombre + ' food')}`}
+            alt={recipe.nombre} className="w-full h-full object-cover"
+            onError={e => (e.currentTarget.style.display = 'none')} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           <div className="absolute bottom-4 left-4 right-4">
             <p className="text-white text-2xl font-semibold leading-tight">{recipe.nombre}</p>
-            {recipe.origen && <p className="text-white/80 text-sm mt-0.5">🌎 {recipe.origen}</p>}
           </div>
         </div>
-
         <div className="px-4 py-6 flex flex-col gap-5">
-          {recipe.descripcion_corta && (
-            <p className="text-muted text-sm">{recipe.descripcion_corta}</p>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {recipe.tiempo_total_min && <Chip>⏱ {recipe.tiempo_total_min}min</Chip>}
-            {recipe.dificultad && (
-              <span className={`px-2 py-0.5 rounded-full border text-xs ${DIFICULTAD_COLOR[recipe.dificultad]}`}>
-                {recipe.dificultad}
-              </span>
-            )}
-            {recipe.porciones && <Chip>👥 {recipe.porciones} porciones</Chip>}
-          </div>
-
           <div className="card flex flex-col gap-4 text-center py-6">
             <span className="text-4xl">🍽️</span>
             <div>
               <p className="font-semibold text-text">Ver receta completa</p>
-              <p className="text-muted text-sm mt-1">
-                Ingredientes, preparación y más — crea tu cuenta gratis.
-              </p>
+              <p className="text-muted text-sm mt-1">Ingredientes, preparación y más — crea tu cuenta gratis.</p>
             </div>
-            <button onClick={() => navigate(`/signup?return=${returnUrl}`)} className="btn-primary">
-              Crear cuenta gratis
-            </button>
-            <button onClick={() => navigate(`/login?return=${returnUrl}`)} className="btn-ghost">
-              Ya tengo cuenta — Entrar
-            </button>
+            <button onClick={() => navigate(`/signup?return=${returnUrl}`)} className="btn-primary">Crear cuenta gratis</button>
+            <button onClick={() => navigate(`/login?return=${returnUrl}`)} className="btn-ghost">Ya tengo cuenta — Entrar</button>
           </div>
         </div>
       </div>
     )
   }
 
-  const imgSrc = recipe.imagen_url
-    ?? `https://source.unsplash.com/featured/800x500/?${encodeURIComponent(recipe.nombre.split(' ').slice(0,3).join(' ') + ' food')}`
-  const nut    = recipe.info_nutricional_aprox
-  const totalMacros = nut ? nut.proteina_g + nut.carbohidratos_g + nut.grasa_g : 1
+  const imgSrc      = recipe.imagen_url ?? `https://source.unsplash.com/featured/800x500/?${encodeURIComponent(recipe.nombre.split(' ').slice(0,3).join(' ') + ' food')}`
+  const nut         = recipe.info_nutricional_aprox
+  const basePorciones = recipe.porciones ?? 4
+  const factor      = basePorciones > 0 ? porcionesActual / basePorciones : 1
+  const tc          = (recipe as Recipe & { tipo_componente?: string }).tipo_componente
 
   return (
     <div className="min-h-screen pb-28 max-w-lg mx-auto">
 
-      {/* Sticky header */}
-      <div className="sticky top-0 bg-bg/95 backdrop-blur z-20 px-4 pt-5 pb-3 flex items-center justify-between">
-        <button onClick={() => navigate(-1)}
-          className="flex items-center gap-1 text-muted hover:text-text transition-colors text-sm">
-          ← Volver
-        </button>
-        <div className="flex gap-3 items-center">
-          {isOwner && (
-            <button onClick={() => confirmEstelar ? toggleEstelar() : setConfirmEstelar(true)}
-              className={`text-xl transition-all ${esEstelar ? 'scale-110' : 'text-muted hover:text-yellow-500'}`}
-              title={esEstelar ? 'Receta estelar · Quitar' : 'Marcar como receta para lucirme'}>
-              {esEstelar ? '⭐' : '☆'}
-            </button>
-          )}
-          <button onClick={toggleBookmark}
-            className={`text-xl transition-all ${isBookmarked ? 'text-accent scale-110' : 'text-muted hover:text-accent'}`}
-            title={isBookmarked ? 'Quitar de guardadas' : 'Guardar'}>
-            🔖
-          </button>
-          <button onClick={handleShare} className="text-muted hover:text-text transition-colors text-xl" title="Compartir">
-            ↗
-          </button>
-        </div>
-      </div>
-
-      {/* Foto */}
-      <div className="relative h-52 bg-accent-light overflow-hidden">
-        {!imgError && (
-          <img src={imgSrc} alt={recipe.nombre}
-            className={`w-full h-full object-cover transition-opacity duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
-            onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} />
-        )}
-        {(!imgLoaded || imgError) && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-accent-light to-accent/40">
-            <span className="text-7xl">{TIPO_ICONS[recipe.tipo_comida[0]] ?? '🍽️'}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Crédito Unsplash */}
-      {recipe.imagen_credito && imgLoaded && (
-        <p className="text-right px-3 py-1 text-[11px] text-muted">
-          Foto:{' '}
-          <a href={recipe.imagen_credito.perfil_url} target="_blank" rel="noopener noreferrer"
-            className="underline hover:text-text transition-colors">
-            {recipe.imagen_credito.fotografo}
-          </a>
-          {' '}en Unsplash
-        </p>
-      )}
-
-      {/* Wizard de clasificación */}
+      {/* ── Modales ────────────────────────────────────────────────────── */}
       {showWizard && (
-        <ClasificacionWizard
-          titulo="Editar etiquetas"
+        <ClasificacionWizard titulo="Editar etiquetas"
           initialTipoComida={(recipe.tipo_comida ?? []) as string[]}
-          initialTipoComponente={(recipe as Recipe & { tipo_componente?: string }).tipo_componente ?? null}
-          onConfirm={handleWizardConfirm}
-          onClose={() => setShowWizard(false)}
-        />
+          initialTipoComponente={tc ?? null}
+          onConfirm={handleWizardConfirm} onClose={() => setShowWizard(false)} />
       )}
 
-      {/* Modal confirmar estelar */}
       {confirmEstelar && !esEstelar && (
         <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-4 pb-8">
           <div className="card w-full max-w-sm flex flex-col gap-4">
             <p className="font-semibold text-text text-center">⭐ Marcar para lucirme</p>
-            <p className="text-muted text-sm text-center">
-              Esta receta quedará marcada como "carta de presentación" para ocasiones especiales o cuando tengas invitados.
-            </p>
+            <p className="text-muted text-sm text-center">Esta receta quedará como "carta de presentación" para ocasiones especiales.</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmEstelar(false)} className="btn-ghost flex-1">Cancelar</button>
               <button onClick={toggleEstelar} className="btn-primary flex-1">Sí, marcar ⭐</button>
@@ -316,31 +216,107 @@ export default function RecetaPage() {
         </div>
       )}
 
-      {/* Info principal */}
-      <div className="px-4 pt-4 pb-3">
-        <div className="flex items-start gap-2">
-          <h1 className="text-2xl font-serif font-semibold text-text leading-tight flex-1">{recipe.nombre}</h1>
-          {esEstelar && <span className="text-xl flex-shrink-0 mt-0.5" title="Receta estelar">⭐</span>}
-        </div>
-        {recipe.descripcion_corta && (
-          <p className="text-muted text-sm mt-1">{recipe.descripcion_corta}</p>
-        )}
-        {/* Etiquetas editables */}
-        <div className="flex flex-wrap gap-2 mt-3 items-center">
-          {recipe.tipo_comida.slice(0,2).map(t => (
-            <span key={t} className="text-xs text-muted">{TIPO_ICONS[t] ?? ''} {t}</span>
-          ))}
-          {(recipe as Recipe & { tipo_componente?: string }).tipo_componente && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20 font-medium">
-              {(recipe as Recipe & { tipo_componente?: string }).tipo_componente}
-            </span>
+      {/* ⋯ Menú contextual */}
+      {showMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+          <div className="fixed top-16 right-4 z-50 bg-white rounded-2xl shadow-xl border border-border overflow-hidden w-44">
+            {isOwner && (
+              <button onClick={() => { toggleBookmark(); setShowMenu(false) }}
+                className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors border-b border-border">
+                {isBookmarked ? '🔖 Quitar bookmark' : '🔖 Guardar'}
+              </button>
+            )}
+            {isOwner && (
+              <button onClick={() => { setConfirmEstelar(true); setShowMenu(false) }}
+                className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors border-b border-border">
+                {esEstelar ? '☆ Quitar estrella' : '⭐ Para lucirme'}
+              </button>
+            )}
+            <button onClick={() => { setShowWizard(true); setShowMenu(false) }}
+              className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors border-b border-border">
+              ✏️ Editar etiquetas
+            </button>
+            <button onClick={handleShare}
+              className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors">
+              📤 Compartir
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <div className="sticky top-0 bg-white/95 backdrop-blur z-20 px-4 pt-4 pb-3 flex items-center justify-between border-b border-border/50">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-muted hover:text-text transition-colors text-sm font-medium">
+          ← Volver
+        </button>
+        <div className="flex items-center gap-2">
+          {memberId && (
+            <button onClick={toggleBookmark}
+              className={`text-xl transition-all ${isBookmarked ? 'text-accent' : 'text-muted hover:text-accent'}`}>
+              🔖
+            </button>
           )}
-          <button onClick={() => setShowWizard(true)}
-            className="text-xs text-muted hover:text-accent transition-colors" title="Editar etiquetas">
-            ✏️
+          <button onClick={() => setShowMenu(s => !s)} className="text-muted hover:text-text transition-colors text-lg px-1">
+            ⋯
           </button>
         </div>
-        <div className="flex flex-wrap gap-2 mt-2">
+      </div>
+
+      {/* ── Foto grande ────────────────────────────────────────────────── */}
+      <div className="relative w-full aspect-[4/3] bg-accent-light overflow-hidden">
+        {!imgError && (
+          <img src={imgSrc} alt={recipe.nombre}
+            className={`w-full h-full object-cover transition-opacity duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} />
+        )}
+        {(!imgLoaded || imgError) && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-accent-light to-accent/30">
+            <span className="text-8xl">{TIPO_ICONS[recipe.tipo_comida?.[0]] ?? '🍽️'}</span>
+          </div>
+        )}
+        {/* Crédito */}
+        {recipe.imagen_credito && imgLoaded && (
+          <div className="absolute bottom-2 right-2">
+            <a href={recipe.imagen_credito.perfil_url} target="_blank" rel="noopener noreferrer"
+              className="text-[10px] text-white/70 bg-black/30 px-2 py-0.5 rounded-full hover:bg-black/50 transition-colors">
+              📷 {recipe.imagen_credito.fotografo}
+            </a>
+          </div>
+        )}
+      </div>
+
+      {/* ── Título + etiquetas ─────────────────────────────────────────── */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-start gap-2 mb-2">
+          <h1 className="text-2xl font-serif font-semibold text-text leading-tight flex-1">
+            {recipe.nombre}
+            {esEstelar && <span className="ml-2 text-xl">⭐</span>}
+          </h1>
+        </div>
+
+        {recipe.descripcion_corta && (
+          <p className="text-muted text-sm mb-3">{recipe.descripcion_corta}</p>
+        )}
+
+        {/* Chips editables */}
+        <div className="flex flex-wrap gap-1.5 items-center">
+          {recipe.tipo_comida?.slice(0,3).map(t => (
+            <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-muted font-medium">
+              {TIPO_ICONS[t] ?? ''} {t}
+            </span>
+          ))}
+          {tc && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20 font-medium">
+              {TC_EMOJI[tc] ?? ''} {tc.replace('_', ' ')}
+            </span>
+          )}
+          <button onClick={() => setShowWizard(true)} title="Editar etiquetas"
+            className="text-xs text-muted hover:text-accent transition-colors ml-1">✏️</button>
+        </div>
+
+        {/* Metadata chips */}
+        <div className="flex flex-wrap gap-1.5 mt-2">
           {recipe.origen && <Chip>🌎 {recipe.origen}</Chip>}
           {recipe.tiempo_total_min && <Chip>⏱ {recipe.tiempo_total_min}min</Chip>}
           {recipe.dificultad && (
@@ -348,34 +324,48 @@ export default function RecetaPage() {
               {recipe.dificultad}
             </span>
           )}
-          {recipe.porciones && <Chip>👥 {recipe.porciones} porciones</Chip>}
+          {recipe.costo_estimado && <Chip>💰 {recipe.costo_estimado}</Chip>}
         </div>
+      </div>
 
-        {/* Sección de roles — solo visible para el owner */}
-        {isOwner && familyRatings.length > 0 && (
-          <div className="mt-3 p-3 rounded-xl bg-gray-50 border border-border">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Valoraciones de la familia</p>
-            {familyRatings.map(r => {
-              const member = (family as unknown as { members?: { id: string; name: string; emoji: string }[] })
-              const m = Array.isArray(member?.members)
-                ? member.members.find(mb => mb.id === r.member_id)
-                : null
-              return (
-                <div key={r.member_id} className="flex items-center gap-2 text-xs text-text py-0.5">
-                  <span>{m?.emoji ?? '👤'}</span>
-                  <span className="flex-1">{m?.name ?? 'Miembro'}</span>
-                  <span className="text-yellow-500">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
-                </div>
-              )
-            })}
-          </div>
+      {/* ── 4 Botones de acción ────────────────────────────────────────── */}
+      <div className="px-4 py-3">
+        <div className="flex gap-2">
+          {[
+            { emoji: '📑', label: 'Guardar',    onClick: toggleBookmark },
+            { emoji: '📤', label: 'Compartir',  onClick: handleShare    },
+            { emoji: '🛒', label: 'Lista',      onClick: () => showToast('🛒 Lista de mercado próximamente') },
+            { emoji: '⭐', label: esEstelar ? 'Estelar ✓' : 'Estelar',
+              onClick: () => esEstelar ? toggleEstelar() : setConfirmEstelar(true) },
+          ].map(btn => (
+            <button key={btn.label} onClick={btn.onClick}
+              className="flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl bg-gray-50 border border-border hover:border-accent hover:bg-accent/5 transition-all active:scale-95">
+              <span className="text-xl leading-none">{btn.emoji}</span>
+              <span className="text-[10px] text-muted font-medium">{btn.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Divider />
+
+      {/* ── Notas de receta ────────────────────────────────────────────── */}
+      <div className="px-4 py-3 flex flex-col gap-3">
+        <p className="text-xs font-semibold text-muted uppercase tracking-wider">Sobre esta receta</p>
+
+        {/* Fuente */}
+        {(recipe as Recipe & { source_url?: string; source_platform?: string }).source_url && (
+          <a href={(recipe as Recipe & { source_url?: string }).source_url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-accent hover:underline">
+            🔗 Ver fuente original
+          </a>
         )}
 
         {/* Rating del miembro */}
         {memberId && (
-          <div className="mt-3">
-            <p className="text-xs text-muted mb-1">Tu valoración</p>
-            <div className="flex gap-1.5">
+          <div>
+            <p className="text-xs text-muted mb-1.5">Tu valoración</p>
+            <div className="flex gap-2">
               {[1,2,3,4,5].map(s => (
                 <button key={s} onClick={() => handleRating(s)}
                   className="text-2xl transition-transform hover:scale-110 active:scale-90"
@@ -384,115 +374,154 @@ export default function RecetaPage() {
             </div>
           </div>
         )}
+
+        {/* Valoraciones de la familia (solo owner) */}
+        {isOwner && familyRatings.length > 0 && (
+          <div className="p-3 rounded-xl bg-gray-50 border border-border">
+            <p className="text-xs font-semibold text-muted mb-2">Valoraciones de la familia</p>
+            {familyRatings.map(r => {
+              const m = members.find(mb => mb.id === r.member_id)
+              return (
+                <div key={r.member_id} className="flex items-center gap-2 text-xs py-0.5">
+                  <span>{m?.emoji ?? '👤'}</span>
+                  <span className="flex-1 text-text">{m?.name ?? 'Miembro'}</span>
+                  <span className="text-yellow-500">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Tabs */}
-      <div className="px-4 mb-0">
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-          {(['ingredientes', 'pasos', 'nutricion'] as Tab[]).map(t => (
-            <button key={t} onClick={() => setActiveTab(t)}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all
-                ${activeTab === t ? 'bg-white text-text shadow-sm' : 'text-muted hover:text-text'}`}>
-              {t === 'ingredientes' ? '🧅 Ingredientes' : t === 'pasos' ? '📋 Pasos' : '📊 Nutrición'}
+      <Divider />
+
+      {/* ── Ingredientes con porciones dinámicas ──────────────────────── */}
+      <div className="px-4 py-3">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wider">Ingredientes</p>
+          {/* Selector porciones */}
+          <div className="flex items-center gap-2">
+            <button onClick={() => setPorcionesActual(p => Math.max(1, p - 1))}
+              className="w-7 h-7 rounded-full border border-border flex items-center justify-center hover:border-accent hover:text-accent transition-colors">
+              <Minus size={13} />
             </button>
-          ))}
+            <span className="text-sm font-semibold text-text min-w-[24px] text-center">{porcionesActual}</span>
+            <button onClick={() => setPorcionesActual(p => p + 1)}
+              className="w-7 h-7 rounded-full border border-border flex items-center justify-center hover:border-accent hover:text-accent transition-colors">
+              <Plus size={13} />
+            </button>
+            <span className="text-xs text-muted">porciones</span>
+          </div>
         </div>
+
+        {recipe.ingredientes.length === 0 ? (
+          <p className="text-sm text-muted italic">Sin ingredientes registrados</p>
+        ) : (
+          <div className="flex flex-col">
+            {/* Esenciales */}
+            {recipe.ingredientes.filter(i => i.esencial).map((ing, idx) => {
+              const tiene = inFridge(ing.nombre, fridgeItems)
+              const cantStr = redondear(ing.cantidad, factor)
+              return (
+                <div key={`e-${idx}`} className="flex items-center gap-2.5 py-2.5 border-b border-border/50 last:border-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 mt-0.5" />
+                  <span className="flex-1 text-sm text-text">{ing.nombre}</span>
+                  {cantStr && (
+                    <span className="text-xs text-muted flex-shrink-0">
+                      {cantStr} {ing.unidad ?? ''}
+                    </span>
+                  )}
+                  {tiene ? (
+                    <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full flex-shrink-0">✓</span>
+                  ) : (
+                    <span className="text-[10px] bg-orange-50 text-orange-600 border border-orange-200 px-1.5 py-0.5 rounded-full flex-shrink-0">🛒</span>
+                  )}
+                </div>
+              )
+            })}
+            {/* Opcionales */}
+            {recipe.ingredientes.some(i => !i.esencial) && (
+              <>
+                <p className="text-xs text-muted font-medium pt-3 pb-1">Opcionales</p>
+                {recipe.ingredientes.filter(i => !i.esencial).map((ing, idx) => {
+                  const cantStr = redondear(ing.cantidad, factor)
+                  return (
+                    <div key={`o-${idx}`} className="flex items-center gap-2.5 py-2 border-b border-border/30 last:border-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0 mt-0.5" />
+                      <span className="flex-1 text-sm text-muted">{ing.nombre}</span>
+                      {cantStr && <span className="text-xs text-muted">{cantStr} {ing.unidad ?? ''}</span>}
+                    </div>
+                  )
+                })}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Tab: Ingredientes */}
-      {activeTab === 'ingredientes' && (
-        <div className="px-4 pt-4 flex flex-col gap-4">
-          {/* Esenciales */}
-          <div>
-            <p className="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Esenciales</p>
-            <div className="flex flex-col">
-              {recipe.ingredientes.filter(i => i.esencial).map((ing, idx) => {
-                const tieneEnNevera = inFridge(ing.nombre, fridgeItems)
+      {/* ── Pasos con checkmark ────────────────────────────────────────── */}
+      {recipe.pasos?.length > 0 && (
+        <>
+          <Divider />
+          <div className="px-4 py-3">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Preparación</p>
+            <div className="flex flex-col gap-3">
+              {recipe.pasos.map((paso, i) => {
+                const done = pasosCheck.has(i)
                 return (
-                  <div key={idx} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-accent flex-shrink-0" />
-                      <span className="text-text text-sm">{ing.nombre}</span>
-                      {ing.cantidad && (
-                        <span className="text-muted text-xs">{ing.cantidad} {ing.unidad ?? ''}</span>
-                      )}
+                  <button key={i} onClick={() => togglePasoCheck(i)}
+                    className={`flex gap-3 text-left transition-all ${done ? 'opacity-50' : ''}`}>
+                    <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold mt-0.5 transition-all
+                      ${done ? 'bg-oliva text-white' : 'bg-accent text-white'}`}>
+                      {done ? <Check size={14} /> : i + 1}
                     </div>
-                    {tieneEnNevera ? (
-                      <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full flex-shrink-0">
-                        ✓ Tienes
-                      </span>
-                    ) : (
-                      <button onClick={handleAddToList}
-                        className="text-xs bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full flex-shrink-0 hover:bg-blue-100 transition-all">
-                        + Lista
-                      </button>
-                    )}
-                  </div>
+                    <p className={`text-sm leading-relaxed flex-1 ${done ? 'line-through text-muted' : 'text-text'}`}>
+                      {paso}
+                    </p>
+                  </button>
                 )
               })}
             </div>
-          </div>
-
-          {/* Opcionales */}
-          {recipe.ingredientes.some(i => !i.esencial) && (
-            <div>
-              <p className="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Opcionales</p>
-              <div className="flex flex-col">
-                {recipe.ingredientes.filter(i => !i.esencial).map((ing, idx) => (
-                  <div key={idx} className="flex items-center gap-2 py-2.5 border-b border-border last:border-0">
-                    <span className="w-2 h-2 rounded-full bg-border flex-shrink-0" />
-                    <span className="text-text text-sm">{ing.nombre}</span>
-                    {ing.cantidad && (
-                      <span className="text-muted text-xs ml-auto">{ing.cantidad} {ing.unidad ?? ''}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Tab: Pasos */}
-      {activeTab === 'pasos' && (
-        <div className="px-4 pt-4 flex flex-col gap-4">
-          {recipe.pasos.map((paso, i) => (
-            <div key={i} className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-accent text-white text-sm font-bold flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
-                {i + 1}
-              </div>
-              <div className="card flex-1 py-3 px-4">
-                <p className="text-text text-sm leading-relaxed">{paso}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Tab: Nutrición */}
-      {activeTab === 'nutricion' && nut && (
-        <div className="px-4 pt-4 flex flex-col gap-4">
-          <div className="card text-center py-5">
-            <p className="text-5xl font-bold text-text">{nut.calorias_porcion}</p>
-            <p className="text-muted text-sm mt-1">kcal por porción</p>
-            {recipe.porciones && (
-              <p className="text-xs text-muted mt-0.5">{recipe.porciones} porciones totales</p>
+            {pasosCheck.size > 0 && (
+              <button onClick={() => setPasosCheck(new Set())}
+                className="mt-3 text-xs text-muted hover:text-text transition-colors">
+                ↩ Reiniciar pasos
+              </button>
             )}
           </div>
+        </>
+      )}
 
-          <div className="card flex flex-col gap-4">
-            <MacroBar label="Proteína"      value={nut.proteina_g}      total={totalMacros} color="bg-blue-500"   unit="g" />
-            <MacroBar label="Carbohidratos" value={nut.carbohidratos_g} total={totalMacros} color="bg-yellow-400" unit="g" />
-            <MacroBar label="Grasa"         value={nut.grasa_g}         total={totalMacros} color="bg-red-400"    unit="g" />
-          </div>
-
-          {recipe.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {recipe.tags.map(t => (
-                <span key={t} className="px-2.5 py-1 bg-accent-light text-accent text-xs rounded-full">{t}</span>
+      {/* ── Nutrición ─────────────────────────────────────────────────── */}
+      {nut && (
+        <>
+          <Divider />
+          <div className="px-4 py-3">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Nutrición por porción</p>
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {[
+                { label: 'Calorías', value: nut.calorias_porcion, unit: 'kcal' },
+                { label: 'Proteína', value: nut.proteina_g,       unit: 'g'    },
+                { label: 'Carbs',    value: nut.carbohidratos_g,  unit: 'g'    },
+                { label: 'Grasa',    value: nut.grasa_g,          unit: 'g'    },
+              ].map(m => (
+                <div key={m.label} className="bg-gray-50 rounded-xl p-2.5 text-center border border-border">
+                  <p className="text-base font-bold text-text">{m.value ?? '—'}</p>
+                  <p className="text-[10px] text-muted">{m.unit}</p>
+                  <p className="text-[9px] text-muted mt-0.5">{m.label}</p>
+                </div>
               ))}
             </div>
-          )}
+          </div>
+        </>
+      )}
+
+      {/* ── Tags ──────────────────────────────────────────────────────── */}
+      {recipe.tags?.length > 0 && (
+        <div className="px-4 pb-4 flex flex-wrap gap-1.5">
+          {recipe.tags.map(t => (
+            <span key={t} className="px-2.5 py-1 bg-accent-light text-accent text-xs rounded-full">{t}</span>
+          ))}
         </div>
       )}
 
@@ -502,9 +531,12 @@ export default function RecetaPage() {
           {toastMsg}
         </div>
       )}
-
     </div>
   )
+}
+
+function Divider() {
+  return <div className="h-2 bg-gray-50 border-y border-border/40" />
 }
 
 function Chip({ children }: { children: React.ReactNode }) {
@@ -512,22 +544,5 @@ function Chip({ children }: { children: React.ReactNode }) {
     <span className="px-2 py-0.5 bg-white border border-border text-muted text-xs rounded-full">
       {children}
     </span>
-  )
-}
-
-function MacroBar({ label, value, total, color, unit }: {
-  label: string; value: number; total: number; color: string; unit: string
-}) {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-text font-medium">{label}</span>
-        <span className="text-sm font-semibold text-text">{value}{unit} <span className="text-xs text-muted font-normal">({pct}%)</span></span>
-      </div>
-      <div className="w-full bg-border rounded-full h-2.5 overflow-hidden">
-        <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
-      </div>
-    </div>
   )
 }
