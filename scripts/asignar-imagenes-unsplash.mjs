@@ -1,8 +1,8 @@
 /**
- * asignar-imagenes-unsplash.mjs
+ * asignar-imagenes-unsplash.mjs  v3
  *
- * Asigna imágenes de Unsplash a recetas que no tienen imagen_url.
- * Agrupa por keyword para minimizar llamadas API (≤50/hora).
+ * Estrategia híbrida: agrupa recetas por "huella" de 2 palabras clave.
+ * ~100-120 grupos únicos = 2-3 corridas dentro del límite 50/hora de Unsplash.
  *
  * Uso:
  *   node scripts/asignar-imagenes-unsplash.mjs              # dry-run
@@ -17,7 +17,6 @@ import { dirname, join } from 'path'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DRY_RUN   = !process.argv.includes('--apply')
 
-// Leer .env
 try {
   readFileSync(join(__dirname, '../.env'), 'utf8').split('\n').forEach(line => {
     const [k, ...rest] = line.split('=')
@@ -31,244 +30,223 @@ const UNSPLASH_KEY = process.env.UNSPLASH_ACCESS_KEY || 'iB43hLvYzVEwCP52_pK0ejc
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY)
 
-// ── Mapa de keywords → término de búsqueda en inglés ─────────────────────────
-// Unsplash da mejores resultados en inglés para comidas
-const KEYWORD_MAP = {
-  // Proteínas
-  'pollo':       'grilled chicken food',
-  'pechuga':     'chicken breast food',
-  'res':         'beef steak food',
-  'carne':       'beef food plate',
-  'cerdo':       'pork food plate',
-  'costilla':    'pork ribs food',
-  'lomo':        'pork loin food',
-  'chuleta':     'pork chop food',
-  'pescado':     'fish fillet food',
-  'salmon':      'salmon fillet food',
-  'atun':        'tuna food plate',
-  'tilapia':     'tilapia fish food',
-  'camarones':   'shrimp food plate',
-  'langostino':  'prawn seafood plate',
-  'huevo':       'eggs food breakfast',
-  'huevos':      'eggs food breakfast',
-  'tofu':        'tofu healthy food',
-  'chorizo':     'chorizo sausage food',
-  'jamon':       'ham food plate',
-  // Legumbres
-  'lentejas':    'lentil soup food',
-  'frijol':      'beans food latin',
-  'garbanzos':   'chickpea food plate',
-  'quinua':      'quinoa healthy food',
-  // Carbohidratos / acompañamientos
-  'arroz':       'rice food plate',
-  'pasta':       'pasta food plate',
-  'arepa':       'arepa colombian food',
-  'papa':        'potato food plate',
-  'yuca':        'yuca cassava food',
-  'platano':     'plantain food latin',
-  'patacon':     'fried plantain food',
-  'pan':         'bread food artisan',
-  'tapioca':     'tapioca food',
-  // Verduras / ensaladas
-  'ensalada':    'salad fresh food',
-  'espinaca':    'spinach salad food',
-  'coliflor':    'cauliflower food',
-  'brocoli':     'broccoli food',
-  'zanahoria':   'carrot food',
-  // Sopas / caldos
-  'sopa':        'soup bowl food',
-  'sancocho':    'chicken stew soup latin',
-  'ajiaco':      'colombian chicken soup',
-  'caldo':       'broth soup food',
-  'crema':       'cream soup food',
-  // Platos típicos colombianos
-  'bandeja':     'bandeja paisa colombian food',
-  'changua':     'colombian breakfast soup',
-  'pandebono':   'colombian cheese bread',
-  'empanada':    'empanada latin food',
-  'tamale':      'tamale latin food',
-  'tamal':       'tamale latin food',
-  'almojabana':  'colombian cheese roll',
-  // Desayunos
-  'avena':       'oatmeal breakfast food',
-  'granola':     'granola breakfast bowl',
-  'tostada':     'toast breakfast food',
-  'pancake':     'pancake breakfast food',
-  // Bebidas
-  'jugo':        'fresh juice drink',
-  'smoothie':    'smoothie healthy drink',
-  'limonada':    'lemonade drink',
-  'cafe':        'coffee drink breakfast',
-  'leche':       'milk drink food',
-  'agua':        'infused water drink',
-  // Postres
-  'postre':      'dessert sweet food',
-  'torta':       'cake dessert food',
-  'flan':        'flan dessert food',
-  'helado':      'ice cream dessert',
-  'brownie':     'brownie chocolate dessert',
-  // Salsas
-  'guacamole':   'guacamole dip food',
-  'salsa':       'tomato sauce cooking',
-  'chimichurri': 'chimichurri sauce food',
-  'hogao':       'tomato sauce food',
-  // Bowls / wraps
-  'bowl':        'grain bowl healthy food',
-  'wrap':        'wrap sandwich food',
-  'burrito':     'burrito mexican food',
+// ── Diccionarios ES → EN ──────────────────────────────────────────────────────
+const PROT = {
+  'pollo':'chicken', 'pechuga':'chicken breast', 'muslo':'chicken thigh',
+  'pavo':'turkey', 'pato':'duck',
+  'res':'beef', 'carne':'beef', 'lomo':'beef tenderloin', 'costilla':'ribs',
+  'cerdo':'pork', 'chuleta':'pork chop', 'chicharron':'crispy pork',
+  'salmon':'salmon', 'salmón':'salmon', 'tilapia':'tilapia', 'pescado':'fish',
+  'atun':'tuna', 'atún':'tuna', 'bagre':'catfish', 'bacalao':'cod fish',
+  'camarones':'shrimp', 'camaron':'shrimp', 'langostino':'prawn',
+  'mariscos':'seafood', 'pulpo':'octopus',
+  'huevo':'egg', 'huevos':'eggs',
+  'chorizo':'chorizo sausage', 'jamon':'ham',
+  'tofu':'tofu', 'lentejas':'lentils', 'frijol':'beans', 'frijoles':'beans',
+  'garbanzos':'chickpeas', 'quinua':'quinoa', 'soya':'soy protein',
+}
+const CARBS = {
+  'arroz':'rice', 'pasta':'pasta', 'yuca':'yuca cassava', 'papa':'potato',
+  'papas':'potatoes', 'platano':'plantain', 'plátano':'plantain',
+  'patacon':'fried plantain', 'patacón':'fried plantain',
+  'arepa':'arepa', 'pan':'bread', 'tamal':'tamale', 'empanada':'empanada',
+  'pizza':'pizza', 'wrap':'wrap', 'taco':'taco', 'burrito':'burrito',
+  'avena':'oatmeal', 'granola':'granola', 'pancake':'pancake',
+  'fideos':'noodles',
+}
+const VEG = {
+  'espinaca':'spinach', 'brocoli':'broccoli', 'brócoli':'broccoli',
+  'zanahoria':'carrot', 'coliflor':'cauliflower', 'kale':'kale',
+  'aguacate':'avocado', 'tomate':'tomato', 'repollo':'cabbage',
+  'cebolla':'onion', 'ajo':'garlic', 'pimenton':'bell pepper',
+  'pimentón':'bell pepper',
+}
+const DISH = {
+  'sopa':'soup bowl', 'crema':'cream soup', 'caldo':'broth soup',
+  'sancocho':'chicken stew', 'ajiaco':'colombian soup', 'cazuela':'seafood stew',
+  'sudado':'braised stew', 'seco':'braised dish',
+  'ensalada':'fresh salad', 'bowl':'grain bowl', 'ceviche':'ceviche',
+  'smoothie':'smoothie drink', 'jugo':'fresh juice',
+  'postre':'dessert', 'torta':'cake slice', 'brownie':'chocolate brownie',
+  'helado':'ice cream', 'flan':'flan dessert', 'trufa':'truffle sweet',
+  'cocada':'coconut sweet', 'compota':'fruit compote',
+  'bizcocho':'sponge cake', 'muffin':'muffin baked', 'galleta':'cookie baked',
+  'alfajor':'alfajor cookie', 'barritas':'granola bar',
+  'bandeja':'bandeja paisa', 'changua':'colombian milk soup',
+  'pandebono':'cheese bread', 'almojabana':'cheese roll',
+  'guacamole':'guacamole', 'hogao':'tomato sauce',
+  'chimichurri':'chimichurri sauce', 'vinagreta':'vinaigrette salad',
+}
+const COOK = {
+  'horno':'baked oven', 'plancha':'grilled', 'frito':'fried crispy',
+  'frita':'fried crispy', 'vapor':'steamed', 'asado':'roasted',
+  'asada':'roasted', 'saltado':'stir fried', 'curry':'curry spiced',
+  'relleno':'stuffed', 'rellena':'stuffed',
 }
 
-// Fallback por tipo_componente
-const TC_FALLBACK = {
-  'proteina_principal': 'protein food plate healthy',
-  'guarnicion':         'side dish food plate',
-  'ensalada':           'salad fresh vegetables',
-  'salsa':              'tomato sauce cooking plate',
-  'vinagreta':          'vinaigrette dressing salad',
-  'plato_unico':        'complete meal plate food',
-  'postre':             'dessert sweet food',
-  'bebida':             'healthy drink food',
-  'merienda':           'snack healthy food',
+function norm(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ')
 }
 
-function normalizar(s) {
-  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-}
-
-// Matching por palabra completa (no "res" dentro de "caprese" o "fresco")
-function matchWord(texto, kw) {
-  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return new RegExp(`(^|[^a-z])${escaped}([^a-z]|$)`).test(texto)
-}
-
-function extraerKeyword(nombre) {
-  const n = normalizar(nombre)
-  // Iterar de más largo a más corto para evitar matches parciales
-  const kwsSorted = Object.keys(KEYWORD_MAP).sort((a, b) => b.length - a.length)
-  for (const kw of kwsSorted) {
-    if (matchWord(n, kw)) return kw
+function findFirst(texto, map) {
+  const t = norm(texto)
+  for (const [es, en] of Object.entries(map)) {
+    const re = new RegExp(`(^|\\s)${es.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`)
+    if (re.test(t)) return en
   }
   return null
 }
 
-// ── Cache de fotos por término ────────────────────────────────────────────────
-const photoCache = new Map()  // term → string[]
-
-async function fetchPhotos(term) {
-  if (photoCache.has(term)) return photoCache.get(term)
-
-  await new Promise(r => setTimeout(r, 300))  // respetar rate-limit
-
-  const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(term)}&per_page=15&orientation=landscape&content_filter=high`
-  const res  = await fetch(url, { headers: { Authorization: `Client-ID ${UNSPLASH_KEY}` } })
-
-  if (!res.ok) {
-    console.warn(`  ⚠️  Unsplash ${res.status} para "${term}"`)
-    photoCache.set(term, [])
-    return []
+function construirHuella(nombre, tipoComponente) {
+  // 1. Plato típico / categoría especial primero
+  const dish = findFirst(nombre, DISH)
+  const nHasProtein = findFirst(nombre, PROT)
+  // Si es un plato completo tipico, usarlo
+  if (dish && !['fresh salad', 'grain bowl', 'vinaigrette salad'].includes(dish) && !nHasProtein) {
+    return `${dish}`
   }
 
-  const data   = await res.json()
-  const photos = (data.results ?? []).map(p => p.urls.regular)
-  photoCache.set(term, photos)
-  return photos
+  const prot = nHasProtein
+  const cook = findFirst(nombre, COOK)
+  const carb = findFirst(nombre, CARBS)
+  const veg  = findFirst(nombre, VEG)
+
+  // 2. Proteína + método cocción (más específico)
+  if (prot && cook) return `${prot} ${cook}`
+  if (prot && dish && dish !== 'fresh salad') return `${prot} ${dish}`
+  if (prot && carb) return `${prot} with ${carb}`
+  if (prot && veg)  return `${prot} with ${veg}`
+  if (prot)         return `${prot} food plate`
+
+  // 3. Carbo + algo
+  if (carb && veg)  return `${carb} with ${veg}`
+  if (carb && cook) return `${cook} ${carb}`
+  if (carb && dish) return `${carb} ${dish}`
+  if (carb)         return `${carb} food`
+
+  // 4. Plato / verdura solos
+  if (dish) return `${dish}`
+  if (veg)  return `${veg} salad`
+
+  // 5. Fallback por tipo_componente
+  const TC_FB = {
+    'proteina_principal': 'protein main course',
+    'guarnicion':         'side dish plate',
+    'ensalada':           'fresh salad bowl',
+    'salsa':              'sauce condiment',
+    'vinagreta':          'vinaigrette dressing',
+    'plato_unico':        'complete meal plate',
+    'postre':             'dessert sweet',
+    'bebida':             'healthy drink',
+    'merienda':           'healthy snack',
+  }
+  return TC_FB[tipoComponente] ?? 'food meal plate'
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
-async function main() {
-  console.log(DRY_RUN
-    ? '🔍 DRY-RUN — sin cambios en BD. Usá --apply para confirmar.\n'
-    : '✏️  APPLY — asignando imágenes en Supabase.\n'
-  )
+const photoCache = new Map()
+let apiCalls = 0
 
-  // 1. Traer recetas sin imagen
+async function fetchPool(huella) {
+  if (photoCache.has(huella)) return photoCache.get(huella)
+
+  if (DRY_RUN) {
+    photoCache.set(huella, [`DRY:${huella}`])
+    return photoCache.get(huella)
+  }
+
+  await new Promise(r => setTimeout(r, 700))
+  apiCalls++
+
+  const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(huella)}&per_page=15&orientation=landscape&content_filter=high`
+  const res  = await fetch(url, { headers: { Authorization: `Client-ID ${UNSPLASH_KEY}` } })
+
+  if (res.status === 429 || res.status === 403) {
+    console.log(`\n  ⏳ Rate limit — esperando 65s...`)
+    await new Promise(r => setTimeout(r, 65000))
+    const r2   = await fetch(url, { headers: { Authorization: `Client-ID ${UNSPLASH_KEY}` } })
+    const d2   = r2.ok ? await r2.json() : { results: [] }
+    const pool = (d2.results ?? []).map(p => p.urls.regular)
+    photoCache.set(huella, pool)
+    return pool
+  }
+
+  const data = await res.json()
+  const pool = (data.results ?? []).map(p => p.urls.regular)
+  photoCache.set(huella, pool)
+  return pool
+}
+
+async function main() {
+  console.log(DRY_RUN ? '🔍 DRY-RUN\n' : '✏️  APPLY\n')
+
   const { data: recipes, error } = await sb
     .from('recipes')
     .select('id, nombre, tipo_componente')
     .is('imagen_url', null)
-    .eq('is_active_for_menu', true)
+    .order('tipo_componente')
 
-  if (error) { console.error('Error Supabase:', error.message); process.exit(1) }
-  console.log(`Recetas sin imagen: ${recipes.length}\n`)
+  if (error) { console.error(error.message); process.exit(1) }
+  if (!recipes?.length) { console.log('✅ Todas las recetas tienen imagen.'); return }
 
-  // 2. Agrupar por keyword para minimizar llamadas API
-  const groups = new Map()  // keyword → [recipe]
-  const fallbackGroup = []
+  console.log(`Recetas sin imagen: ${recipes.length}`)
 
+  // Agrupar por huella
+  const grupos = new Map()
   for (const r of recipes) {
-    const kw = extraerKeyword(r.nombre)
-    if (kw) {
-      if (!groups.has(kw)) groups.set(kw, [])
-      groups.get(kw).push(r)
-    } else {
-      fallbackGroup.push(r)
-    }
+    const h = construirHuella(r.nombre, r.tipo_componente)
+    if (!grupos.has(h)) grupos.set(h, [])
+    grupos.get(h).push(r)
   }
 
-  console.log(`Keywords únicos: ${groups.size} | Sin keyword: ${fallbackGroup.length}`)
-  console.log(`Llamadas Unsplash estimadas: ${groups.size + new Set(fallbackGroup.map(r => r.tipo_componente)).size}\n`)
-
-  // 3. Asignar fotos
-  const updates = []  // { id, imagen_url }
-  let apiCalls = 0
-
-  for (const [kw, recs] of groups.entries()) {
-    const term   = KEYWORD_MAP[kw]
-    const photos = await fetchPhotos(term)
-    apiCalls++
-
-    if (photos.length === 0) {
-      console.warn(`  ⚠️  Sin fotos para keyword "${kw}" (${recs.length} recetas)`)
-      continue
-    }
-
-    recs.forEach((r, i) => {
-      const url = photos[i % photos.length]
-      updates.push({ id: r.id, imagen_url: url })
-      if (DRY_RUN) console.log(`  [DRY] "${r.nombre}" → ${kw} → ${url.slice(0, 60)}...`)
-    })
+  const totalGrupos = grupos.size
+  console.log(`Grupos únicos: ${totalGrupos} (= llamadas a Unsplash)`)
+  if (totalGrupos > 50) {
+    console.log(`⚠️  Más de 50 grupos — el script pausará automáticamente cuando llegue al límite.\n`)
   }
-
-  // Fallback por tipo_componente
-  const tcSeen = new Map()
-  for (const r of fallbackGroup) {
-    const tc   = r.tipo_componente ?? 'plato_unico'
-    const term = TC_FALLBACK[tc] ?? 'food plate meal'
-
-    if (!tcSeen.has(tc)) {
-      const photos = await fetchPhotos(term)
-      tcSeen.set(tc, photos)
-      apiCalls++
-    }
-
-    const photos = tcSeen.get(tc) ?? []
-    if (photos.length === 0) continue
-
-    const idx = updates.length % photos.length
-    updates.push({ id: r.id, imagen_url: photos[idx] })
-    if (DRY_RUN) console.log(`  [DRY-TC] "${r.nombre}" (${tc}) → ${photos[idx].slice(0, 60)}...`)
-  }
-
-  console.log(`\nTotal: ${updates.length} recetas → imágenes asignadas | Llamadas API: ${apiCalls}`)
 
   if (DRY_RUN) {
-    console.log('\nCorré con --apply para confirmar.')
+    console.log('\nMuestra de grupos (primeros 25):')
+    let shown = 0
+    for (const [h, recs] of grupos.entries()) {
+      if (shown++ >= 25) break
+      const nombres = recs.map(r => r.nombre).slice(0, 2).join(' | ')
+      console.log(`  [${recs.length}] "${h}" → ${nombres}`)
+    }
+    console.log('\nCorré con --apply para aplicar.')
     return
   }
 
-  // 4. Actualizar en lotes de 50
+  const updates = []
+  let groupCount = 0
+
+  for (const [huella, recs] of grupos.entries()) {
+    groupCount++
+    process.stdout.write(`\r  [${groupCount}/${totalGrupos}] "${huella.slice(0, 45)}"...`)
+    const pool = await fetchPool(huella)
+
+    if (!pool.length) {
+      console.log(`\n  ⚠️  Sin fotos: "${huella}" (${recs.length} recetas)`)
+      continue
+    }
+
+    recs.forEach((r, i) => updates.push({ id: r.id, imagen_url: pool[i % pool.length] }))
+  }
+
+  console.log(`\n\nTotal a actualizar: ${updates.length} | Llamadas API: ${apiCalls}`)
+
   let ok = 0, fail = 0
   for (let i = 0; i < updates.length; i += 50) {
     const lote = updates.slice(i, i + 50)
     await Promise.all(lote.map(async u => {
       const { error: e } = await sb.from('recipes').update({ imagen_url: u.imagen_url }).eq('id', u.id)
-      if (e) { fail++; console.error(`  ✗ ${u.id}: ${e.message}`) }
-      else ok++
+      if (e) fail++; else ok++
     }))
     process.stdout.write(`\r✅ ${ok}/${updates.length}...`)
   }
 
-  console.log(`\n\n🎉 Listo. Actualizadas: ${ok} | Errores: ${fail}`)
+  console.log(`\n\n🎉 Actualizadas: ${ok} | Errores: ${fail}`)
+  const { count } = await sb.from('recipes').select('id', { count: 'exact', head: true }).is('imagen_url', null)
+  console.log(`📊 Pendientes restantes: ${count ?? 0}`)
 }
 
 main().catch(e => { console.error(e); process.exit(1) })
