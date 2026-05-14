@@ -13,7 +13,8 @@ import RecetaPage     from './pages/recipes/RecetaPage'
 import RecetaImprimir from './pages/recipes/RecetaImprimir'
 import UnirsePage        from './pages/invite/UnirsePage'
 import MenuPage          from './pages/menu/MenuPage'
-import RecetasAutoPage   from './pages/admin/RecetasAutoPage'
+import RecetasAutoPage      from './pages/admin/RecetasAutoPage'
+import ImportarRecetaPage   from './pages/ImportarRecetaPage'
 
 function AppRoutes() {
   const { session, loading: authLoading }   = useAuthStore()
@@ -60,6 +61,11 @@ function AppRoutes() {
       <Route path="/receta/:id/imprimir" element={<RecetaImprimir />} />
       {/* Pública — link de invitación */}
       <Route path="/unirse/:token" element={<UnirsePage />} />
+
+      {/* Importar receta desde Shortcut iOS / Web Share Target / link directo */}
+      <Route path="/importar" element={
+        !session ? <Navigate to="/login" replace /> : <ImportarRecetaPage />
+      } />
 
       <Route path="/admin/recetas-auto" element={
         !session ? <Navigate to="/login" replace /> : <RecetasAutoPage />
