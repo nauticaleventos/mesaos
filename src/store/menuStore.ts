@@ -426,16 +426,20 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     // Para cada slot, buscar la receta más fácil y rápida del mismo tipo
     let changed = 0
     for (const entry of upcoming) {
+      // .contains() genera array malformado en PostgREST — filtrar tipo_comida en JS
       const { data } = await supabase
         .from('recipes')
         .select(RECIPE_SELECT)
         .eq('is_active_for_menu', true)
         .eq('dificultad', 'facil')
-        .contains('tipo_comida', [entry.meal_type])
         .order('tiempo_total_min', { ascending: true, nullsFirst: false })
-        .limit(10)
+        .limit(50)
 
-      const candidates = (data ?? [] as RecipeForMenu[]).filter(r => r.id !== entry.recipe_id)
+      const candidates = (data ?? [] as RecipeForMenu[]).filter(r =>
+        r.id !== entry.recipe_id &&
+        Array.isArray(r.tipo_comida) &&
+        r.tipo_comida.includes(entry.meal_type)
+      )
       if (candidates.length === 0) continue
 
       const chosen = candidates[Math.floor(Math.random() * Math.min(3, candidates.length))]
