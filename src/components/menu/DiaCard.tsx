@@ -375,16 +375,17 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
                       {eMembers.length > 3
                         ? <span className="text-xs text-muted">Familia ({eMembers.length})</span>
                         : eMembers.map(m => <span key={m.id} title={m.name??''} className="text-sm leading-none">{m.emoji}</span>)}
-                      {eMembers.length > 1 && eMembers.some(m => calcularMultiplicadorPorcion(m) !== 1.0) && (
-                        <button
-                          onClick={ev => { ev.stopPropagation(); setAjustesRecipe({ name: r.nombre, members: eMembers }) }}
-                          className="text-[10px] text-orange-500 font-medium hover:underline leading-none">
-                          📊 Ver ajustes
-                        </button>
-                      )}
                     </div>
                   </div>
                 </button>
+                {/* Badge ajustes: sibling del botón de navegación */}
+                {eMembers.length > 1 && eMembers.some(m => calcularMultiplicadorPorcion(m) !== 1.0) && (
+                  <button
+                    onClick={() => setAjustesRecipe({ name: r.nombre, members: eMembers })}
+                    className="text-[10px] text-orange-500 font-medium hover:underline leading-none flex-shrink-0 self-start pt-1">
+                    📊
+                  </button>
+                )}
                 {/* Quitar — cualquier receta del desayuno (incluyendo la principal) */}
                 {!isCooked && !isSkipped && (
                   <button onClick={() => quitarComponente(e.id)}
@@ -536,17 +537,18 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
                     {displayMembers.length > 3
                       ? <span className="text-xs text-muted">Familia ({displayMembers.length})</span>
                       : displayMembers.map(m => <span key={m.id} title={m.name??''} className="text-sm leading-none">{m.emoji}</span>)}
-                    {/* Badge ajustes: solo cuando hay 2+ miembros con multiplicadores distintos */}
-                    {displayMembers.length > 1 && displayMembers.some(m => calcularMultiplicadorPorcion(m) !== 1.0) && (
-                      <button
-                        onClick={e => { e.stopPropagation(); setAjustesRecipe({ name: r.nombre, members: displayMembers }) }}
-                        className="text-[10px] text-orange-500 font-medium hover:underline leading-none">
-                        📊 Ver ajustes
-                      </button>
-                    )}
                   </div>
                 )}
               </button>
+
+              {/* Badge ajustes: sibling del botón de navegación, no anidado */}
+              {displayMembers.length > 1 && displayMembers.some(m => calcularMultiplicadorPorcion(m) !== 1.0) && (
+                <button
+                  onClick={() => setAjustesRecipe({ name: r.nombre, members: displayMembers })}
+                  className="text-[10px] text-orange-500 font-medium hover:underline leading-none flex-shrink-0 mt-1 self-start">
+                  📊
+                </button>
+              )}
 
               {/* Quitar — todos los componentes incluyendo proteína */}
               {!isCooked && !isSkipped && (

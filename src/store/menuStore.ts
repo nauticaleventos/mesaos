@@ -446,7 +446,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       set(s => ({
         menu: s.menu.map(e => e.id === entry.id
-          ? { ...e, recipe_id: chosen.id, status: 'swapped', recipe: chosen as RecipeForMenu }
+          ? { ...e, recipe_id: chosen.id, status: 'swapped', dia_dificil: true, recipe: chosen as RecipeForMenu }
           : e
         )
       }))
