@@ -8,7 +8,7 @@ import { useFridgeStore } from '../../store/fridgeStore'
 import { supabase } from '../../lib/supabase'
 import type { FamilyMember } from '../../lib/types'
 import type { Leftover } from '../../store/leftoversStore'
-import { DAY_NAMES_FULL, getMondayOfWeek } from '../../lib/motorMenu'
+import { DAY_NAMES_FULL, getMondayOfWeek, calcularMultiplicadorPorcion } from '../../lib/motorMenu'
 import { calcularMatch, matchBadge } from '../../lib/matchReceta'
 import CambiarSheet from './CambiarSheet'
 
@@ -112,6 +112,62 @@ function agruparPorReceta(entries: EnrichedMenuEntry[], allMembers: FamilyMember
   })
 }
 
+// ── Modal de ajustes de porción ──────────────────────────────────────────────
+function AjustesPorcionModal({
+  recipeName, sharedMembers, onClose,
+}: {
+  recipeName: string
+  sharedMembers: FamilyMember[]
+  onClose: () => void
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pointer-events-none">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm pointer-events-auto">
+          <div className="flex flex-col gap-3 p-5">
+
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-gray-900">📊 Ajustes de porción</p>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+            </div>
+            <p className="text-xs text-gray-500 truncate">{recipeName}</p>
+
+            <div className="flex flex-col gap-2 pt-1">
+              {sharedMembers.map(m => {
+                const mult    = calcularMultiplicadorPorcion(m)
+                const etiqueta = mult < 1 ? 'porción reducida' : mult > 1 ? 'porción extra' : 'porción estándar'
+                const color    = mult < 1 ? 'text-blue-600 bg-blue-50' : mult > 1 ? 'text-green-700 bg-green-50' : 'text-gray-600 bg-gray-50'
+                return (
+                  <div key={m.id} className="flex items-center justify-between py-2 px-3 rounded-xl bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl leading-none">{m.emoji}</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{m.name}</p>
+                        {m.age && <p className="text-xs text-gray-400">{m.age} años</p>}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">×{mult.toFixed(2)}</p>
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${color}`}>
+                        {etiqueta}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <p className="text-[11px] text-gray-400 text-center pt-1">
+              Sugerencias según edad y objetivo. Ajustá según lo que ves.
+            </p>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAddSobrante }: Props) {
   const { marcarCocinada, saltarReceta, restaurarReceta } = useMenuStore()
   const members   = useFamilyStore(s => s.members)
@@ -211,6 +267,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
   const [recetasAgregar, setRecetasAgregar]   = useState<{id:string;nombre:string}[]>([])
   const [ultimoAgregado, setUltimoAgregado]   = useState<{recipeId:string;component:string;nombre:string} | null>(null)
   const [replicando, setReplicando]           = useState(false)
+  const [ajustesRecipe, setAjustesRecipe]     = useState<{ name: string; members: FamilyMember[] } | null>(null)
 
   const visibles = components.filter(e => e.meal_component !== 'vinagreta')
   const main = visibles.find(e => e.is_main_recipe) ?? visibles[0]
@@ -314,10 +371,17 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
                       {r.dificultad && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DIFICULTAD_COLOR[r.dificultad]}`}>{r.dificultad}</span>}
                       {!isCooked && !isSkipped && <span className={`text-[10px] font-medium ${badge.color}`}>{badge.icon}</span>}
                     </div>
-                    <div className="flex items-center gap-1 mt-1">
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
                       {eMembers.length > 3
                         ? <span className="text-xs text-muted">Familia ({eMembers.length})</span>
                         : eMembers.map(m => <span key={m.id} title={m.name??''} className="text-sm leading-none">{m.emoji}</span>)}
+                      {eMembers.length > 1 && eMembers.some(m => calcularMultiplicadorPorcion(m) !== 1.0) && (
+                        <button
+                          onClick={ev => { ev.stopPropagation(); setAjustesRecipe({ name: r.nombre, members: eMembers }) }}
+                          className="text-[10px] text-orange-500 font-medium hover:underline leading-none">
+                          📊 Ver ajustes
+                        </button>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -372,6 +436,14 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
           onCambiar={() => setShowCambiar(true)}
         />
         {showCambiar && <CambiarSheet entry={main} onClose={() => setShowCambiar(false)} />}
+        {ajustesRecipe && (
+          <AjustesPorcionModal
+            recipeName={ajustesRecipe.name}
+
+            sharedMembers={ajustesRecipe.members}
+            onClose={() => setAjustesRecipe(null)}
+          />
+        )}
       </div>
     )
   }
@@ -460,10 +532,18 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
                   </div>
                 )}
                 {displayMembers.length > 0 && (
-                  <div className="flex items-center gap-1 mt-1">
+                  <div className="flex items-center gap-1 mt-1 flex-wrap">
                     {displayMembers.length > 3
                       ? <span className="text-xs text-muted">Familia ({displayMembers.length})</span>
                       : displayMembers.map(m => <span key={m.id} title={m.name??''} className="text-sm leading-none">{m.emoji}</span>)}
+                    {/* Badge ajustes: solo cuando hay 2+ miembros con multiplicadores distintos */}
+                    {displayMembers.length > 1 && displayMembers.some(m => calcularMultiplicadorPorcion(m) !== 1.0) && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setAjustesRecipe({ name: r.nombre, members: displayMembers }) }}
+                        className="text-[10px] text-orange-500 font-medium hover:underline leading-none">
+                        📊 Ver ajustes
+                      </button>
+                    )}
                   </div>
                 )}
               </button>
@@ -538,6 +618,13 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
         onCambiar={() => setShowCambiar(true)}
       />
       {showCambiar && <CambiarSheet entry={main} onClose={() => setShowCambiar(false)} />}
+      {ajustesRecipe && (
+        <AjustesPorcionModal
+          recipeName={ajustesRecipe.name}
+          sharedMembers={ajustesRecipe.members}
+          onClose={() => setAjustesRecipe(null)}
+        />
+      )}
     </div>
   )
 }
