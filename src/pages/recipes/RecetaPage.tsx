@@ -7,6 +7,8 @@ import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore, type FridgeItem } from '../../store/fridgeStore'
 import ClasificacionWizard from '../../components/recipes/ClasificacionWizard'
 import RecipePlaceholder from '../../components/recipes/RecipePlaceholder'
+import PhotosModal from '../../components/recipes/PhotosModal'
+import { useRecipePhotosStore } from '../../store/recipePhotosStore'
 import { calcularNutricion } from '../../lib/claudeImport'
 import { Minus, Plus, Check } from 'lucide-react'
 
@@ -60,6 +62,8 @@ export default function RecetaPage() {
   const [confirmEstelar, setConfirmEstelar] = useState(false)
   const [showWizard, setShowWizard] = useState(false)
   const [showMenu, setShowMenu]   = useState(false)  // ⋯ menu
+  const [showPhotos, setShowPhotos] = useState(false)
+  const { photos, loadPhotos }    = useRecipePhotosStore()
   const [familyRatings, setFamilyRatings] = useState<{ member_id: string; rating: number }[]>([])
   const [loadedRatings, setLoadedRatings] = useState(false)
 
@@ -90,6 +94,11 @@ export default function RecetaPage() {
         })
     }
   }, [id, recipes])
+
+  // Cargar fotos de la receta
+  useEffect(() => {
+    if (id && family?.id) loadPhotos(id, family.id)
+  }, [id, family?.id])
 
   const isOwner = family?.owner_user_id === session?.user?.id
 
@@ -232,6 +241,19 @@ export default function RecetaPage() {
           onConfirm={handleWizardConfirm} onClose={() => setShowWizard(false)} />
       )}
 
+      {showPhotos && id && recipe && (
+        <PhotosModal
+          recipeId={id}
+          recipeName={recipe.nombre}
+          onClose={() => setShowPhotos(false)}
+          onPrimaryChange={(url) => {
+            setRecipe(r => r ? { ...r, imagen_url: url ?? undefined } as Recipe : r)
+            setImgError(false)
+            setImgLoaded(false)
+          }}
+        />
+      )}
+
       {confirmEstelar && !esEstelar && (
         <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-4 pb-8">
           <div className="card w-full max-w-sm flex flex-col gap-4">
@@ -304,6 +326,12 @@ export default function RecetaPage() {
               onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} />
           : <RecipePlaceholder tipo={tc} nombre={recipe.nombre} showName className="w-full h-full" />
         }
+        {/* Botón de fotos */}
+        <button
+          onClick={() => setShowPhotos(true)}
+          className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/50 hover:bg-black/70 text-white text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-sm transition-colors">
+          📷 {photos.length > 0 ? `Mis fotos (${photos.length})` : 'Subir foto'}
+        </button>
       </div>
 
       {/* ── Título + etiquetas ─────────────────────────────────────────── */}
