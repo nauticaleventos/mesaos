@@ -399,7 +399,6 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
   const altMemberIds = new Set(visibles.filter(e => e.member_id !== null && e.is_main_recipe).map(e => e.member_id!))
   const membersFamilia = members.filter(m => !altMemberIds.has(m.id!))
   const hasProtein = components.some(c => c.meal_component === 'proteina' || c.meal_component === 'completo')
-  const hasSalad   = components.some(c => c.meal_component === 'ensalada')
 
   return (
     <div className={`${!isLast ? 'border-b border-border/60' : ''}`}>
