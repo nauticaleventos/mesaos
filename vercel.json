@@ -13,7 +13,7 @@
     },
     {
       "path": "/api/cron-alertas-preparacion",
-      "schedule": "0 * * * *"
+      "schedule": "0 8 * * *"
     }
   ],
   "headers": [
