@@ -11,6 +11,7 @@
 | 5 cont. | 2026-05-10 | Bugs TS, clasificación 266 recetas NULL, unificación ¿Cómo come? |
 | 6 | 2026-05-11 | Fix vegetariano Abel (3 causas raíz), corrección masiva BD, guía recetas |
 | 7 | 2026-05-12 | Botón Sorpréndeme, batch cooking config, cron dominical |
+| 8 | 2026-05-14 | P14 día difícil badge+persistencia, sobras modal centrado, P15 reclasificación recetas, P16 fotos reales usuarios |
 
 ---
 
@@ -58,6 +59,12 @@ Principios:
 - Comunidad: compartir menús entre familias
 - App nativa iOS para Web Share Target
 - Sistema de macros Fase 3: analítica semanal + catálogo latino base
+- **Galería comunitaria de fotos** — ver cómo quedó la receta a otras familias
+  - Crear tabla `photo_votes(id, photo_id, user_id, created_at)`
+  - UI para subir foto con `visibility = 'community'` (hoy solo `family_and_owner`)
+  - Galería pública por receta ordenada por `votes_count DESC`
+  - Moderación básica: flag de reporte + cola de revisión
+  - Infraestructura ya lista: tabla `recipe_photos` con `visibility` y `votes_count`
 
 ---
 
