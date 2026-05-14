@@ -32,10 +32,10 @@ export default function SobradosSheet({ onClose }: Props) {
   return (
     <>
       <div className="fixed inset-0 z-40" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl shadow-2xl max-h-[85vh] overflow-y-auto" style={{ backgroundColor: '#ffffff', isolation: 'isolate' }}>
-        <div className="flex flex-col gap-4 p-5 pb-10">
+      <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl shadow-2xl max-h-[85vh] overflow-y-auto" style={{ background: '#ffffff', isolation: 'isolate' }}>
+        <div className="flex flex-col gap-4 p-5 pb-10" style={{ background: '#ffffff' }}>
 
-          <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto" />
+          <div className="w-10 h-1 rounded-full bg-gray-300 mx-auto" />
 
             {/* Header */}
             <div className="flex items-center justify-between">
