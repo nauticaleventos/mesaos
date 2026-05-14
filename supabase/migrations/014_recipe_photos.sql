@@ -37,7 +37,7 @@ CREATE POLICY "subir fotos miembro familia" ON recipe_photos
 
 CREATE POLICY "borrar mis fotos o si soy owner" ON recipe_photos
   FOR DELETE USING (
-    uploaded_by IN (SELECT id FROM family_members WHERE user_id = auth.uid())
+    uploaded_by IN (SELECT id FROM family_members WHERE linked_user_id = auth.uid())
     OR family_id IN (SELECT id FROM families WHERE owner_user_id = auth.uid())
   );
 
