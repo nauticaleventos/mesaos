@@ -48,7 +48,7 @@ export default function NotificacionesModal({ userId, familyId, onClose }: Props
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={rechazar} />
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-xl p-6 pb-10">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-xl p-6 pb-10" style={{ backgroundColor: '#ffffff', isolation: 'isolate' }}>
         <button onClick={rechazar} className="absolute top-4 right-4 p-1.5 rounded-xl hover:bg-gray-100">
           <X size={18} className="text-muted" />
         </button>

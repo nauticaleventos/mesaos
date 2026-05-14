@@ -68,7 +68,7 @@ export default function PhotosModal({ recipeId, recipeName, onClose, onPrimaryCh
     <>
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none">
-        <div className="bg-white rounded-t-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto pointer-events-auto">
+        <div className="bg-white rounded-t-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto pointer-events-auto" style={{ backgroundColor: '#ffffff', isolation: 'isolate' }}>
           <div className="flex flex-col gap-4 p-5 pb-10">
 
             {/* Header */}

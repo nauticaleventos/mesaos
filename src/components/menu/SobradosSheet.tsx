@@ -34,7 +34,7 @@ export default function SobradosSheet({ onClose }: Props) {
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
 
       <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pointer-events-none">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[85vh] overflow-y-auto pointer-events-auto">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[85vh] overflow-y-auto pointer-events-auto" style={{ backgroundColor: '#ffffff', isolation: 'isolate' }}>
           <div className="flex flex-col gap-4 p-5 pb-6">
 
             {/* Header */}
