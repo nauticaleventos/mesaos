@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { RefreshCw, Printer, Leaf, Zap } from 'lucide-react'
 import { useMenuStore } from '../../store/menuStore'
 import { useLeftoversStore } from '../../store/leftoversStore'
@@ -135,8 +136,11 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
         />
       ))}
 
-      {showSobrados   && <SobradosSheet    onClose={() => setShowSobrados(false)} />}
       {showDiaDificil && <DiaDificilSheet onClose={() => setShowDiaDificil(false)} />}
+      {showSobrados   && createPortal(
+        <SobradosSheet onClose={() => setShowSobrados(false)} />,
+        document.body
+      )}
     </div>
   )
 }
