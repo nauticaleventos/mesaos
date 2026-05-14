@@ -26,7 +26,8 @@ try {
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || ''
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY || ''
-const UNSPLASH_KEY = process.env.UNSPLASH_ACCESS_KEY || 'iB43hLvYzVEwCP52_pK0ejcoSOAfBpsNfMFK3zjs158'
+const UNSPLASH_KEY = process.env.UNSPLASH_ACCESS_KEY || ''
+if (!UNSPLASH_KEY) { console.error('Falta UNSPLASH_ACCESS_KEY en .env'); process.exit(1) }
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY)
 
