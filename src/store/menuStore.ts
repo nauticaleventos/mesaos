@@ -398,7 +398,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   // ── Simplificar las próximas N comidas (modo día difícil) ──────────────────
-  simplificarComidas: async (_familyId, cuantas) => {
+  simplificarComidas: async (familyId, cuantas) => {
     const todayDate  = new Date()
     // day_of_week 1=lun … 7=dom; getDay() 0=dom
     const jsDay      = todayDate.getDay()
@@ -452,6 +452,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       }))
       changed++
     }
+
+    // Recargar desde BD para asegurar que la UI refleja el estado real
+    await get().loadMenu(familyId, getMondayOfWeek())
 
     return changed
   },
