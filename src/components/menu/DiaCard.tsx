@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, SkipForward, Clock, ChefHat, ExternalLink, RefreshCw, RotateCcw, Plus, Trash2 } from 'lucide-react'
+import { Check, SkipForward, Clock, ExternalLink, RefreshCw, RotateCcw, Plus, Trash2 } from 'lucide-react'
+import RecipePlaceholder from '../recipes/RecipePlaceholder'
 import { useMenuStore, type EnrichedMenuEntry } from '../../store/menuStore'
 import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore } from '../../store/fridgeStore'
@@ -302,7 +303,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
                   <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-accent-light">
                     {r.imagen_url
                       ? <img src={r.imagen_url} alt={r.nombre} className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center"><ChefHat size={16} color="#E76F51" /></div>}
+                      : <RecipePlaceholder tipo={(r as typeof r & { tipo_componente?: string }).tipo_componente} showName={false} className="w-full h-full" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-text leading-snug">

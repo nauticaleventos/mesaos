@@ -6,6 +6,7 @@ import { useRecipesStore, type Recipe } from '../../store/recipesStore'
 import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore, type FridgeItem } from '../../store/fridgeStore'
 import ClasificacionWizard from '../../components/recipes/ClasificacionWizard'
+import RecipePlaceholder from '../../components/recipes/RecipePlaceholder'
 import { calcularNutricion } from '../../lib/claudeImport'
 import { Minus, Plus, Check } from 'lucide-react'
 
@@ -184,15 +185,17 @@ export default function RecetaPage() {
     return <div className="min-h-screen flex items-center justify-center"><p className="text-muted text-sm">Cargando receta...</p></div>
   }
 
+  const tc = (recipe as Recipe & { tipo_componente?: string }).tipo_componente
+
   // ── Vista pública (sin sesión) ────────────────────────────────────────────
   if (!session) {
     const returnUrl = encodeURIComponent(`/receta/${id}`)
     return (
       <div className="min-h-screen max-w-lg mx-auto">
         <div className="relative h-56 bg-accent-light overflow-hidden">
-          <img src={recipe.imagen_url ?? `https://source.unsplash.com/featured/800x500/?${encodeURIComponent(recipe.nombre + ' food')}`}
-            alt={recipe.nombre} className="w-full h-full object-cover"
-            onError={e => (e.currentTarget.style.display = 'none')} />
+          {recipe.imagen_url
+            ? <img src={recipe.imagen_url} alt={recipe.nombre} className="w-full h-full object-cover" />
+            : <RecipePlaceholder tipo={tc} nombre={recipe.nombre} showName className="w-full h-full" />}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           <div className="absolute bottom-4 left-4 right-4">
             <p className="text-white text-2xl font-semibold leading-tight">{recipe.nombre}</p>
@@ -213,11 +216,10 @@ export default function RecetaPage() {
     )
   }
 
-  const imgSrc      = recipe.imagen_url ?? `https://source.unsplash.com/featured/800x500/?${encodeURIComponent(recipe.nombre.split(' ').slice(0,3).join(' ') + ' food')}`
-  const nut         = recipe.info_nutricional_aprox
+  const imgSrc        = recipe.imagen_url ?? null
+  const nut           = recipe.info_nutricional_aprox
   const basePorciones = recipe.porciones ?? 4
-  const factor      = basePorciones > 0 ? porcionesActual / basePorciones : 1
-  const tc          = (recipe as Recipe & { tipo_componente?: string }).tipo_componente
+  const factor        = basePorciones > 0 ? porcionesActual / basePorciones : 1
 
   return (
     <div className="min-h-screen pb-28 max-w-lg mx-auto">
@@ -295,26 +297,13 @@ export default function RecetaPage() {
       </div>
 
       {/* ── Foto grande ────────────────────────────────────────────────── */}
-      <div className="relative w-full aspect-[4/3] bg-accent-light overflow-hidden">
-        {!imgError && (
-          <img src={imgSrc} alt={recipe.nombre}
-            className={`w-full h-full object-cover transition-opacity duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
-            onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} />
-        )}
-        {(!imgLoaded || imgError) && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-accent-light to-accent/30">
-            <span className="text-8xl">{TIPO_ICONS[recipe.tipo_comida?.[0]] ?? '🍽️'}</span>
-          </div>
-        )}
-        {/* Crédito */}
-        {recipe.imagen_credito && imgLoaded && (
-          <div className="absolute bottom-2 right-2">
-            <a href={recipe.imagen_credito.perfil_url} target="_blank" rel="noopener noreferrer"
-              className="text-[10px] text-white/70 bg-black/30 px-2 py-0.5 rounded-full hover:bg-black/50 transition-colors">
-              📷 {recipe.imagen_credito.fotografo}
-            </a>
-          </div>
-        )}
+      <div className="relative w-full aspect-[4/3] overflow-hidden">
+        {imgSrc && !imgError
+          ? <img src={imgSrc} alt={recipe.nombre}
+              className={`w-full h-full object-cover transition-opacity duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+              onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} />
+          : <RecipePlaceholder tipo={tc} nombre={recipe.nombre} showName className="w-full h-full" />
+        }
       </div>
 
       {/* ── Título + etiquetas ─────────────────────────────────────────── */}

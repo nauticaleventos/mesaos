@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { ChefHat } from 'lucide-react'
 import type { Recipe } from '../../store/recipesStore'
 import type { FridgeItem } from '../../store/fridgeStore'
+import RecipePlaceholder from './RecipePlaceholder'
 
 interface Props {
   recipe:      Recipe
@@ -43,8 +43,7 @@ export default function RecipeCard({ recipe, fridgeItems, dragX = 0, dragY = 0, 
   const [selectedStars, setSelectedStars] = useState(0)
   const [poppingStar, setPoppingStar]   = useState<number | null>(null)
 
-  const imgSrc = recipe.imagen_url
-    ?? `https://source.unsplash.com/featured/800x600/?${encodeURIComponent(recipe.nombre.split(' ').slice(0,3).join(' ') + ' food')}`
+  const imgSrc = recipe.imagen_url ?? null
   const dif  = recipe.dificultad ? DIFICULTAD_MAP[recipe.dificultad] : null
   const nut  = recipe.info_nutricional_aprox
   const { have, total } = countMatches(recipe, fridgeItems)
@@ -71,7 +70,7 @@ export default function RecipeCard({ recipe, fridgeItems, dragX = 0, dragY = 0, 
 
       {/* ── Foto — 55% de la altura ── */}
       <div className="relative overflow-hidden" style={{ height: '52vw', maxHeight: '280px', minHeight: '180px' }}>
-        {!imgError && (
+        {imgSrc && !imgError && (
           <img
             src={imgSrc}
             alt={recipe.nombre}
@@ -80,11 +79,13 @@ export default function RecipeCard({ recipe, fridgeItems, dragX = 0, dragY = 0, 
             onError={() => setImgError(true)}
           />
         )}
-        {(!imgLoaded || imgError) && (
-          <div className="absolute inset-0 flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #FFCDB2 0%, #E76F51 100%)' }}>
-            <ChefHat size={64} color="white" strokeWidth={1.2} />
-          </div>
+        {(!imgSrc || !imgLoaded || imgError) && (
+          <RecipePlaceholder
+            tipo={(recipe as Recipe & { tipo_componente?: string }).tipo_componente}
+            nombre={recipe.nombre}
+            showName
+            className="absolute inset-0"
+          />
         )}
 
         {/* Swipe overlays */}
