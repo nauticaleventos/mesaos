@@ -268,6 +268,23 @@ function esCompatibleConMiembro(recipe: RecipeForMenu, m: FamilyMember): boolean
   return true
 }
 
+/**
+ * Multiplicador de porción por miembro según edad y objetivo.
+ * Base = 1 porción estándar de la receta.
+ */
+export function calcularMultiplicadorPorcion(m: FamilyMember): number {
+  const age  = m.age ?? 18
+  if (age < 6)  return 0.50   // bebé/niño pequeño
+  if (age < 12) return 0.65   // niño escolar
+  if (age < 16) return 0.85   // adolescente
+
+  const goal = m.goal
+  if (goal === 'deficit' || goal === 'deficit_agresivo') return 0.80
+  if (goal === 'volumen' || goal === 'crecimiento')       return 1.15
+
+  return 1.0
+}
+
 /** Score de inventario usando calcularMatch (esenciales 80% + opcionales 20% + sustituciones) */
 function scoreInventario(recipe: RecipeForMenu, fridge: FridgeItemMin[]): number {
   // Sin ingredientes → no podemos verificar disponibilidad → penalizar (no premiar)
