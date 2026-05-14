@@ -7,6 +7,7 @@ import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore, type FridgeItem } from '../../store/fridgeStore'
 import ClasificacionWizard from '../../components/recipes/ClasificacionWizard'
 import RecipePlaceholder from '../../components/recipes/RecipePlaceholder'
+import { calcularMultiplicadorPorcion } from '../../lib/motorMenu'
 import PhotosModal from '../../components/recipes/PhotosModal'
 import { useRecipePhotosStore } from '../../store/recipePhotosStore'
 import { calcularNutricion } from '../../lib/claudeImport'
@@ -506,6 +507,38 @@ export default function RecetaPage() {
           </div>
         )}
       </div>
+
+      {/* ── Al servir ─────────────────────────────────────────────────── */}
+      {(() => {
+        const activos = members.filter(m => calcularMultiplicadorPorcion(m) !== 1.0)
+        if (activos.length < 1) return null
+        return (
+          <>
+            <Divider />
+            <div className="px-4 py-3">
+              <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Al servir</p>
+              <div className="flex flex-col gap-2">
+                {members.map(m => {
+                  const mult = calcularMultiplicadorPorcion(m)
+                  const ref =
+                    mult <= 0.65 ? '½ 🍗 · ½ 🍚' :
+                    mult <= 0.80 ? '¾ 🍗 · ¾ 🍚' :
+                    mult >= 1.15 ? '1¼ 🍗 · 1¼ 🍚' :
+                                   '1 🍗 · 1 🍚'
+                  return (
+                    <div key={m.id} className="flex items-center gap-2">
+                      <span className="text-lg leading-none">{m.emoji}</span>
+                      <span className="text-sm text-text font-medium">{m.name}</span>
+                      <span className="text-sm text-muted">{ref}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-[10px] text-muted mt-2">🍗 palma = proteína · 🍚 puñado = grano/carb</p>
+            </div>
+          </>
+        )
+      })()}
 
       {/* ── Pasos con checkmark ────────────────────────────────────────── */}
       {recipe.pasos?.length > 0 && (
