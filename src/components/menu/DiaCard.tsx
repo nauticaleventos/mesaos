@@ -371,21 +371,28 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
                       {r.dificultad && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DIFICULTAD_COLOR[r.dificultad]}`}>{r.dificultad}</span>}
                       {!isCooked && !isSkipped && <span className={`text-[10px] font-medium ${badge.color}`}>{badge.icon}</span>}
                     </div>
-                    <div className="flex items-center gap-1 mt-1 flex-wrap">
-                      {eMembers.length > 3
-                        ? <span className="text-xs text-muted">Familia ({eMembers.length})</span>
-                        : eMembers.map(m => <span key={m.id} title={m.name??''} className="text-sm leading-none">{m.emoji}</span>)}
+                    <div className="flex flex-col gap-0.5 mt-1">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {eMembers.length > 3
+                          ? <span className="text-xs text-muted">Familia ({eMembers.length})</span>
+                          : eMembers.map(m => <span key={m.id} title={m.name??''} className="text-sm leading-none">{m.emoji}</span>)}
+                      </div>
+                      {eMembers.length > 1 && eMembers.some(m => calcularMultiplicadorPorcion(m) !== 1.0) && (
+                        <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                          {eMembers.map(m => {
+                            const mult = calcularMultiplicadorPorcion(m)
+                            const label = mult < 1 ? 'porción reducida' : mult > 1 ? 'porción extra' : 'normal'
+                            return (
+                              <span key={m.id} className="text-[10px] text-muted">
+                                {m.emoji} {m.name}: {label}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </button>
-                {/* Badge ajustes: sibling del botón de navegación */}
-                {eMembers.length > 1 && eMembers.some(m => calcularMultiplicadorPorcion(m) !== 1.0) && (
-                  <button
-                    onClick={() => setAjustesRecipe({ name: r.nombre, members: eMembers })}
-                    className="text-[10px] text-orange-500 font-medium hover:underline leading-none flex-shrink-0 self-start pt-1">
-                    📊
-                  </button>
-                )}
                 {/* Quitar — cualquier receta del desayuno (incluyendo la principal) */}
                 {!isCooked && !isSkipped && (
                   <button onClick={() => quitarComponente(e.id)}
@@ -533,22 +540,29 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
                   </div>
                 )}
                 {displayMembers.length > 0 && (
-                  <div className="flex items-center gap-1 mt-1 flex-wrap">
-                    {displayMembers.length > 3
-                      ? <span className="text-xs text-muted">Familia ({displayMembers.length})</span>
-                      : displayMembers.map(m => <span key={m.id} title={m.name??''} className="text-sm leading-none">{m.emoji}</span>)}
+                  <div className="flex flex-col gap-0.5 mt-1">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {displayMembers.length > 3
+                        ? <span className="text-xs text-muted">Familia ({displayMembers.length})</span>
+                        : displayMembers.map(m => <span key={m.id} title={m.name??''} className="text-sm leading-none">{m.emoji}</span>)}
+                    </div>
+                    {/* Porciones inline — visible sin tocar nada */}
+                    {displayMembers.length > 1 && displayMembers.some(m => calcularMultiplicadorPorcion(m) !== 1.0) && (
+                      <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                        {displayMembers.map(m => {
+                          const mult = calcularMultiplicadorPorcion(m)
+                          const label = mult < 1 ? 'porción reducida' : mult > 1 ? 'porción extra' : 'normal'
+                          return (
+                            <span key={m.id} className="text-[10px] text-muted">
+                              {m.emoji} {m.name}: {label}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </button>
-
-              {/* Badge ajustes: sibling del botón de navegación, no anidado */}
-              {displayMembers.length > 1 && displayMembers.some(m => calcularMultiplicadorPorcion(m) !== 1.0) && (
-                <button
-                  onClick={() => setAjustesRecipe({ name: r.nombre, members: displayMembers })}
-                  className="text-[10px] text-orange-500 font-medium hover:underline leading-none flex-shrink-0 mt-1 self-start">
-                  📊
-                </button>
-              )}
 
               {/* Quitar — todos los componentes incluyendo proteína */}
               {!isCooked && !isSkipped && (
