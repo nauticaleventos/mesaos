@@ -600,10 +600,12 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           }
           if (compatCount === 0) continue
           // Bonus por preparación compartida: más personas → menos trabajo
-          const shareBonus = compatCount * 20
+          // ×50 por persona + 100 extra si la receta es compatible con TODOS (máxima preferencia)
+          const shareBonus    = compatCount * 50
+          const allShareBonus = compatCount === slotMembers.length ? 100 : 0
           // Bonus batch: recetas fáciles/rápidas se priorizan si se cocina poco
           const batchBonus = isBatch && (r.dificultad === 'facil' || (r.tiempo_total_min ?? 999) <= 20) ? 25 : 0
-          const combined = sumScore + shareBonus + batchBonus
+          const combined = sumScore + shareBonus + allShareBonus + batchBonus
           if (combined > baseScore) { baseScore = combined; baseRecipe = r }
         }
 
