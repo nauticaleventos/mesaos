@@ -42,6 +42,29 @@ const CATEGORIA_A_PASILLO: Record<string, string> = {
   otro:            'otros',
 }
 
+// Override de pasillo por nombre — corrige categorías inconsistentes en BD
+const NOMBRE_A_PASILLO: Record<string, string> = {
+  banano: 'frutas_verduras', platano: 'frutas_verduras', mango: 'frutas_verduras',
+  fresa: 'frutas_verduras', fresas: 'frutas_verduras', uva: 'frutas_verduras', uvas: 'frutas_verduras',
+  kiwi: 'frutas_verduras', pera: 'frutas_verduras', manzana: 'frutas_verduras',
+  naranja: 'frutas_verduras', mandarina: 'frutas_verduras', limon: 'frutas_verduras',
+  aguacate: 'frutas_verduras', tomate: 'frutas_verduras', cebolla: 'frutas_verduras',
+  ajo: 'frutas_verduras', zanahoria: 'frutas_verduras', coliflor: 'frutas_verduras',
+  brocoli: 'frutas_verduras', espinaca: 'frutas_verduras', lechuga: 'frutas_verduras',
+  pepino: 'frutas_verduras', pimenton: 'frutas_verduras', apio: 'frutas_verduras',
+  cilantro: 'frutas_verduras', perejil: 'frutas_verduras', oregano: 'aceites_condimentos',
+  sal: 'aceites_condimentos', pimienta: 'aceites_condimentos', comino: 'aceites_condimentos',
+  canela: 'aceites_condimentos', azucar: 'aceites_condimentos', panela: 'aceites_condimentos',
+  aceite: 'aceites_condimentos', vinagre: 'aceites_condimentos',
+  arroz: 'granos_pastas', pasta: 'granos_pastas', harina: 'granos_pastas',
+  avena: 'granos_pastas', quinua: 'granos_pastas', lentejas: 'granos_pastas',
+  frijol: 'granos_pastas', frijoles: 'granos_pastas', garbanzo: 'granos_pastas',
+  leche: 'lacteos_huevos', queso: 'lacteos_huevos', yogurt: 'lacteos_huevos',
+  huevo: 'lacteos_huevos', huevos: 'lacteos_huevos', mantequilla: 'lacteos_huevos',
+  crema: 'lacteos_huevos',
+  pan: 'panaderia', arepa: 'panaderia', tortilla: 'panaderia',
+}
+
 // Detectar pescadería por nombre (cuando categoria = proteina_animal pero es pescado)
 const PALABRAS_PESCADO = ['pescado','salmon','salmón','tilapia','atun','atún','sardina','bacalao','trucha','merluza','bagre','mojarra','corvina','cachama','robalo']
 function esPescado(nombre: string) {
@@ -73,7 +96,7 @@ const MANTENER_EXACTO = [
 const PREFIJOS_PROC = [
   'jugo de','zumo de','extracto de','esencia de',
   'pasta de','pure de','puro de','crema de','mantequilla de',
-  'harina de','aceite de','vinagre de','salsa de',
+  'harina de','vinagre de','salsa de',
   // Unidades de medida usadas como nombre: "sopera de X" → X
   'cucharada sopera de','cucharadas soperas de',
   'cucharadita de','cucharaditas de',
@@ -259,11 +282,17 @@ async function buildItems(
       }
     }
 
-    // Pasillo
-    let pasillo = CATEGORIA_A_PASILLO[v.categoria] ?? 'otros'
-    if (pasillo === 'carniceria' && esPescado(v.nombre)) pasillo = 'pescaderia'
-    // Huevos → lacteos_huevos
-    if (norm(v.nombre).includes('huevo')) pasillo = 'lacteos_huevos'
+    // Pasillo — override por nombre primero, luego por categoria
+    const nombreNorm = norm(v.nombre)
+    // Buscar override por nombre (palabra exacta o parcial al inicio)
+    const overridePasillo = Object.entries(NOMBRE_A_PASILLO).find(([k]) =>
+      nombreNorm === k || nombreNorm.startsWith(k + ' ') || nombreNorm.endsWith(' ' + k)
+    )?.[1]
+
+    let pasillo = overridePasillo ?? CATEGORIA_A_PASILLO[v.categoria] ?? 'otros'
+    if (!overridePasillo && pasillo === 'carniceria' && esPescado(v.nombre)) pasillo = 'pescaderia'
+    if (!overridePasillo && norm(v.nombre).includes('huevo')) pasillo = 'lacteos_huevos'
+    if (!overridePasillo && (norm(v.nombre).startsWith('aceite'))) pasillo = 'aceites_condimentos'
 
     result.push({
       ingrediente_nombre: v.nombre,
