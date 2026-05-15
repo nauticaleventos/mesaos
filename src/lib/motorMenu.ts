@@ -685,6 +685,22 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           if (combined > baseScore) { baseScore = combined; baseRecipe = r }
         }
 
+        // Fallback: pool agotado por deduplicación semanal → permitir repetición
+        if (!baseRecipe) {
+          for (const r of pool) {
+            let sumScore = 0; let compatCount = 0
+            for (const m of slotMembers) {
+              if (!esCompatibleConMiembro(r, m)) continue
+              const mUsed = new Set<string>()   // ignorar historial semanal
+              const s = calcularScore(r, input, mUsed, 0, new Set([m.id!]), isDayFinde, tipo)
+              if (s >= 0) { sumScore += s; compatCount++ }
+            }
+            if (compatCount === 0) continue
+            const combined = sumScore + compatCount * 50 + (compatCount === slotMembers.length ? 100 : 0)
+            if (combined > baseScore) { baseScore = combined; baseRecipe = r }
+          }
+        }
+
         if (!baseRecipe) continue
 
         usedToday.add(baseRecipe.id)
