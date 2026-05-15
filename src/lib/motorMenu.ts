@@ -774,9 +774,12 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         }
 
         // 4. Construir componentes
+        // memberId=null significa "toda la familia" — solo usarlo cuando el slot
+        // incluye a TODOS los miembros de la familia (no un subconjunto como "solo Sarah")
         const components: MenuComponent[] = []
+        const slotEsTodaLaFamilia = slotMembers.length === allMembers.length
 
-        if (onBase.length === slotMembers.length) {
+        if (onBase.length === slotMembers.length && slotEsTodaLaFamilia) {
           components.push({ component: 'completo', recipe: baseRecipe, memberId: null, servings: slotServings })
         } else {
           for (const id of onBase) {
