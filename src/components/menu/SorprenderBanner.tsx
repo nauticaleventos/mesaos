@@ -86,6 +86,15 @@ export default function SorprenderBanner({ familyId }: { familyId: string }) {
 
     if (!recetas || recetas.length === 0) { setFase('vacio'); return }
 
+    // Sobras pendientes esta semana
+    const { data: leftoversData } = await supabase
+      .from('weekly_leftovers')
+      .select('ingredient_name')
+      .eq('family_id', familyId)
+    const leftovers = (leftoversData ?? []).map((l: { ingredient_name: string }) =>
+      l.ingredient_name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    )
+
     // Score de nevera para cada candidata
     const scored: RecetaSugerida[] = recetas
       .filter(r => !usadasSet.has(r.id))
@@ -97,14 +106,22 @@ export default function SorprenderBanner({ familyId }: { familyId: string }) {
         const esRapida    = (r.tiempo_total_min ?? 999) <= 30
         const esFacil     = r.dificultad === 'facil'
 
+        // Bonus sobras: receta usa algún sobrante
+        const sobraUsada = leftovers.find(lft =>
+          ings.some((i: { nombre: string }) => i.nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(lft) ||
+                         lft.includes(i.nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')))
+        )
+
         const score =
           match.porcentaje * 0.40 +
           (tieneRating ? 25 : 0) +
           (esCena && esRapida ? 20 : 0) +
-          (esFacil ? 15 : 0)
+          (esFacil ? 15 : 0) +
+          (sobraUsada ? 200 : 0)
 
         // Generar razones legibles
         const razones: string[] = []
+        if (sobraUsada) razones.push(`♻️ Usa tu sobra de ${sobraUsada}`)
         if (match.porcentaje === 100) razones.push('Tenés todos los ingredientes')
         else if (match.porcentaje >= 80) {
           const faltantes = match.faltantes.slice(0, 2).join(', ')
