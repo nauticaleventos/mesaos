@@ -131,7 +131,6 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
           dayOfWeek={i + 1}
           date={days[i]}
           entries={byDay(i + 1)}
-          leftovers={leftovers}
           onAddSobrante={() => setShowSobrados(true)}
         />
       ))}

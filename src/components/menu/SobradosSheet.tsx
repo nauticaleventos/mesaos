@@ -56,7 +56,7 @@ export default function SobradosSheet({ onClose }: Props) {
       const checkDow = ((isoDow - 1 + offset) % 7) + 1
       for (const meal of MEAL_ORDER) {
         if (offset === 0 && h >= MEAL_AFTER[meal]) continue
-        const exists = menu.some(e => e.day_of_week === checkDow && e.meal_type === meal)
+        const exists = menu.some(e => e.day_of_week === checkDow && e.meal_type.toLowerCase() === meal)
         if (exists) {
           const dayLabel = offset === 0 ? 'hoy' : offset === 1 ? 'mañana' : `día ${checkDow}`
           return { dayOfWeek: checkDow, mealType: meal, label: `${MEAL_LABEL[meal]} de ${dayLabel}` }

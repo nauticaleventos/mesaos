@@ -7,7 +7,6 @@ import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore } from '../../store/fridgeStore'
 import { supabase } from '../../lib/supabase'
 import type { FamilyMember } from '../../lib/types'
-import type { Leftover } from '../../store/leftoversStore'
 import { DAY_NAMES_FULL, getMondayOfWeek, calcularMultiplicadorPorcion } from '../../lib/motorMenu'
 import { calcularMatch, matchBadge } from '../../lib/matchReceta'
 import CambiarSheet from './CambiarSheet'
@@ -16,7 +15,6 @@ interface Props {
   dayOfWeek:      number
   date:           Date
   entries:        EnrichedMenuEntry[]
-  leftovers?:     Leftover[]
   onAddSobrante?: () => void
 }
 
@@ -169,7 +167,7 @@ function AjustesPorcionModal({
   )
 }
 
-export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAddSobrante }: Props) {
+export default function DiaCard({ dayOfWeek, date, entries, onAddSobrante }: Props) {
   const { marcarCocinada, saltarReceta, restaurarReceta } = useMenuStore()
   const members   = useFamilyStore(s => s.members)
   const menuConfig = useMenuStore(s => s.config)
@@ -221,7 +219,6 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
           dayOfWeek={dayOfWeek}
           components={components}
           members={members}
-          leftovers={['almuerzo','cena'].includes(tipo.toLowerCase()) ? leftovers : []}
           onAddSobrante={onAddSobrante}
           onCocinada={() => {
             const main = components.find(e => e.is_main_recipe) ?? components[0]
@@ -242,13 +239,12 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
   )
 }
 
-function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers, onAddSobrante, onCocinada, onSaltar, onRestaurar, isLast }: {
+function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobrante, onCocinada, onSaltar, onRestaurar, isLast }: {
   tipo:           string
   mealTime?:      string
   dayOfWeek:      number
   components:     EnrichedMenuEntry[]
   members:        FamilyMember[]
-  leftovers:      Leftover[]
   onAddSobrante?: () => void
   onCocinada:     () => void
   onSaltar:       () => void
@@ -601,17 +597,6 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
             )}
           </div>
         ))}
-
-        {/* Sobrantes pendientes (chips) */}
-        {leftovers.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-1 pl-7">
-            {leftovers.map(l => (
-              <span key={l.id} className="px-2 py-1 rounded-full bg-oliva/10 border border-oliva/20 text-xs text-oliva font-medium">
-                🍗 {l.ingredient_name}{l.quantity ? ` · ${l.quantity}` : ''}
-              </span>
-            ))}
-          </div>
-        )}
 
         {!hasProtein && customEntries.length === 0 && !isSkipped && (
           <button onClick={onAddSobrante}
