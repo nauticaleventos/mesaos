@@ -61,7 +61,7 @@ export default function MercadoPage() {
     (busqueda === '' || i.ingrediente_nombre.toLowerCase().includes(busqueda.toLowerCase()))
   )
 
-  // Agrupar por pasillo o alfabético
+  // Agrupar por pasillo o alfabético — siempre ordenar dentro de cada grupo
   const porPasillo = new Map<string, ShoppingListItem[]>()
   if (orden === 'pasillo') {
     for (const item of itemsFiltrados) {
@@ -75,6 +75,13 @@ export default function MercadoPage() {
       a.ingrediente_nombre.localeCompare(b.ingrediente_nombre, 'es')
     )
     if (sorted.length > 0) porPasillo.set('_alpha', sorted)
+  }
+
+  // Ordenar alfabéticamente dentro de cada pasillo
+  for (const [p, arr] of porPasillo.entries()) {
+    porPasillo.set(p, arr.sort((a, b) =>
+      a.ingrediente_nombre.localeCompare(b.ingrediente_nombre, 'es')
+    ))
   }
 
   const pasillosConItems = orden === 'pasillo'
