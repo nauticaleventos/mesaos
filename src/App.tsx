@@ -45,10 +45,12 @@ function AppRoutes() {
       <Route path="/signup" element={!session ? <SignupPage /> : <Navigate to="/" replace />} />
 
       {/* Bienvenida Tita: solo la primera vez, post-signup, sin familia */}
+      {/* ?preview=true permite verla aunque ya exista familia (solo testing) */}
       <Route path="/bienvenida" element={
         !session ? <Navigate to="/login" replace />
-        : family  ? <Navigate to="/" replace />
-        : <BienvenidaPage />
+        : (family && !new URLSearchParams(window.location.search).has('preview'))
+          ? <Navigate to="/" replace />
+          : <BienvenidaPage />
       } />
 
       {/* Onboarding: solo si no tiene familia aún */}
