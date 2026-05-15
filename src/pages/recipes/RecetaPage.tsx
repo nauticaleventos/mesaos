@@ -69,7 +69,7 @@ export default function RecetaPage() {
   const [loadedRatings, setLoadedRatings] = useState(false)
 
   // Porciones dinámicas
-  const [porcionesActual, setPorcionesActual] = useState<number>(4)
+  const [porcionesActual, setPorcionesActual] = useState<number>(() => Math.max(members.length, 1))
 
   // Pasos completados (modo cocina)
   const [pasosCheck, setPasosCheck]   = useState(new Set<number>())
@@ -80,7 +80,7 @@ export default function RecetaPage() {
     const found = recipes.find(r => r.id === id)
     if (found) {
       setRecipe(found)
-      setPorcionesActual(found.porciones ?? 4)
+      setPorcionesActual(Math.max(members.length, 1))
       setEsEstelar(!!(found as Recipe & { es_para_lucirse?: boolean }).es_para_lucirse)
       return
     }

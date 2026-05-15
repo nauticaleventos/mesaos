@@ -527,6 +527,9 @@ function calcularScore(
   const pesoInventario = nv2 >= 60 ? 0.60 : nv2 >= 40 ? 0.50 : 0.40
   const pesoOtros      = 1 - pesoInventario
 
+  // Ruido aleatorio ±8 para romper empates y generar variedad en cada regeneración
+  const sRandom = (Math.random() - 0.5) * 16
+
   return (
     sInventario  * pesoInventario +
     sSugerencia  * (0.20 * pesoOtros / 0.65) +
@@ -534,7 +537,8 @@ function calcularScore(
     sVariedad    * (0.15 * pesoOtros / 0.65) +
     lovesBonus   * (0.10 * pesoOtros / 0.65) +
     sProtein     +
-    favRecipeBonus
+    favRecipeBonus +
+    sRandom
   )
 }
 
