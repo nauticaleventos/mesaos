@@ -274,7 +274,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
 
   const isCooked     = main?.status === 'cooked'
   const isSkipped    = main?.status === 'skipped'
-  const isDiaDificil = !!(main as (typeof main & { dia_dificil?: boolean }) | undefined)?.dia_dificil
+  const isDiaDificil = !!main?.dia_dificil
   const tipoBase  = tipo.toLowerCase()
   const isSimple  = tipoBase === 'desayuno' || tipoBase === 'snack' ||
                     tipoBase.includes('merienda') || tipoBase.includes('snack')

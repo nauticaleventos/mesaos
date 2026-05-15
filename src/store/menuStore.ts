@@ -131,16 +131,19 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     const recipeMap = new Map((recipes ?? []).map(r => [r.id, r]))
 
     const enriched: EnrichedMenuEntry[] = (entries as {
-      id: string; day_of_week: number; meal_type: string; meal_component: string;
-      recipe_id: string | null; nombre_custom?: string; member_id: string | null;
-      is_main_recipe: boolean; servings: number; status: string
+      id: string; day_of_week: number; meal_type: string; meal_time?: string;
+      meal_component: string; recipe_id: string | null; nombre_custom?: string;
+      member_id: string | null; is_main_recipe: boolean; servings: number;
+      status: string; accion_preparacion?: string; dia_dificil?: boolean;
     }[])
       .filter(e => e.recipe_id === null || recipeMap.has(e.recipe_id))
       .map(e => ({
         ...e,
-        meal_component: e.meal_component ?? 'completo',
-        status: e.status as EnrichedMenuEntry['status'],
-        recipe: e.recipe_id ? recipeMap.get(e.recipe_id) as RecipeForMenu : undefined,
+        meal_component:      e.meal_component ?? 'completo',
+        status:              e.status as EnrichedMenuEntry['status'],
+        accion_preparacion:  e.accion_preparacion as EnrichedMenuEntry['accion_preparacion'],
+        dia_dificil:         e.dia_dificil ?? false,
+        recipe:              e.recipe_id ? recipeMap.get(e.recipe_id) as RecipeForMenu : undefined,
       }))
 
     set({ menu: enriched, loading: false })
