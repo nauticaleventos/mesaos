@@ -75,6 +75,17 @@ export async function importFromText(text: string): Promise<RecipeImport> {
   return callImportApi({ type: 'text', content: text })
 }
 
+export async function importFromManualIA(nombre: string, ingredientes: string): Promise<RecipeImport & { missing_info?: string[] | null }> {
+  const res = await fetch('/api/inferir-receta-manual', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ nombre, ingredientes }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`)
+  return data.recipe as RecipeImport & { missing_info?: string[] | null }
+}
+
 export async function importFromUrl(url: string): Promise<RecipeImport> {
   return callImportApi({ type: 'url', content: url })
 }
