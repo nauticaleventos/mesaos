@@ -53,35 +53,78 @@ function norm(s: string) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
 }
 
-// Extrae el ingrediente base para la lista de compras.
-// Solo importa QUÉ comprar, no cómo prepararlo.
-// "1/2 cebolla finamente picada" → "cebolla"
-// "dientes de ajo picado" → "ajo"
-const PREP_WORDS = [
+// ── Sistema de normalización para lista de compras ───────────────────────────
+// Regla: mostrar QUÉ se compra en la tienda, no cómo se prepara en casa.
+
+// Productos que deben mantenerse tal cual (se compran así en la tienda)
+const MANTENER_EXACTO = [
+  'carne molida','carne de res molida','pollo molido','cerdo molido',
+  'tomate cherry','tomates cherry','tomate chonto','tomates chonto',
+  'tomate pera','tomates pera','lomo de cerdo','lomo de res',
+  'pasta de tomate','pasta de aji','pasta de chile',
+  'leche de coco','crema de leche','leche condensada',
+  'pan rallado','pan molido','azucar morena','azucar negra',
+  'arroz integral','arroz blanco','arroz negro',
+  'frijoles negros','frijoles rojos','lentejas verdes','lentejas rojas',
+]
+
+// Prefijos de procesamiento → el ingrediente base es lo que viene después
+// "jugo de limón" → "limón", "pasta de ajo" → "ajo"
+const PREFIJOS_PROC = [
+  'jugo de','zumo de','extracto de','esencia de',
+  'pasta de','pure de','puro de','crema de','mantequilla de',
+  'harina de','aceite de','vinagre de','salsa de',
+]
+
+// Preparaciones que se hacen en CASA (no cambian lo que comprás)
+const PREP_CASA = [
   'picado','picada','picados','picadas',
   'rallado','rallada','rallados','ralladas',
-  'finamente','grueso','gruesa',
-  'triturado','triturada','molido','molida',
-  'cocido','cocida','crudo','cruda',
+  'aplastado','aplastada','aplastados','aplastadas',
+  'exprimido','exprimida','exprimidos','exprimidas',
+  'triturado','triturada','triturados','trituradas',
+  'machacado','machacada','machacados','machacadas',
+  'cocido','cocida','cocidos','cocidas',
+  'crudo','cruda','crudos','crudas',
   'fresco','fresca','frescos','frescas',
   'seco','seca','secos','secas',
+  'troceado','troceada','troceados','troceadas',
+  'cortado','cortada','cortados','cortadas',
+  'rebanado','rebanada','rebanados','rebanadas',
+  'fileteado','fileteada','fileteados','fileteadas',
+  'finamente','grueso','gruesa','gruesos','gruesas',
   'mediano','mediana','medianos','medianas',
-  'grande','grandes','pequeño','pequeña','pequeno','pequena',
-  'fileteado','fileteada','rebanado','rebanada',
-  'troceado','troceada','cortado','cortada',
-  'al gusto','al dente','en rodajas','en cubos','en tiras','en juliana',
+  'al gusto','al dente',
+  'en rodajas','en cubos','en tiras','en juliana','en brunoise',
 ]
 
 function normIngrediente(s: string): string {
   let n = norm(s)
+
   // 1. Quitar números y fracciones al inicio: "1/2 cebolla" → "cebolla"
   n = n.replace(/^[\d\/\.,\s]+/, '').trim()
-  // 2. Quitar unidades de conteo: "dientes de ajo" → "ajo"
-  n = n.replace(/^(dientes?|hojas?|ramas?|cabezas?|trozos?|filetes?|presas?|manojos?|lonjas?|rodajas?|piezas?)\s+de\s+/, '')
-  // 3. Quitar descriptores de preparación (en cualquier posición)
-  for (const p of PREP_WORDS) {
-    n = n.replace(new RegExp(`\\s+${p.replace(/\s/g,'\\s+')}(\\s|$)`, 'g'), ' ').trim()
+
+  // 2. Revisar si es un producto especial que mantener exacto
+  for (const exacto of MANTENER_EXACTO) {
+    if (n.includes(norm(exacto))) return norm(exacto)
   }
+
+  // 3. Quitar prefijos de procesamiento: "jugo de limón" → "limón"
+  for (const pref of PREFIJOS_PROC) {
+    if (n.startsWith(pref)) {
+      n = n.slice(pref.length).trim()
+      break
+    }
+  }
+
+  // 4. Quitar unidades de conteo al inicio: "dientes de ajo" → "ajo"
+  n = n.replace(/^(dientes?|hojas?|ramas?|cabezas?|trozos?|filetes?|presas?|manojos?|lonjas?|rodajas?|piezas?|gotas?)\s+de\s+/, '')
+
+  // 5. Quitar preparaciones de casa en cualquier posición
+  for (const p of PREP_CASA) {
+    n = n.replace(new RegExp(`(^|\\s)${p.replace(/\s+/g,'\\s+')}(\\s|$)`, 'g'), ' ').trim()
+  }
+
   return n.trim()
 }
 
