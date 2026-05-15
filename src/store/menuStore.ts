@@ -230,6 +230,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           slotAttendance.push({
             dayOfWeek:         day,
             mealType:          tipo,
+            mealName:          mealName,
             memberIds:         presentMembers.map(m => m.id!),
             totalServings:     presentMembers.length + guestCount,
             guestRestrictions,

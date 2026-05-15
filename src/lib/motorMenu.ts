@@ -80,10 +80,11 @@ export interface FridgeItemMin {
 export interface SlotAttendance {
   dayOfWeek:          number
   mealType:           MealType
+  mealName:           string        // nombre exacto configurado, ej: "Merienda mañana"
   mealTime?:          string        // hora configurada, ej: "09:00"
   memberIds:          string[]
   totalServings:      number
-  guestRestrictions:  string[]   // restricciones detectadas en notas de invitados
+  guestRestrictions:  string[]
 }
 
 /**
@@ -622,9 +623,12 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
     const usedTodayNames: string[] = []         // para detectar recetas similares en el mismo día
 
     for (const { mealName, mealType: tipo, mealTime } of mealSlots) {
-      // Obtener asistencia específica para este día/comida (buscar por mealName O tipo)
+      // Buscar por mealName exacto primero (distingue "Merienda mañana" de "Merienda tarde"),
+      // luego por mealType como fallback para slots sin nombre custom
       const slot = slotAttendance.find(s =>
-        s.dayOfWeek === day && (s.mealType === tipo || s.mealType === mealName)
+        s.dayOfWeek === day && s.mealName.toLowerCase() === mealName.toLowerCase()
+      ) ?? slotAttendance.find(s =>
+        s.dayOfWeek === day && s.mealType === tipo
       )
       const slotMemberIds  = slot?.memberIds  ?? allMembers.map(m => m.id!)
       const slotServings   = slot?.totalServings ?? allMembers.length
