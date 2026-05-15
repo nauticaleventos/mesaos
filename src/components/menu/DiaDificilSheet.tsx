@@ -46,9 +46,15 @@ export default function DiaDificilSheet({ onClose }: Props) {
   const handleConfirm = async () => {
     if (!selected || !family?.id) return
     setLoading(true)
-    const cambiadas = await simplificarComidas(family.id, selected)
-    setLoading(false)
-    setDone(cambiadas)
+    try {
+      const cambiadas = await simplificarComidas(family.id, selected)
+      setDone(cambiadas)
+    } catch (err) {
+      console.error('simplificarComidas error:', err)
+      setDone(-1)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -77,15 +83,21 @@ export default function DiaDificilSheet({ onClose }: Props) {
           {done !== null ? (
             /* Estado final */
             <div className="flex flex-col items-center gap-4 py-6 text-center">
-              <span className="text-5xl">✅</span>
+              <span className="text-5xl">{done === -1 ? '❌' : '✅'}</span>
               <div>
                 <p className="font-semibold text-text">
-                  {done > 0
-                    ? `${done} comida${done > 1 ? 's' : ''} simplificada${done > 1 ? 's' : ''}`
-                    : 'No encontré recetas más fáciles'}
+                  {done === -1
+                    ? 'Error al simplificar'
+                    : done > 0
+                      ? `${done} comida${done > 1 ? 's' : ''} simplificada${done > 1 ? 's' : ''}`
+                      : 'No encontré recetas más fáciles'}
                 </p>
                 <p className="text-xs text-muted mt-1">
-                  {done > 0 ? 'Las recetas se cambiaron a opciones rápidas y fáciles.' : 'El menú ya tiene las recetas más sencillas disponibles.'}
+                  {done === -1
+                    ? 'Revisá la conexión e intentá de nuevo.'
+                    : done > 0
+                      ? 'Las recetas se cambiaron a opciones rápidas y fáciles.'
+                      : 'El menú ya tiene las recetas más sencillas disponibles.'}
                 </p>
               </div>
               <button onClick={onClose} className="btn-primary max-w-xs">Listo</button>

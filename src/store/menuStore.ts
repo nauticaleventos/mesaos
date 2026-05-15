@@ -468,17 +468,17 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     // Para cada slot, buscar la receta más fácil y rápida del mismo tipo
     let changed = 0
     for (const entry of upcoming) {
-      // .contains() genera array malformado en PostgREST — filtrar tipo_comida en JS
-      const { data } = await supabase
+      const { data, error: recipeError } = await supabase
         .from('recipes')
         .select(RECIPE_SELECT)
         .eq('is_active_for_menu', true)
         .eq('dificultad', 'facil')
-        .order('tiempo_total_min', { ascending: true, nullsFirst: false })
-        .limit(50)
+        .limit(100)
+
+      if (recipeError) throw new Error(`recipes query: ${recipeError.message}`)
 
       const mealTypeLower = entry.meal_type.toLowerCase()
-      const candidates = (data ?? [] as RecipeForMenu[]).filter(r =>
+      const candidates = (data ?? []).filter((r: RecipeForMenu) =>
         r.id !== entry.recipe_id &&
         Array.isArray(r.tipo_comida) &&
         r.tipo_comida.some((t: string) => t.toLowerCase() === mealTypeLower)
@@ -486,10 +486,12 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       if (candidates.length === 0) continue
 
       const chosen = candidates[Math.floor(Math.random() * Math.min(3, candidates.length))]
-      await supabase
+      const { error: updateError } = await supabase
         .from('weekly_menu')
         .update({ recipe_id: chosen.id, status: 'swapped', dia_dificil: true })
         .eq('id', entry.id)
+
+      if (updateError) throw new Error(`weekly_menu update: ${updateError.message}`)
 
       set(s => ({
         menu: s.menu.map(e => e.id === entry.id
@@ -500,7 +502,6 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       changed++
     }
 
-    // Delay 300ms → React renderiza el optimistic update antes de recargar BD
     await new Promise(r => setTimeout(r, 300))
     await get().loadMenu(familyId, getMondayOfWeek())
 
