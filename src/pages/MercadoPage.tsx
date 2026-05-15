@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Printer, Share2 } from 'lucide-react'
+import { RefreshCw, Printer, Share2, Search } from 'lucide-react'
 import { useFamilyStore } from '../store/familyStore'
 import { useFridgeStore } from '../store/fridgeStore'
 import { useMenuStore }   from '../store/menuStore'
@@ -40,6 +40,9 @@ export default function MercadoPage() {
   const { menu }                  = useMenuStore()
   const { listId, items, loading, generating, loadList, generateList, toggleComprado } = useShoppingListStore()
 
+  const [busqueda, setBusqueda] = useState('')
+  const [orden, setOrden]       = useState<'pasillo' | 'alfabetico'>('pasillo')
+
   const weekStart = getMondayOfWeek()
   const tieneMenu = menu.some(e => e.is_main_recipe)
 
@@ -52,16 +55,32 @@ export default function MercadoPage() {
     await generateList(family.id, fridgeItems)
   }
 
-  // Agrupar por pasillo
+  // Filtrar por búsqueda
+  const itemsFiltrados = items.filter(i =>
+    i.faltante &&
+    (busqueda === '' || i.ingrediente_nombre.toLowerCase().includes(busqueda.toLowerCase()))
+  )
+
+  // Agrupar por pasillo o alfabético
   const porPasillo = new Map<string, ShoppingListItem[]>()
-  for (const item of items) {
-    if (!item.faltante && !item.en_nevera) continue // ocultar los que no faltan y no están en nevera
-    const p = item.categoria_pasillo
-    if (!porPasillo.has(p)) porPasillo.set(p, [])
-    porPasillo.get(p)!.push(item)
+  if (orden === 'pasillo') {
+    for (const item of itemsFiltrados) {
+      const p = item.categoria_pasillo
+      if (!porPasillo.has(p)) porPasillo.set(p, [])
+      porPasillo.get(p)!.push(item)
+    }
+  } else {
+    // Orden alfabético — un solo grupo
+    const sorted = [...itemsFiltrados].sort((a, b) =>
+      a.ingrediente_nombre.localeCompare(b.ingrediente_nombre, 'es')
+    )
+    if (sorted.length > 0) porPasillo.set('_alpha', sorted)
   }
 
-  const pasillosConItems = PASILLO_ORDER.filter(p => porPasillo.has(p))
+  const pasillosConItems = orden === 'pasillo'
+    ? PASILLO_ORDER.filter(p => porPasillo.has(p))
+    : porPasillo.has('_alpha') ? ['_alpha'] : []
+
   const totalFaltantes = items.filter(i => i.faltante).length
   const comprados      = items.filter(i => i.comprado).length
 
@@ -151,6 +170,28 @@ export default function MercadoPage() {
         {/* Lista */}
         {!loading && !generating && listId && items.length > 0 && (
           <>
+            {/* Búsqueda y orden */}
+            <div className="flex gap-2 mb-3">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  type="text" placeholder="Buscar ingrediente…"
+                  value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                  className="w-full pl-8 pr-3 py-2 rounded-xl border border-border bg-white text-sm focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div className="flex rounded-xl border border-border overflow-hidden text-xs font-medium">
+                <button onClick={() => setOrden('pasillo')}
+                  className={`px-3 py-2 transition-colors ${orden === 'pasillo' ? 'bg-accent text-white' : 'text-muted hover:bg-gray-50'}`}>
+                  Pasillos
+                </button>
+                <button onClick={() => setOrden('alfabetico')}
+                  className={`px-3 py-2 transition-colors ${orden === 'alfabetico' ? 'bg-accent text-white' : 'text-muted hover:bg-gray-50'}`}>
+                  A–Z
+                </button>
+              </div>
+            </div>
+
             {/* Progreso */}
             {comprados > 0 && (
               <div className="mb-4 p-3 rounded-2xl bg-green-50 border border-green-200">
@@ -166,17 +207,20 @@ export default function MercadoPage() {
 
             {/* Secciones por pasillo */}
             {pasillosConItems.map(pasillo => {
-              const cfg = PASILLOS[pasillo] ?? { emoji: '📦', label: pasillo }
+              const cfg = PASILLOS[pasillo] ?? { emoji: '🔤', label: 'Todos' }
               const pasilloItems = porPasillo.get(pasillo) ?? []
               const todoComprado = pasilloItems.every(i => i.comprado)
+              const esAlpha = pasillo === '_alpha'
 
               return (
                 <div key={pasillo} className={`mb-4 card p-0 overflow-hidden ${todoComprado ? 'opacity-50' : ''}`}>
+                  {!esAlpha && (
                   <div className="px-4 py-2.5 bg-gray-50 border-b border-border flex items-center gap-2">
                     <span className="text-base">{cfg.emoji}</span>
                     <p className="text-xs font-semibold text-muted uppercase tracking-wider">{cfg.label}</p>
                     <span className="ml-auto text-xs text-muted">{pasilloItems.filter(i => !i.comprado).length}</span>
                   </div>
+                  )}
                   <div className="flex flex-col">
                     {pasilloItems.map(item => (
                       <button key={item.id}

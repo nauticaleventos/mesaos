@@ -53,6 +53,17 @@ function norm(s: string) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
 }
 
+// Extrae el ingrediente base eliminando descriptores de preparación y unidades de conteo
+// "dientes de ajo picado" → "ajo"  |  "cebolla finamente picada" → "cebolla"
+function normIngrediente(s: string): string {
+  let n = norm(s)
+  // Eliminar unidades de conteo al inicio: "dientes de", "hojas de", "ramas de", "tazas de", etc.
+  n = n.replace(/^(dientes?|hojas?|ramas?|tazas?|cucharadas?|cucharaditas?|cabezas?|piezas?|lonjas?|rodajas?|trozos?|filetes?|presas?)\s+de\s+/, '')
+  // Eliminar descriptores de preparación al final
+  n = n.replace(/\s+(picado[a]?s?|rallado[a]?s?|finamente|triturado[a]?s?|molido[a]?s?|en\s+\w+|al\s+gusto|fresco[a]?s?|seco[a]?s?|cocido[a]?s?|crudo[a]?s?|mediano[a]?s?|grande[a]?s?|pequen[ao]s?)(\s.*)?$/, '')
+  return n.trim()
+}
+
 // ── Conversión de unidades a base común ───────────────────────────────────────
 type Medida = { cantidad: number; unidad: string }
 
@@ -108,7 +119,9 @@ async function buildItems(
       if (!ing.esencial) continue
       const cantRaw = (ing.cantidad ?? 1) * scale
       const { cantidad: cantBase, unidad: unidadBase } = convertirABase(cantRaw, ing.unidad ?? 'unidades')
-      const clave = `${norm(ing.nombre)}::${unidadBase}`
+      // Usar nombre base normalizado como clave para agrupar variantes del mismo ingrediente
+      const nombreBase = normIngrediente(ing.nombre)
+      const clave = `${nombreBase}::${unidadBase}`
 
       if (acum.has(clave)) {
         const e = acum.get(clave)!
@@ -116,7 +129,7 @@ async function buildItems(
         e.recetas.add(recipe.nombre)
       } else {
         acum.set(clave, {
-          nombre:     ing.nombre,
+          nombre:     nombreBase,  // mostrar nombre limpio
           cantBase,
           unidadBase,
           recetas:    new Set([recipe.nombre]),
