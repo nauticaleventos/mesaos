@@ -162,8 +162,12 @@ const PREP_CASA = [
   'mediano','mediana','medianos','medianas',
   'grande','grandes','pequeno','pequena','pequenos','pequenas',
   'maduro','madura','maduros','maduras',
+  'puro','pura','puros','puras',
+  'entero','entera','enteros','enteras',
+  'natural','naturales',
   'al gusto','al dente',
   'en rodajas','en cubos','en tiras','en juliana','en brunoise',
+  'en trozos','en dados','en laminas','en rebanadas','en mitades',
 ]
 
 function normIngrediente(s: string): string {
@@ -188,10 +192,18 @@ function normIngrediente(s: string): string {
   // 4. Quitar unidades de conteo al inicio: "dientes de ajo" → "ajo"
   n = n.replace(/^(dientes?|hojas?|ramas?|cabezas?|trozos?|filetes?|presas?|manojos?|lonjas?|rodajas?|piezas?|gotas?)\s+de\s+/, '')
 
+  // 4b. Quitar unidades de medida embebidas al inicio: "taza de zanahoria" → "zanahoria"
+  //     (puede quedar después del strip de número si el ingresado era "1 taza de zanahoria")
+  n = n.replace(/^(tazas?|cucharadas?|cucharaditas?|soperas?|gramos?|kilos?|litros?|mililitros?)\s+(de\s+)?/, '')
+
   // 5. Quitar preparaciones de casa en cualquier posición
   for (const p of PREP_CASA) {
     n = n.replace(new RegExp(`(^|\\s)${p.replace(/\s+/g,'\\s+')}(\\s|$)`, 'g'), ' ').trim()
   }
+
+  // 5b. Quitar todo lo que venga después de "para", "con" si es descriptivo
+  // "zanahoria para sopa" → "zanahoria"
+  n = n.replace(/\s+(para|con)\s+.*$/, '').trim()
 
   // 6. Aplicar aliases explícitos
   if (ALIASES[n]) n = ALIASES[n]
