@@ -653,14 +653,18 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         // Para desayuno: excluir guarniciones y ensaladas sueltas (no son platos de desayuno)
         const TC_INVALIDOS_DESAYUNO = new Set(['guarnicion', 'ensalada', 'salsa', 'vinagreta'])
         const poolBase = filtrarPorPracticidad(allRecipes, tipo, isDayFinde)
+        // Para snack: aceptar tipo_comida 'snack' O 'merienda' (ambos se usan en la BD)
+        const tipoMatch = (r: RecipeForMenu) =>
+          tipo === 'snack'
+            ? (r.tipo_comida.includes('snack') || r.tipo_comida.includes('merienda'))
+            : r.tipo_comida.includes(tipo)
         const pool = poolBase.filter(r => {
-          if (!r.tipo_comida.includes(tipo)) return false
+          if (!tipoMatch(r)) return false
           if (tipo === 'desayuno' && r.tipo_componente && TC_INVALIDOS_DESAYUNO.has(r.tipo_componente)) return false
           if (usedToday.has(r.id)) return false
           if (guestRestrictions.includes('vegetariana') && !r.perfiles?.vegetariana) return false
           if (guestRestrictions.includes('sin_gluten')  && !r.filtros_nutricionales?.sin_gluten)  return false
           if (guestRestrictions.includes('sin_lacteos') && !r.filtros_nutricionales?.sin_lacteos) return false
-          // No repetir preparación del día anterior
           if (usedYesterdayNames.some(n => sonSimilares(r.nombre, n))) return false
           return slotMembers.some(m => esCompatibleConMiembro(r, m))
         })
@@ -689,14 +693,33 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           if (combined > baseScore) { baseScore = combined; baseRecipe = r }
         }
 
-        // Fallback: pool agotado por deduplicación semanal → permitir repetición
+        // Fallback 1: pool agotado por usedPerMember → ignorar historial semanal
         if (!baseRecipe) {
           for (const r of pool) {
             let sumScore = 0; let compatCount = 0
             for (const m of slotMembers) {
               if (!esCompatibleConMiembro(r, m)) continue
-              const mUsed = new Set<string>()   // ignorar historial semanal
-              const s = calcularScore(r, input, mUsed, 0, new Set([m.id!]), isDayFinde, tipo)
+              const s = calcularScore(r, input, new Set<string>(), 0, new Set([m.id!]), isDayFinde, tipo)
+              if (s >= 0) { sumScore += s; compatCount++ }
+            }
+            if (compatCount === 0) continue
+            const combined = sumScore + compatCount * 50 + (compatCount === slotMembers.length ? 100 : 0)
+            if (combined > baseScore) { baseScore = combined; baseRecipe = r }
+          }
+        }
+
+        // Fallback 2: pool totalmente vacío (e.g. merienda tarde el mismo día que merienda mañana)
+        // → expandir ignorando usedToday también
+        if (!baseRecipe) {
+          const poolExpanded = poolBase.filter(r =>
+            tipoMatch(r) &&
+            slotMembers.some(m => esCompatibleConMiembro(r, m))
+          )
+          for (const r of poolExpanded) {
+            let sumScore = 0; let compatCount = 0
+            for (const m of slotMembers) {
+              if (!esCompatibleConMiembro(r, m)) continue
+              const s = calcularScore(r, input, new Set<string>(), 0, new Set([m.id!]), isDayFinde, tipo)
               if (s >= 0) { sumScore += s; compatCount++ }
             }
             if (compatCount === 0) continue
