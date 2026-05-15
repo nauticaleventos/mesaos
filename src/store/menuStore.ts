@@ -49,7 +49,7 @@ interface MenuState {
   quitarComponente:     (entryId: string) => Promise<void>
   agregarComponente:    (familyId: string, weekStart: string, dayOfWeek: number, mealType: string, recipeId: string, component: string) => Promise<void>
   replicarEnSemana:     (familyId: string, weekStart: string, fromDay: number, mealType: string, recipeId: string, component: string) => Promise<number>
-  asignarSobraEnMenu:   (familyId: string, weekStart: string, dayOfWeek: number, mealType: string, nombreCustom: string) => Promise<boolean>
+  asignarSobraEnMenu:   (familyId: string, weekStart: string, dayOfWeek: number, mealType: string, nombreCustom: string) => Promise<{ ok: boolean; msg: string }>
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -619,8 +619,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       .single()
 
     if (error) {
-      console.error('[asignarSobraEnMenu] code:', error.code, '| msg:', error.message, '| details:', error.details, '| hint:', error.hint)
-      return false
+      return { ok: false, msg: `${error.code}: ${error.message}` }
     }
 
     if (inserted) {
@@ -633,6 +632,6 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       }
       set(s => ({ menu: [...s.menu, entry] }))
     }
-    return !!inserted
+    return { ok: !!inserted, msg: '' }
   },
 }))

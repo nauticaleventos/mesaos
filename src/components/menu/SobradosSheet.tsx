@@ -108,13 +108,12 @@ export default function SobradosSheet({ onClose }: Props) {
     setPickerId(null)
     setErrorId(null)
     setErrorMsg('')
-    const ok = await asignarSobraEnMenu(family.id, getMondayOfWeek(), slot.dayOfWeek, slot.mealType, l.ingredient_name)
+    const { ok, msg } = await asignarSobraEnMenu(family.id, getMondayOfWeek(), slot.dayOfWeek, slot.mealType, l.ingredient_name)
     if (ok) {
       setAsignados(prev => ({ ...prev, [l.id]: slot.label }))
     } else {
       setErrorId(l.id)
-      // El error detallado aparece en la consola del browser (F12 → Console)
-      setErrorMsg('Error al guardar — abrí F12 → Console para ver el detalle')
+      setErrorMsg(msg || 'Error desconocido')
     }
     setAsignando(null)
   }
