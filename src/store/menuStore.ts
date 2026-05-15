@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import {
-  generarMenuSemanal, getMondayOfWeek, getMondayNWeeksAgo,
+  generarMenuSemanal, getMondayOfWeek, getMondayNWeeksAgo, buildMealSlots,
   type MenuConfig, type RecipeForMenu, type MenuSlot,
 } from '../lib/motorMenu'
 import { calcularNivelNevera } from '../lib/nivelNevera'
@@ -170,27 +170,48 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       const absenceSet = absences ?? []
       const guests     = guestRows ?? []
 
-      // Construir SlotAttendance para cada día × comida activa
-      const mealTypes: import('../lib/motorMenu').MealType[] = []
-      if (config.planear_desayuno) mealTypes.push('desayuno')
-      if (config.planear_almuerzo) mealTypes.push('almuerzo')
-      if (config.planear_cena)     mealTypes.push('cena')
-      if (config.planear_snacks)   mealTypes.push('snack')
+      // Construir SlotAttendance respetando meals_per_day individual de cada miembro.
+      // buildMealSlots genera la unión de todos los slots; luego filtramos qué miembros
+      // tienen cada slot configurado en su perfil personal.
+      const mealSlots = buildMealSlots(allMembers, config)
+
+      // Fallback global para miembros sin meals_per_day configurado
+      const globalMealTypes = new Set<string>([
+        ...(config.planear_desayuno ? ['desayuno'] : []),
+        ...(config.planear_almuerzo ? ['almuerzo'] : []),
+        ...(config.planear_cena     ? ['cena']     : []),
+        ...(config.planear_snacks   ? ['snack']    : []),
+      ])
 
       const slotAttendance: import('../lib/motorMenu').SlotAttendance[] = []
       for (let day = 1; day <= 7; day++) {
-        for (const meal of mealTypes) {
-          const presentMembers = allMembers.filter(m =>
+        for (const { mealName, mealType: tipo } of mealSlots) {
+          const mealNameNorm = mealName.toLowerCase().trim()
+
+          // Miembros que tienen ESTE slot configurado individualmente
+          const membersWithMeal = allMembers.filter(m => {
+            const memberMeals = (m.meals_per_day ?? []) as { name: string; time: string }[]
+            if (memberMeals.length === 0) {
+              // Sin config individual → usar flags globales de la familia
+              return globalMealTypes.has(tipo)
+            }
+            return memberMeals.some(mm => mm.name.toLowerCase().trim() === mealNameNorm)
+          })
+
+          // Descontar ausencias
+          const presentMembers = membersWithMeal.filter(m =>
             !absenceSet.some((a: { member_id: string; day_of_week: number; meal_type: string }) =>
-              a.member_id === m.id && a.day_of_week === day && a.meal_type === meal
+              a.member_id === m.id && a.day_of_week === day &&
+              (a.meal_type === tipo || a.meal_type.toLowerCase() === mealNameNorm)
             )
           )
+
           const slotGuests = guests.filter((g: { day_of_week: number; meal_type: string }) =>
-            g.day_of_week === day && g.meal_type === meal
+            g.day_of_week === day && (g.meal_type === tipo || g.meal_type.toLowerCase() === mealNameNorm)
           )
           const guestCount = slotGuests.reduce((s: number, g: { cantidad: number }) => s + g.cantidad, 0)
 
-          // Detectar restricciones en notas de invitados
+          // Restricciones de invitados
           const guestRestrictions: string[] = []
           for (const g of slotGuests as { notas: string | null }[]) {
             if (!g.notas) continue
@@ -200,9 +221,12 @@ export const useMenuStore = create<MenuState>((set, get) => ({
             if (n.includes('sin lacteo') || n.includes('lactosa')) guestRestrictions.push('sin_lacteos')
           }
 
+          // Solo agregar el slot si hay al menos un miembro o un invitado
+          if (presentMembers.length + guestCount === 0) continue
+
           slotAttendance.push({
             dayOfWeek:         day,
-            mealType:          meal as import('../lib/motorMenu').MealType,
+            mealType:          tipo,
             memberIds:         presentMembers.map(m => m.id!),
             totalServings:     presentMembers.length + guestCount,
             guestRestrictions,
