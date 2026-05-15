@@ -583,7 +583,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
     desayuno: 20,
     almuerzo: 45,
     cena:     25,
-    snack:    10,
+    snack:    20,   // merienda mañana Y tarde — 20min permite más variedad
   }
 
   /** Filtra recetas según etiqueta_practicidad y tiempo máximo del slot */
@@ -708,11 +708,12 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           }
         }
 
-        // Fallback 2: pool totalmente vacío (e.g. merienda tarde el mismo día que merienda mañana)
-        // → expandir ignorando usedToday también
+        // Fallback 2: pool vacío incluso ignorando usedPerMember
+        // → expandir sobre TODAS las recetas del tipo, ignorando usedToday y cap de tiempo
         if (!baseRecipe) {
-          const poolExpanded = poolBase.filter(r =>
+          const poolExpanded = allRecipes.filter(r =>
             tipoMatch(r) &&
+            r.etiqueta_practicidad !== 'batch' &&
             slotMembers.some(m => esCompatibleConMiembro(r, m))
           )
           for (const r of poolExpanded) {
