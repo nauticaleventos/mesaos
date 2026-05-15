@@ -8,6 +8,7 @@ import { useFridgeStore, type FridgeItem } from '../../store/fridgeStore'
 import ClasificacionWizard from '../../components/recipes/ClasificacionWizard'
 import RecipePlaceholder from '../../components/recipes/RecipePlaceholder'
 import { calcularMultiplicadorPorcion } from '../../lib/motorMenu'
+import { inferirEmojisReceta, multToFraccion } from '../../lib/porcionEmoji'
 import PhotosModal from '../../components/recipes/PhotosModal'
 import { useRecipePhotosStore } from '../../store/recipePhotosStore'
 import { calcularNutricion } from '../../lib/claudeImport'
@@ -512,6 +513,7 @@ export default function RecetaPage() {
       {(() => {
         const activos = members.filter(m => calcularMultiplicadorPorcion(m) !== 1.0)
         if (activos.length < 1) return null
+        const { protein: pEmoji, carb: cEmoji } = inferirEmojisReceta(recipe.ingredientes ?? [])
         return (
           <>
             <Divider />
@@ -520,21 +522,17 @@ export default function RecetaPage() {
               <div className="flex flex-col gap-2">
                 {members.map(m => {
                   const mult = calcularMultiplicadorPorcion(m)
-                  const ref =
-                    mult <= 0.65 ? '½ 🍗 · ½ 🍚' :
-                    mult <= 0.80 ? '¾ 🍗 · ¾ 🍚' :
-                    mult >= 1.15 ? '1¼ 🍗 · 1¼ 🍚' :
-                                   '1 🍗 · 1 🍚'
+                  const frac = multToFraccion(mult)
                   return (
-                    <div key={m.id} className="flex items-center gap-2">
-                      <span className="text-lg leading-none">{m.emoji}</span>
-                      <span className="text-sm text-text font-medium">{m.name}</span>
-                      <span className="text-sm text-muted">{ref}</span>
+                    <div key={m.id} className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-base leading-none">{m.emoji}</span>
+                      <span className="text-sm font-medium text-text">{m.name}:</span>
+                      <span className="text-sm text-muted">{pEmoji} {frac} palma {cEmoji} {frac} puño</span>
                     </div>
                   )
                 })}
               </div>
-              <p className="text-[10px] text-muted mt-2">🍗 palma = proteína · 🍚 puñado = grano/carb</p>
+              <p className="text-[10px] text-muted mt-2">palma = proteína · puño = grano/carb</p>
             </div>
           </>
         )

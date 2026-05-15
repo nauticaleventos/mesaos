@@ -11,6 +11,7 @@ import { DAY_NAMES_FULL, getMondayOfWeek, calcularMultiplicadorPorcion } from '.
 import { calcularMatch, matchBadge } from '../../lib/matchReceta'
 import CambiarSheet from './CambiarSheet'
 import RatingPostCoccionModal from './RatingPostCoccionModal'
+import { inferirEmojisReceta, multToFraccion } from '../../lib/porcionEmoji'
 
 interface Props {
   dayOfWeek:      number
@@ -380,19 +381,19 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
                       </div>
                       {eMembers.length > 1 && eMembers.some(m => calcularMultiplicadorPorcion(m) !== 1.0) && (
                         <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                          {eMembers.map(m => {
-                            const mult = calcularMultiplicadorPorcion(m)
-                            const ref =
-                              mult <= 0.65 ? '½ 🍗 · ½ 🍚' :
-                              mult <= 0.80 ? '¾ 🍗 · ¾ 🍚' :
-                              mult >= 1.15 ? '1¼ 🍗 · 1¼ 🍚' : null
-                            if (!ref) return null
-                            return (
-                              <span key={m.id} className="text-[10px] text-muted">
-                                {m.emoji} {m.name}: {ref}
-                              </span>
-                            )
-                          })}
+                          {(() => {
+                            const { protein: pE, carb: cE } = inferirEmojisReceta(r.ingredientes ?? [])
+                            return eMembers.map(m => {
+                              const mult = calcularMultiplicadorPorcion(m)
+                              if (mult === 1.0) return null
+                              const frac = multToFraccion(mult)
+                              return (
+                                <span key={m.id} className="text-[10px] text-muted">
+                                  {m.emoji} {m.name}: {pE} {frac} palma {cE} {frac} puño
+                                </span>
+                              )
+                            })
+                          })()}
                         </div>
                       )}
                     </div>
@@ -567,19 +568,19 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
                     {/* Porciones inline — visible sin tocar nada */}
                     {displayMembers.length > 1 && displayMembers.some(m => calcularMultiplicadorPorcion(m) !== 1.0) && (
                       <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                        {displayMembers.map(m => {
-                          const mult = calcularMultiplicadorPorcion(m)
-                          const ref =
-                            mult <= 0.65 ? '½ 🍗 · ½ 🍚' :
-                            mult <= 0.80 ? '¾ 🍗 · ¾ 🍚' :
-                            mult >= 1.15 ? '1¼ 🍗 · 1¼ 🍚' : null
-                          if (!ref) return null
-                          return (
-                            <span key={m.id} className="text-[10px] text-muted">
-                              {m.emoji} {m.name}: {ref}
-                            </span>
-                          )
-                        })}
+                        {(() => {
+                          const { protein: pE, carb: cE } = inferirEmojisReceta(r.ingredientes ?? [])
+                          return displayMembers.map(m => {
+                            const mult = calcularMultiplicadorPorcion(m)
+                            if (mult === 1.0) return null
+                            const frac = multToFraccion(mult)
+                            return (
+                              <span key={m.id} className="text-[10px] text-muted">
+                                {m.emoji} {m.name}: {pE} {frac} palma {cE} {frac} puño
+                              </span>
+                            )
+                          })
+                        })()}
                       </div>
                     )}
                   </div>
