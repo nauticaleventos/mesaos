@@ -220,7 +220,7 @@ export default function DiaCard({ dayOfWeek, date, entries, leftovers = [], onAd
           dayOfWeek={dayOfWeek}
           components={components}
           members={members}
-          leftovers={tipo === 'almuerzo' || tipo === 'cena' ? leftovers : []}
+          leftovers={['almuerzo','cena'].includes(tipo.toLowerCase()) ? leftovers : []}
           onAddSobrante={onAddSobrante}
           onCocinada={() => {
             const main = components.find(e => e.is_main_recipe) ?? components[0]
@@ -491,7 +491,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
       <div className="px-4 pt-3 pb-1 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <p className={`text-xs font-bold uppercase tracking-widest ${isCooked ? 'text-muted' : 'text-accent'}`}>
-            {MEAL_LABELS[tipo]}
+            {getMealLabel(tipo, mealTime)}
           </p>
           {isDiaDificil && (
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0"
