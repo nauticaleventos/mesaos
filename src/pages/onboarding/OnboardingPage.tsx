@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { useFamilyStore } from '../../store/familyStore'
 import StepFamilyName from '../../components/onboarding/StepFamilyName'
-import StepAddMember from '../../components/onboarding/StepAddMember'
+import StepAddMemberSimple from '../../components/onboarding/StepAddMemberSimple'
 import StepDone from '../../components/onboarding/StepDone'
 
 type Step = 'family' | 'members' | 'done'
@@ -35,7 +35,7 @@ export default function OnboardingPage() {
       )}
 
       {step === 'members' && (
-        <StepAddMember
+        <StepAddMemberSimple
           familyName={family?.name ?? ''}
           memberCount={members.length}
           onAdded={handleMemberAdded}
