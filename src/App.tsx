@@ -5,7 +5,8 @@ import { useAuthStore } from './store/authStore'
 import { useFamilyStore } from './store/familyStore'
 import LoginPage      from './pages/auth/LoginPage'
 import SignupPage     from './pages/auth/SignupPage'
-import OnboardingPage from './pages/onboarding/OnboardingPage'
+import OnboardingPage  from './pages/onboarding/OnboardingPage'
+import BienvenidaPage  from './pages/onboarding/BienvenidaPage'
 import HomePage       from './pages/HomePage'
 import FridgePage     from './pages/fridge/FridgePage'
 import RecetasPage    from './pages/recipes/RecetasPage'
@@ -17,6 +18,14 @@ import RecetasAutoPage      from './pages/admin/RecetasAutoPage'
 import ImportarRecetaPage   from './pages/ImportarRecetaPage'
 import MercadoPage          from './pages/MercadoPage'
 import MercadoImprimir      from './pages/MercadoImprimir'
+
+// Para usuarios sin familia: mostrar bienvenida la primera vez, onboarding luego
+function sinFamiliaDestino(userId: string | undefined): '/bienvenida' | '/onboarding' {
+  if (!userId) return '/bienvenida'
+  return localStorage.getItem(`bienvenida_step_${userId}`) === 'done'
+    ? '/onboarding'
+    : '/bienvenida'
+}
 
 function AppRoutes() {
   const { session, loading: authLoading }   = useAuthStore()
@@ -35,6 +44,13 @@ function AppRoutes() {
       <Route path="/login"  element={!session ? <LoginPage />  : <Navigate to="/" replace />} />
       <Route path="/signup" element={!session ? <SignupPage /> : <Navigate to="/" replace />} />
 
+      {/* Bienvenida Tita: solo la primera vez, post-signup, sin familia */}
+      <Route path="/bienvenida" element={
+        !session ? <Navigate to="/login" replace />
+        : family  ? <Navigate to="/" replace />
+        : <BienvenidaPage />
+      } />
+
       {/* Onboarding: solo si no tiene familia aún */}
       <Route path="/onboarding" element={
         !session ? <Navigate to="/login" replace />
@@ -44,7 +60,7 @@ function AppRoutes() {
 
       <Route path="/" element={
         !session ? <Navigate to="/login" replace />
-        : !family ? <Navigate to="/onboarding" replace />
+        : !family ? <Navigate to={sinFamiliaDestino(session.user.id)} replace />
         : <HomePage />
       } />
       <Route path="/nevera" element={
@@ -55,7 +71,7 @@ function AppRoutes() {
       } />
       <Route path="/menu" element={
         !session ? <Navigate to="/login" replace />
-        : !family  ? <Navigate to="/onboarding" replace />
+        : !family  ? <Navigate to={sinFamiliaDestino(session.user.id)} replace />
         : <MenuPage />
       } />
       {/* Pública — muestra preview si no hay sesión */}

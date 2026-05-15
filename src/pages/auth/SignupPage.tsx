@@ -24,7 +24,7 @@ export default function SignupPage() {
     const err = await signUp(email, password)
     setLoading(false)
     if (err) return setError(err)
-    navigate(returnTo, { replace: true })
+    navigate('/bienvenida', { replace: true })
   }
 
   return (
