@@ -21,6 +21,7 @@ export interface EnrichedMenuEntry {
   status:               'planned' | 'cooked' | 'skipped' | 'swapped'
   accion_preparacion?:  'cocinar' | 'calentar' | 'ensamblar' | 'descongelar' | 'preparar_fresco'
   dia_dificil?:         boolean
+  rating_prompted?:     boolean
   recipe?:              RecipeForMenu
 }
 
@@ -134,7 +135,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       id: string; day_of_week: number; meal_type: string; meal_time?: string;
       meal_component: string; recipe_id: string | null; nombre_custom?: string;
       member_id: string | null; is_main_recipe: boolean; servings: number;
-      status: string; accion_preparacion?: string; dia_dificil?: boolean;
+      status: string; accion_preparacion?: string; dia_dificil?: boolean; rating_prompted?: boolean;
     }[])
       .filter(e => e.recipe_id === null || recipeMap.has(e.recipe_id))
       .map(e => ({
@@ -143,6 +144,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         status:              e.status as EnrichedMenuEntry['status'],
         accion_preparacion:  e.accion_preparacion as EnrichedMenuEntry['accion_preparacion'],
         dia_dificil:         e.dia_dificil ?? false,
+        rating_prompted:     e.rating_prompted ?? false,
         recipe:              e.recipe_id ? recipeMap.get(e.recipe_id) as RecipeForMenu : undefined,
       }))
 

@@ -10,6 +10,7 @@ import type { FamilyMember } from '../../lib/types'
 import { DAY_NAMES_FULL, getMondayOfWeek, calcularMultiplicadorPorcion } from '../../lib/motorMenu'
 import { calcularMatch, matchBadge } from '../../lib/matchReceta'
 import CambiarSheet from './CambiarSheet'
+import RatingPostCoccionModal from './RatingPostCoccionModal'
 
 interface Props {
   dayOfWeek:      number
@@ -258,6 +259,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
 
   const [expanded, setExpanded]           = useState(false)
   const [showCambiar, setShowCambiar]     = useState(false)
+  const [ratingEntry, setRatingEntry]     = useState<import('../../store/menuStore').EnrichedMenuEntry | null>(null)
   const [showAgregar, setShowAgregar]     = useState(false)
   const [tipoAgregar, setTipoAgregar]     = useState('')
   const [busquedaAgregar, setBusquedaAgregar] = useState('')
@@ -441,7 +443,10 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
         <AccionesRow expanded={expanded} onExpand={() => setExpanded(e => !e)}
           isCooked={isCooked} isSkipped={isSkipped}
           onVerReceta={() => navigate(`/receta/${main.recipe_id}`)}
-          onCocinada={() => { onCocinada(); setExpanded(false) }}
+          onCocinada={() => {
+            onCocinada(); setExpanded(false)
+            if (main && main.recipe_id && !main.rating_prompted) setRatingEntry(main)
+          }}
           onSaltar={() => { onSaltar(); setExpanded(false) }}
           onRestaurar={() => { onRestaurar(); setExpanded(false) }}
           onCambiar={() => setShowCambiar(true)}
@@ -450,9 +455,19 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
         {ajustesRecipe && (
           <AjustesPorcionModal
             recipeName={ajustesRecipe.name}
-
             sharedMembers={ajustesRecipe.members}
             onClose={() => setAjustesRecipe(null)}
+          />
+        )}
+        {ratingEntry && (
+          <RatingPostCoccionModal
+            entry={ratingEntry}
+            onClose={() => setRatingEntry(null)}
+            onSkip={async () => {
+              await supabase.from('weekly_menu').update({ rating_prompted: true }).eq('id', ratingEntry.id)
+              setRatingEntry(null)
+            }}
+            onSaved={() => setRatingEntry(null)}
           />
         )}
       </div>
@@ -639,7 +654,10 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
         <AccionesRow expanded={expanded} onExpand={() => setExpanded(e => !e)}
           isCooked={isCooked} isSkipped={isSkipped}
           onVerReceta={() => navigate(`/receta/${main.recipe_id}`)}
-          onCocinada={() => { onCocinada(); setExpanded(false) }}
+          onCocinada={() => {
+            onCocinada(); setExpanded(false)
+            if (main.recipe_id && !main.rating_prompted) setRatingEntry(main)
+          }}
           onSaltar={() => { onSaltar(); setExpanded(false) }}
           onRestaurar={() => { onRestaurar(); setExpanded(false) }}
           onCambiar={() => setShowCambiar(true)}
@@ -651,6 +669,17 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
           recipeName={ajustesRecipe.name}
           sharedMembers={ajustesRecipe.members}
           onClose={() => setAjustesRecipe(null)}
+        />
+      )}
+      {ratingEntry && (
+        <RatingPostCoccionModal
+          entry={ratingEntry}
+          onClose={() => setRatingEntry(null)}
+          onSkip={async () => {
+            await supabase.from('weekly_menu').update({ rating_prompted: true }).eq('id', ratingEntry.id)
+            setRatingEntry(null)
+          }}
+          onSaved={() => setRatingEntry(null)}
         />
       )}
     </div>
