@@ -31,6 +31,7 @@ export default function SobradosSheet({ onClose }: Props) {
   const [pickerId, setPickerId] = useState<string | null>(null)  // leftover.id con picker abierto
   const [asignando, setAsignando] = useState<string | null>(null)
   const [asignados, setAsignados] = useState<Record<string, string>>({}) // id → label asignado
+  const [errorId,   setErrorId]   = useState<string | null>(null)
 
   const handleAdd = async (name: string, qty?: string) => {
     if (!family?.id || !name.trim()) return
@@ -104,8 +105,13 @@ export default function SobradosSheet({ onClose }: Props) {
     if (!family?.id) return
     setAsignando(l.id)
     setPickerId(null)
-    await asignarSobraEnMenu(family.id, getMondayOfWeek(), slot.dayOfWeek, slot.mealType, l.ingredient_name)
-    setAsignados(prev => ({ ...prev, [l.id]: slot.label }))
+    setErrorId(null)
+    const ok = await asignarSobraEnMenu(family.id, getMondayOfWeek(), slot.dayOfWeek, slot.mealType, l.ingredient_name)
+    if (ok) {
+      setAsignados(prev => ({ ...prev, [l.id]: slot.label }))
+    } else {
+      setErrorId(l.id)
+    }
     setAsignando(null)
   }
 
@@ -195,6 +201,8 @@ export default function SobradosSheet({ onClose }: Props) {
                           {/* Botón o estado */}
                           {yaAsignado ? (
                             <p className="mt-1 text-xs text-oliva font-medium">✓ En tu menú: {yaAsignado}</p>
+                          ) : errorId === l.id ? (
+                            <p className="mt-1 text-xs text-red-500">Error al guardar. ¿Corriste la migración 017 en Supabase?</p>
                           ) : enCurso ? (
                             <p className="mt-1 text-xs text-muted">Agregando…</p>
                           ) : opciones.length > 0 && (

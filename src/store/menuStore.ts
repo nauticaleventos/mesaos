@@ -49,7 +49,7 @@ interface MenuState {
   quitarComponente:     (entryId: string) => Promise<void>
   agregarComponente:    (familyId: string, weekStart: string, dayOfWeek: number, mealType: string, recipeId: string, component: string) => Promise<void>
   replicarEnSemana:     (familyId: string, weekStart: string, fromDay: number, mealType: string, recipeId: string, component: string) => Promise<number>
-  asignarSobraEnMenu:   (familyId: string, weekStart: string, dayOfWeek: number, mealType: string, nombreCustom: string) => Promise<void>
+  asignarSobraEnMenu:   (familyId: string, weekStart: string, dayOfWeek: number, mealType: string, nombreCustom: string) => Promise<boolean>
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -600,7 +600,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   asignarSobraEnMenu: async (familyId, weekStart, dayOfWeek, mealType, nombreCustom) => {
-    const { data: inserted } = await supabase
+    const { data: inserted, error } = await supabase
       .from('weekly_menu')
       .insert({
         family_id:      familyId,
@@ -618,6 +618,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       .select()
       .single()
 
+    if (error) {
+      console.error('[asignarSobraEnMenu]', error.message)
+      return false
+    }
+
     if (inserted) {
       const entry: EnrichedMenuEntry = {
         ...(inserted as Omit<EnrichedMenuEntry, 'recipe'>),
@@ -628,5 +633,6 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       }
       set(s => ({ menu: [...s.menu, entry] }))
     }
+    return !!inserted
   },
 }))
