@@ -154,30 +154,80 @@ export default async function handler(req, res) {
       recipe.source_url = null
     }
 
-    // ── URL web ───────────────────────────────────────────────────────────────
+    // ── URL web / social ─────────────────────────────────────────────────────
     else if (type === 'url' || type === 'social') {
       if (!content) return res.status(400).json({ error: 'content (URL) es requerido' })
       source_url = content
 
-      let pageContent = ''
       const plat = platform ?? detectPlatform(content)
 
-      try {
-        const pageRes = await fetch(content, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; mesa.os recipe importer)' },
-          signal: AbortSignal.timeout(8000),
-        })
-        if (pageRes.ok) {
-          const html = await pageRes.text()
-          pageContent = html
-            .replace(/<script[\s\S]*?<\/script>/gi, '')
-            .replace(/<style[\s\S]*?<\/style>/gi, '')
-            .replace(/<[^>]+>/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .substring(0, 8000)
-        }
-      } catch { /* Claude intentará desde su conocimiento */ }
+      // Instagram/Facebook: bloquean scraping — pedir al usuario alternativas
+      if (plat === 'instagram' || plat === 'facebook') {
+        return res.status(422).json({ error: 'INSTAGRAM_BLOCKED' })
+      }
+
+      let pageContent = ''
+
+      // ── TikTok: oEmbed oficial ──────────────────────────────────────────────
+      if (plat === 'tiktok') {
+        try {
+          const oe = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(content)}`,
+            { signal: AbortSignal.timeout(6000) })
+          if (oe.ok) {
+            const d = await oe.json()
+            pageContent = [
+              d.title        ? `Caption: ${d.title}` : '',
+              d.author_name  ? `Usuario: ${d.author_name}` : '',
+            ].filter(Boolean).join('\n')
+          }
+        } catch { /* continuar sin oEmbed */ }
+      }
+
+      // ── YouTube: oEmbed + og:description ───────────────────────────────────
+      else if (plat === 'youtube') {
+        try {
+          const oe = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(content)}&format=json`,
+            { signal: AbortSignal.timeout(6000) })
+          if (oe.ok) {
+            const d = await oe.json()
+            pageContent = `Título: ${d.title}\nCanal: ${d.author_name}`
+          }
+        } catch { /* continuar sin oEmbed */ }
+
+        // Complementar con og:description de la página
+        try {
+          const pageRes = await fetch(content, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; mesa.os recipe importer)' },
+            signal: AbortSignal.timeout(6000),
+          })
+          if (pageRes.ok) {
+            const html = await pageRes.text()
+            const desc = (html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i)
+                       || html.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i))?.[1] ?? ''
+            if (desc) pageContent += `\nDescripción: ${desc.substring(0, 2000)}`
+          }
+        } catch { /* ignorar */ }
+      }
+
+      // ── Otros (blogs, webs) ─────────────────────────────────────────────────
+      else {
+        try {
+          const pageRes = await fetch(content, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; mesa.os recipe importer)' },
+            signal: AbortSignal.timeout(8000),
+          })
+          if (pageRes.ok) {
+            const html = await pageRes.text()
+            pageContent = html
+              .replace(/<script[\s\S]*?<\/script>/gi, '')
+              .replace(/<style[\s\S]*?<\/style>/gi, '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim()
+              .substring(0, 8000)
+          }
+        } catch { /* Claude intentará desde su conocimiento */ }
+      }
 
       const userMsg = pageContent
         ? `Este contenido fue extraído de ${plat ?? 'la web'}.\nURL: ${content}\nContenido:\n${pageContent}\n\nExtraé la receta completa. El nombre es el plato en sí, no el título del post.`
