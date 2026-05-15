@@ -154,6 +154,11 @@ export function buildMealSlots(
   return fallback
 }
 
+export interface LeftoverItem {
+  ingredient_name: string   // nombre del sobrante (ej: 'pollo asado')
+  created_at:      string
+}
+
 export interface AlgorithmInput {
   config:          MenuConfig
   allMembers:      FamilyMember[]
@@ -165,6 +170,7 @@ export interface AlgorithmInput {
   recentRecipeIds: Set<string>
   healthyMode:     boolean
   nivelNevera:     number   // 0-100: % de llenado de la nevera
+  leftovers:       LeftoverItem[]  // sobras pendientes de usar
 }
 
 export interface MenuComponent {
@@ -522,6 +528,13 @@ function calcularScore(
   // Penalty si ya usamos mucha proteína animal esta semana
   const sProtein = tieneProteinaAnimal(recipe) && proteinDaysUsed >= 3 ? -30 : 0
 
+  // Bonus por sobras: +200 si la receta usa algún sobrante pendiente
+  const leftovers = input.leftovers ?? []
+  const sobrasBonus = leftovers.length > 0 && leftovers.some(lft => {
+    const lftNorm = lft.ingredient_name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    return tieneIngrediente(recipe, [lftNorm])
+  }) ? 200 : 0
+
   // Peso de inventario escala con nivel de nevera
   const nv2 = input.nivelNevera ?? 0
   const pesoInventario = nv2 >= 60 ? 0.60 : nv2 >= 40 ? 0.50 : 0.40
@@ -536,6 +549,7 @@ function calcularScore(
     sRating      * (0.20 * pesoOtros / 0.65) +
     sVariedad    * (0.15 * pesoOtros / 0.65) +
     lovesBonus   * (0.10 * pesoOtros / 0.65) +
+    sobrasBonus  +
     sProtein     +
     favRecipeBonus +
     sRandom

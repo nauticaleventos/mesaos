@@ -251,8 +251,18 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       }
 
       // 8. Correr el algoritmo
-      // Usar la misma función que el widget para nivel de nevera
       const nivelNevera = calcularNivelNevera(fridgeItems).porcentaje
+
+      // Traer sobras pendientes de los últimos 3 días
+      const hace3Dias = new Date()
+      hace3Dias.setDate(hace3Dias.getDate() - 3)
+      const { data: leftoversData } = await supabase
+        .from('weekly_leftovers')
+        .select('ingredient_name, created_at')
+        .eq('family_id', familyId)
+        .eq('week_start', weekStart)
+
+      const leftovers = (leftoversData ?? []) as import('../lib/motorMenu').LeftoverItem[]
 
       const slots: MenuSlot[] = generarMenuSemanal({
         config,
@@ -265,6 +275,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         recentRecipeIds,
         healthyMode,
         nivelNevera,
+        leftovers,
       })
       set({ progress: 85 })
 
