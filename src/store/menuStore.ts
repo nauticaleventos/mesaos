@@ -450,12 +450,13 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       .filter(e =>
         e.is_main_recipe &&
         e.status === 'planned' &&
+        e.recipe_id !== null &&
         (e.day_of_week > todayDow ||
           (e.day_of_week === todayDow))
       )
       .sort((a, b) => {
         if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week
-        return MEAL_ORDER.indexOf(a.meal_type) - MEAL_ORDER.indexOf(b.meal_type)
+        return MEAL_ORDER.indexOf(a.meal_type.toLowerCase()) - MEAL_ORDER.indexOf(b.meal_type.toLowerCase())
       })
       .slice(0, cuantas)
 
@@ -473,10 +474,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         .order('tiempo_total_min', { ascending: true, nullsFirst: false })
         .limit(50)
 
+      const mealTypeLower = entry.meal_type.toLowerCase()
       const candidates = (data ?? [] as RecipeForMenu[]).filter(r =>
         r.id !== entry.recipe_id &&
         Array.isArray(r.tipo_comida) &&
-        r.tipo_comida.includes(entry.meal_type)
+        r.tipo_comida.some((t: string) => t.toLowerCase() === mealTypeLower)
       )
       if (candidates.length === 0) continue
 

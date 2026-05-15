@@ -1,15 +1,21 @@
 import { useState } from 'react'
-import { X, Plus, Trash2, ArrowRight } from 'lucide-react'
+import { X, Plus, Trash2, ChevronDown } from 'lucide-react'
 import { useLeftoversStore, type Leftover } from '../../store/leftoversStore'
 import { useFamilyStore } from '../../store/familyStore'
 import { useMenuStore } from '../../store/menuStore'
-import { getMondayOfWeek } from '../../lib/motorMenu'
+import { getMondayOfWeek, DAY_NAMES_FULL } from '../../lib/motorMenu'
 
 const SUGERENCIAS = [
   'Pollo asado', 'Pechuga de pollo', 'Carne de res', 'Carne molida',
   'Salmón', 'Atún', 'Huevos cocidos', 'Frijoles', 'Lentejas',
   'Cerdo', 'Camarones', 'Tofu',
 ]
+
+interface SlotOpcion {
+  dayOfWeek: number
+  mealType:  string
+  label:     string   // "Hoy · Almuerzo", "Mañana · Cena", etc.
+}
 
 interface Props {
   onClose: () => void
@@ -18,12 +24,13 @@ interface Props {
 export default function SobradosSheet({ onClose }: Props) {
   const { family }                                 = useFamilyStore()
   const { leftovers, addLeftover, removeLeftover } = useLeftoversStore()
-  const { menu, config, asignarSobraEnMenu }       = useMenuStore()
+  const { menu, asignarSobraEnMenu }               = useMenuStore()
   const [nombre,   setNombre]   = useState('')
   const [cantidad, setCantidad] = useState('')
   const [saving,   setSaving]   = useState(false)
-  const [asignando, setAsignando] = useState<string | null>(null) // id del leftover en curso
-  const [asignados, setAsignados] = useState<Set<string>>(new Set())
+  const [pickerId, setPickerId] = useState<string | null>(null)  // leftover.id con picker abierto
+  const [asignando, setAsignando] = useState<string | null>(null)
+  const [asignados, setAsignados] = useState<Record<string, string>>({}) // id → label asignado
 
   const handleAdd = async (name: string, qty?: string) => {
     if (!family?.id || !name.trim()) return
@@ -34,47 +41,48 @@ export default function SobradosSheet({ onClose }: Props) {
     setSaving(false)
   }
 
-  // Encuentra el próximo slot de almuerzo o cena a partir de hoy
-  const proxComidaSlot = (): { dayOfWeek: number; mealType: string; label: string } | null => {
-    const now = new Date()
-    const dow = now.getDay()
-    const isoDow = dow === 0 ? 7 : dow
-    const h = now.getHours()
+  // Devuelve hasta 4 slots futuros donde se puede asignar la sobra
+  const getOpciones = (): SlotOpcion[] => {
+    const now    = new Date()
+    const jsDay  = now.getDay()
+    const isoDow = jsDay === 0 ? 7 : jsDay
+    const h      = now.getHours()
 
-    const MEAL_ORDER = ['almuerzo', 'cena']
-    const MEAL_AFTER: Record<string, number> = { almuerzo: 14, cena: 22 }
-    const MEAL_LABEL: Record<string, string> = { almuerzo: 'almuerzo', cena: 'cena' }
+    const MEAL_ORDER = ['desayuno', 'almuerzo', 'cena']
+    const MEAL_CUTOFF: Record<string, number> = { desayuno: 10, almuerzo: 14, cena: 22 }
 
-    // También considerar desayuno si está planificado
-    if (config?.planear_desayuno) {
-      MEAL_ORDER.unshift('desayuno')
-      MEAL_AFTER['desayuno'] = 10
-      MEAL_LABEL['desayuno'] = 'desayuno'
-    }
+    const opciones: SlotOpcion[] = []
 
-    for (let offset = 0; offset <= 6; offset++) {
+    for (let offset = 0; offset <= 6 && opciones.length < 4; offset++) {
       const checkDow = ((isoDow - 1 + offset) % 7) + 1
       for (const meal of MEAL_ORDER) {
-        if (offset === 0 && h >= MEAL_AFTER[meal]) continue
+        if (offset === 0 && h >= MEAL_CUTOFF[meal]) continue
         const exists = menu.some(e => e.day_of_week === checkDow && e.meal_type.toLowerCase() === meal)
-        if (exists) {
-          const dayLabel = offset === 0 ? 'hoy' : offset === 1 ? 'mañana' : `día ${checkDow}`
-          return { dayOfWeek: checkDow, mealType: meal, label: `${MEAL_LABEL[meal]} de ${dayLabel}` }
-        }
+        if (!exists) continue
+
+        const dayLabel =
+          offset === 0 ? 'Hoy' :
+          offset === 1 ? 'Mañana' :
+          DAY_NAMES_FULL[checkDow]
+        const mealLabel = meal.charAt(0).toUpperCase() + meal.slice(1)
+        opciones.push({ dayOfWeek: checkDow, mealType: meal, label: `${dayLabel} · ${mealLabel}` })
+        if (opciones.length >= 4) break
       }
     }
-    return null
+
+    return opciones
   }
 
-  const asignarEnMenu = async (l: Leftover) => {
+  const asignarEnMenu = async (l: Leftover, slot: SlotOpcion) => {
     if (!family?.id) return
-    const slot = proxComidaSlot()
-    if (!slot) return
     setAsignando(l.id)
+    setPickerId(null)
     await asignarSobraEnMenu(family.id, getMondayOfWeek(), slot.dayOfWeek, slot.mealType, l.ingredient_name)
-    setAsignados(prev => new Set([...prev, l.id]))
+    setAsignados(prev => ({ ...prev, [l.id]: slot.label }))
     setAsignando(null)
   }
+
+  const opciones = getOpciones()
 
   // ── ESTRUCTURA IDÉNTICA A DiaDificilSheet ─────────────────────────────────
   return (
@@ -146,33 +154,57 @@ export default function SobradosSheet({ onClose }: Props) {
               </p>
               <div className="flex flex-col gap-2">
                 {leftovers.map((l: Leftover) => {
-                  const yaAsignado = asignados.has(l.id)
-                  const slot = proxComidaSlot()
+                  const yaAsignado = asignados[l.id]
+                  const enCurso    = asignando === l.id
+                  const pickerOpen = pickerOpen_check(l.id)
+
                   return (
-                    <div key={l.id}
-                      className="flex items-start justify-between gap-2 py-2 px-3 rounded-xl bg-oliva-claro/40 border border-oliva/20">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-text">🍗 {l.ingredient_name}</p>
-                        {l.quantity && <p className="text-xs text-muted">{l.quantity}</p>}
-                        {slot && (
-                          <button
-                            onClick={() => asignarEnMenu(l)}
-                            disabled={asignando === l.id || yaAsignado}
-                            className="mt-1 flex items-center gap-1 text-xs font-medium text-accent hover:opacity-70 disabled:opacity-40 transition-opacity">
-                            {yaAsignado
-                              ? '✓ Agregado al menú'
-                              : asignando === l.id
-                                ? '...'
-                                : <><ArrowRight size={11}/> Poner en {slot.label}</>
-                            }
-                          </button>
-                        )}
+                    <div key={l.id} className="rounded-xl bg-oliva-claro/40 border border-oliva/20 overflow-hidden">
+                      <div className="flex items-start justify-between gap-2 py-2 px-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-text">🍗 {l.ingredient_name}</p>
+                          {l.quantity && <p className="text-xs text-muted">{l.quantity}</p>}
+
+                          {/* Botón o estado */}
+                          {yaAsignado ? (
+                            <p className="mt-1 text-xs text-oliva font-medium">✓ En tu menú: {yaAsignado}</p>
+                          ) : enCurso ? (
+                            <p className="mt-1 text-xs text-muted">Agregando…</p>
+                          ) : opciones.length > 0 && (
+                            <button
+                              onClick={() => setPickerId(pickerOpen ? null : l.id)}
+                              className="mt-1 flex items-center gap-1 text-xs font-medium text-accent hover:opacity-70 transition-opacity">
+                              <ChevronDown size={12} className={`transition-transform ${pickerOpen ? 'rotate-180' : ''}`} />
+                              Agregar al menú
+                            </button>
+                          )}
+                        </div>
+                        <button onClick={() => removeLeftover(l.id)} className="p-1.5 text-muted hover:text-error transition-colors flex-shrink-0">
+                          <Trash2 size={14} />
+                        </button>
                       </div>
-                      <button onClick={() => removeLeftover(l.id)} className="p-1.5 text-muted hover:text-error transition-colors flex-shrink-0">
-                        <Trash2 size={14} />
-                      </button>
+
+                      {/* Picker de comidas */}
+                      {pickerOpen && (
+                        <div className="border-t border-oliva/20 px-3 pb-3 pt-2 flex flex-col gap-1.5">
+                          <p className="text-[11px] text-muted font-medium uppercase tracking-wider mb-0.5">¿Cuándo la usás?</p>
+                          {opciones.map(slot => (
+                            <button
+                              key={`${slot.dayOfWeek}-${slot.mealType}`}
+                              onClick={() => asignarEnMenu(l, slot)}
+                              className="flex items-center gap-2 py-2 px-3 rounded-xl bg-white border border-border text-sm text-text hover:border-accent hover:text-accent transition-all text-left">
+                              <span className="text-base">
+                                {slot.mealType === 'desayuno' ? '☀️' : slot.mealType === 'almuerzo' ? '🍽️' : '🌙'}
+                              </span>
+                              {slot.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )
+
+                  function pickerOpen_check(id: string) { return pickerId === id }
                 })}
               </div>
             </div>
