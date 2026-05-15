@@ -8,7 +8,7 @@ const TABS = [
   { path: '/mercado', icon: ShoppingCart,     label: 'Mercado'   },
 ]
 
-const DISABLED = ['/mercado']
+const DISABLED: string[] = []
 
 export default function BottomNav() {
   const navigate  = useNavigate()

@@ -383,7 +383,7 @@ export default function RecetaPage() {
           {[
             { emoji: '📑', label: 'Guardar',    onClick: toggleBookmark },
             { emoji: '📤', label: 'Compartir',  onClick: handleShare    },
-            { emoji: '🛒', label: 'Lista',      onClick: () => showToast('🛒 Lista de mercado próximamente') },
+            { emoji: '🛒', label: 'Lista',      onClick: () => navigate('/mercado') },
             { emoji: '⭐', label: esEstelar ? 'Estelar ✓' : 'Estelar',
               onClick: () => esEstelar ? toggleEstelar() : setConfirmEstelar(true) },
           ].map(btn => (

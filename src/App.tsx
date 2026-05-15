@@ -15,6 +15,8 @@ import UnirsePage        from './pages/invite/UnirsePage'
 import MenuPage          from './pages/menu/MenuPage'
 import RecetasAutoPage      from './pages/admin/RecetasAutoPage'
 import ImportarRecetaPage   from './pages/ImportarRecetaPage'
+import MercadoPage          from './pages/MercadoPage'
+import MercadoImprimir      from './pages/MercadoImprimir'
 
 function AppRoutes() {
   const { session, loading: authLoading }   = useAuthStore()
@@ -61,6 +63,13 @@ function AppRoutes() {
       <Route path="/receta/:id/imprimir" element={<RecetaImprimir />} />
       {/* Pública — link de invitación */}
       <Route path="/unirse/:token" element={<UnirsePage />} />
+
+      <Route path="/mercado" element={
+        !session ? <Navigate to="/login" replace /> : <MercadoPage />
+      } />
+      <Route path="/mercado/imprimir" element={
+        !session ? <Navigate to="/login" replace /> : <MercadoImprimir />
+      } />
 
       {/* Importar receta desde Shortcut iOS / Web Share Target / link directo */}
       <Route path="/importar" element={
