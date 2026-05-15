@@ -69,11 +69,18 @@ const MANTENER_EXACTO = [
 ]
 
 // Prefijos de procesamiento → el ingrediente base es lo que viene después
-// "jugo de limón" → "limón", "pasta de ajo" → "ajo"
+// "jugo de limón" → "limón", "pasta de ajo" → "ajo", "sopera de edulcorante" → "edulcorante"
 const PREFIJOS_PROC = [
   'jugo de','zumo de','extracto de','esencia de',
   'pasta de','pure de','puro de','crema de','mantequilla de',
   'harina de','aceite de','vinagre de','salsa de',
+  // Unidades de medida usadas como nombre: "sopera de X" → X
+  'cucharada sopera de','cucharadas soperas de',
+  'cucharadita de','cucharaditas de',
+  'cucharada de','cucharadas de',
+  'sopera de','soperas de',
+  'taza de','tazas de',
+  'pizca de','pizcas de',
 ]
 
 // Preparaciones que se hacen en CASA (no cambian lo que comprás)
@@ -94,6 +101,7 @@ const PREP_CASA = [
   'fileteado','fileteada','fileteados','fileteadas',
   'finamente','grueso','gruesa','gruesos','gruesas',
   'mediano','mediana','medianos','medianas',
+  'maduro','madura','maduros','maduras',
   'al gusto','al dente',
   'en rodajas','en cubos','en tiras','en juliana','en brunoise',
 ]
