@@ -131,11 +131,25 @@ function normIngrediente(s: string): string {
 // ── Conversión de unidades a base común ───────────────────────────────────────
 type Medida = { cantidad: number; unidad: string }
 
+// Unidades de conteo que equivalen a "unidades" para agrupar ingredientes
+const UNIDADES_CONTEO = new Set([
+  'diente','dientes','hoja','hojas','rama','ramas','cabeza','cabezas',
+  'trozo','trozos','filete','filetes','presa','presas','manojo','manojos',
+  'loncha','lonchas','rebanada','rebanadas','pieza','piezas','gota','gotas',
+  'pizca','pellizco',
+])
+
+function normUnidad(u: string): string {
+  const ub = (u ?? '').toLowerCase().trim()
+  if (UNIDADES_CONTEO.has(ub)) return 'unidades'
+  return ub || 'unidades'
+}
+
 function convertirABase(cantidad: number, unidad: string): Medida {
-  const u = (unidad ?? '').toLowerCase().trim()
+  const u = normUnidad(unidad)
   if (u === 'kg')  return { cantidad: cantidad * 1000, unidad: 'g' }
   if (u === 'l')   return { cantidad: cantidad * 1000, unidad: 'ml' }
-  return { cantidad, unidad: u || 'unidades' }
+  return { cantidad, unidad: u }
 }
 
 function convertirDesdeBase(cantidad: number, unidad: string): Medida {
