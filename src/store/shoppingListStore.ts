@@ -79,6 +79,17 @@ function norm(s: string) {
 // ── Sistema de normalización para lista de compras ───────────────────────────
 // Regla: mostrar QUÉ se compra en la tienda, no cómo se prepara en casa.
 
+// Aliases: variantes de nombre que deben normalizarse al mismo producto
+const ALIASES: Record<string, string> = {
+  'pimenton rojo': 'pimenton',
+  'pimiento rojo': 'pimenton',
+  'pimenton verde': 'pimenton verde',
+  'pimenton amarillo': 'pimenton amarillo',
+  'cebolla cabezona': 'cebolla',
+  'cebolla blanca': 'cebolla',
+  'cebolla junca': 'cebolla junca',  // mantener — distinta en Colombia
+}
+
 // Productos que deben mantenerse tal cual (se compran así en la tienda)
 const MANTENER_EXACTO = [
   'carne molida','carne de res molida','pollo molido','cerdo molido',
@@ -156,6 +167,9 @@ function normIngrediente(s: string): string {
     n = n.replace(new RegExp(`(^|\\s)${p.replace(/\s+/g,'\\s+')}(\\s|$)`, 'g'), ' ').trim()
   }
 
+  // 6. Aplicar aliases explícitos
+  if (ALIASES[n]) n = ALIASES[n]
+
   return n.trim()
 }
 
@@ -228,17 +242,27 @@ async function buildItems(
       if (!ing.esencial) continue
       const cantRaw = (ing.cantidad ?? 1) * scale
       const { cantidad: cantBase, unidad: unidadBase } = convertirABase(cantRaw, ing.unidad ?? 'unidades')
-      // Usar nombre base normalizado como clave para agrupar variantes del mismo ingrediente
       const nombreBase = normIngrediente(ing.nombre)
-      const clave = `${nombreBase}::${unidadBase}`
+      // Clave = solo nombre normalizado — misma clave sin importar la unidad
+      const clave = nombreBase
 
       if (acum.has(clave)) {
         const e = acum.get(clave)!
-        e.cantBase += cantBase
+        // Sumar solo si la unidad base coincide; si difiere, preferir unidad de peso/volumen
+        if (e.unidadBase === unidadBase) {
+          e.cantBase += cantBase
+        } else if (['g','ml'].includes(unidadBase) && !['g','ml'].includes(e.unidadBase)) {
+          // La nueva entrada tiene mejor unidad (peso/volumen) → reemplazar
+          e.cantBase = cantBase; e.unidadBase = unidadBase
+        }
+        // Si unidades difieren y la existente ya es g/ml, no reemplazar — simplemente agregar cantidad
+        else if (!['g','ml'].includes(unidadBase)) {
+          e.cantBase += cantBase  // ambas son conteo → sumar igual
+        }
         e.recetas.add(recipe.nombre)
       } else {
         acum.set(clave, {
-          nombre:     nombreBase,  // mostrar nombre limpio
+          nombre:     nombreBase,
           cantBase,
           unidadBase,
           recetas:    new Set([recipe.nombre]),
