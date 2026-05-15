@@ -41,36 +41,63 @@ export default function SobradosSheet({ onClose }: Props) {
     setSaving(false)
   }
 
-  // Devuelve hasta 4 slots futuros donde se puede asignar la sobra
+  // Devuelve hasta 4 slots futuros sacados directamente del menú actual
   const getOpciones = (): SlotOpcion[] => {
     const now    = new Date()
     const jsDay  = now.getDay()
     const isoDow = jsDay === 0 ? 7 : jsDay
     const h      = now.getHours()
+    const hm     = h * 100 + now.getMinutes()  // hora en formato HHMM para comparar
 
-    const MEAL_ORDER = ['desayuno', 'almuerzo', 'cena']
-    const MEAL_CUTOFF: Record<string, number> = { desayuno: 10, almuerzo: 14, cena: 22 }
-
-    const opciones: SlotOpcion[] = []
-
-    for (let offset = 0; offset <= 6 && opciones.length < 4; offset++) {
-      const checkDow = ((isoDow - 1 + offset) % 7) + 1
-      for (const meal of MEAL_ORDER) {
-        if (offset === 0 && h >= MEAL_CUTOFF[meal]) continue
-        const exists = menu.some(e => e.day_of_week === checkDow && e.meal_type.toLowerCase() === meal)
-        if (!exists) continue
-
-        const dayLabel =
-          offset === 0 ? 'Hoy' :
-          offset === 1 ? 'Mañana' :
-          DAY_NAMES_FULL[checkDow]
-        const mealLabel = meal.charAt(0).toUpperCase() + meal.slice(1)
-        opciones.push({ dayOfWeek: checkDow, mealType: meal, label: `${dayLabel} · ${mealLabel}` })
-        if (opciones.length >= 4) break
+    // Hora aproximada por tipo de comida (para filtrar "ya pasó")
+    const CUTOFF: Record<string, number> = {
+      desayuno: 1000, almuerzo: 1400, cena: 2200,
+      snack: 1700, merienda: 1700,
+    }
+    const cutoffFor = (mealType: string): number => {
+      const key = mealType.toLowerCase()
+      for (const [k, v] of Object.entries(CUTOFF)) {
+        if (key === k || key.startsWith(k)) return v
       }
+      return 1400  // fallback: mediodía
     }
 
-    return opciones
+    // Orden preferido para el picker
+    const SORT_ORDER = ['desayuno', 'merienda mañana', 'almuerzo', 'merienda tarde', 'cena', 'snack', 'merienda']
+    const sortKey = (mt: string) => {
+      const idx = SORT_ORDER.findIndex(s => mt.toLowerCase().startsWith(s) || mt.toLowerCase() === s)
+      return idx === -1 ? 99 : idx
+    }
+
+    // Slots únicos del menú: un slot = día × meal_type (sin importar componente)
+    const seen = new Set<string>()
+    const slots = menu
+      .filter(e => e.is_main_recipe && e.recipe_id !== null)
+      .filter(e => {
+        const key = `${e.day_of_week}::${e.meal_type}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      .filter(e => {
+        // Días futuros: siempre incluir
+        if (e.day_of_week > isoDow) return true
+        // Hoy: solo si la comida aún no pasó
+        if (e.day_of_week === isoDow) return hm < cutoffFor(e.meal_type)
+        return false
+      })
+      .sort((a, b) => {
+        if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week
+        return sortKey(a.meal_type) - sortKey(b.meal_type)
+      })
+      .slice(0, 4)
+
+    return slots.map(e => {
+      const offset    = e.day_of_week - isoDow
+      const dayLabel  = offset === 0 ? 'Hoy' : offset === 1 ? 'Mañana' : DAY_NAMES_FULL[e.day_of_week]
+      const mealLabel = e.meal_type.charAt(0).toUpperCase() + e.meal_type.slice(1)
+      return { dayOfWeek: e.day_of_week, mealType: e.meal_type, label: `${dayLabel} · ${mealLabel}` }
+    })
   }
 
   const asignarEnMenu = async (l: Leftover, slot: SlotOpcion) => {
