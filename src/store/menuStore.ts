@@ -445,17 +445,28 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     const jsDay      = todayDate.getDay()
     const todayDow   = jsDay === 0 ? 7 : jsDay
 
-    // Orden cronológico de comidas dentro de la semana
-    const MEAL_ORDER  = ['desayuno', 'almuerzo', 'cena', 'snack']
+    const horaActual = todayDate.getHours()
+    const MEAL_ORDER = ['desayuno', 'almuerzo', 'cena', 'snack']
+    // Hora aproximada a partir de la cual cada comida "ya pasó"
+    const HORA_CORTE: Record<string, number> = {
+      desayuno: 10, almuerzo: 14, cena: 22, snack: 17, merienda: 17,
+    }
+    const yaFuePara = (mealType: string): boolean => {
+      const key = mealType.toLowerCase()
+      for (const [k, v] of Object.entries(HORA_CORTE)) {
+        if (key === k || key.startsWith(k)) return horaActual >= v
+      }
+      return false
+    }
 
-    // Próximos slots no cocinados a partir de hoy
+    // Próximos slots no cocinados a partir de ahora (excluye comidas ya pasadas hoy)
     const upcoming = get().menu
       .filter(e =>
         e.is_main_recipe &&
         e.status === 'planned' &&
         e.recipe_id !== null &&
         (e.day_of_week > todayDow ||
-          (e.day_of_week === todayDow))
+          (e.day_of_week === todayDow && !yaFuePara(e.meal_type)))
       )
       .sort((a, b) => {
         if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week
@@ -478,10 +489,13 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       if (recipeError) throw new Error(`recipes query: ${recipeError.message}`)
 
       const mealTypeLower = entry.meal_type.toLowerCase()
+      // Componentes que NO pueden reemplazar una receta principal
+      const TC_EXCLUIR = new Set(['ensalada', 'salsa', 'vinagreta', 'guarnicion', 'carbohidrato'])
       const candidates = (data ?? []).filter((r: RecipeForMenu) =>
         r.id !== entry.recipe_id &&
         Array.isArray(r.tipo_comida) &&
-        r.tipo_comida.some((t: string) => t.toLowerCase() === mealTypeLower)
+        r.tipo_comida.some((t: string) => t.toLowerCase() === mealTypeLower) &&
+        !TC_EXCLUIR.has(r.tipo_componente ?? '')
       )
       if (candidates.length === 0) continue
 
