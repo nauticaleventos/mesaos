@@ -457,7 +457,8 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       changed++
     }
 
-    // Recargar desde BD para asegurar que la UI refleja el estado real
+    // Delay 300ms → React renderiza el optimistic update antes de recargar BD
+    await new Promise(r => setTimeout(r, 300))
     await get().loadMenu(familyId, getMondayOfWeek())
 
     return changed
