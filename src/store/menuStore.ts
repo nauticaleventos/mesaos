@@ -26,7 +26,7 @@ export interface EnrichedMenuEntry {
 export type { MenuConfig, RecipeForMenu } from '../lib/motorMenu'
 export type SwapReason = 'no_ingredientes' | 'no_apetece' | 'muy_dificil' | 'variedad'
 
-const RECIPE_SELECT = 'id, nombre, tipo_comida, tipo_componente, dificultad, tiempo_total_min, porciones, imagen_url, ingredientes, info_nutricional_aprox, perfiles, filtros_nutricionales'
+const RECIPE_SELECT = 'id, nombre, tipo_comida, tipo_componente, etiqueta_practicidad, dificultad, tiempo_total_min, porciones, imagen_url, ingredientes, info_nutricional_aprox, perfiles, filtros_nutricionales'
 
 interface MenuState {
   config:     MenuConfig | null

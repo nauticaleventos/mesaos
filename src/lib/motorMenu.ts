@@ -30,6 +30,7 @@ export interface RecipeForMenu {
   nombre:                  string
   tipo_comida:             string[]
   tipo_componente:         TipoComponente | null   // clasificación explícita desde BD
+  etiqueta_practicidad:    'diario' | 'para_lucirme' | 'batch' | null
   dificultad:              'facil' | 'media' | 'dificil' | null
   tiempo_total_min:        number | null
   porciones:               number | null
@@ -558,6 +559,45 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
   // Construir lista de comidas a planificar (respeta meals_per_day de miembros)
   const mealSlots = buildMealSlots(allMembers, config)
 
+  // ── Reglas de practicidad ─────────────────────────────────────────────────
+  const TIEMPO_MAX: Record<string, number> = {
+    desayuno: 20,
+    almuerzo: 45,
+    cena:     25,
+    snack:    10,
+  }
+
+  /** Filtra recetas según etiqueta_practicidad y tiempo máximo del slot */
+  function filtrarPorPracticidad(
+    recetas: RecipeForMenu[],
+    tipo: MealType,
+    isDayFinde: boolean,
+    fallback = false
+  ): RecipeForMenu[] {
+    const tiempoMax = isDayFinde ? null : (TIEMPO_MAX[tipo] ?? null)
+
+    const aptas = recetas.filter(r => {
+      // batch nunca aparece como plato principal del menú
+      if (r.etiqueta_practicidad === 'batch') return false
+      // entre semana: solo 'diario'
+      if (!isDayFinde && r.etiqueta_practicidad === 'para_lucirme') return false
+      // tiempo máximo entre semana
+      if (tiempoMax && r.tiempo_total_min && r.tiempo_total_min > tiempoMax) return false
+      return true
+    })
+
+    // Fallback: si no hay candidatas, ampliar gradualmente
+    if (aptas.length === 0 && !fallback) {
+      // Paso 1: ignorar tiempo pero mantener etiqueta
+      const sinTiempo = recetas.filter(r => r.etiqueta_practicidad !== 'batch' && (!isDayFinde ? r.etiqueta_practicidad !== 'para_lucirme' : true))
+      if (sinTiempo.length > 0) return sinTiempo
+      // Paso 2: ignorar todo excepto batch
+      return recetas.filter(r => r.etiqueta_practicidad !== 'batch')
+    }
+
+    return aptas
+  }
+
   for (let day = 1; day <= 7; day++) {
     const isDayFinde     = day >= 6
     const usedToday      = new Set<string>()   // resetea cada día — evita repetir en mismo día
@@ -590,7 +630,8 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         // Pool general: compatible con al menos un miembro, tipo correcto, no usada hoy ni ayer
         // Para desayuno: excluir guarniciones y ensaladas sueltas (no son platos de desayuno)
         const TC_INVALIDOS_DESAYUNO = new Set(['guarnicion', 'ensalada', 'salsa', 'vinagreta'])
-        const pool = allRecipes.filter(r => {
+        const poolBase = filtrarPorPracticidad(allRecipes, tipo, isDayFinde)
+        const pool = poolBase.filter(r => {
           if (!r.tipo_comida.includes(tipo)) return false
           if (tipo === 'desayuno' && r.tipo_componente && TC_INVALIDOS_DESAYUNO.has(r.tipo_componente)) return false
           if (usedToday.has(r.id)) return false
@@ -724,8 +765,11 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
 
       // ── ALMUERZO Y CENA: proteína compartida + acompañamientos por miembro ──
 
+      // Filtrar por practicidad y tiempo máximo según el día
+      const recipesPracticidad = filtrarPorPracticidad(allRecipes, tipo, isDayFinde)
+
       // Filtrar recetas compatibles con los miembros presentes en este slot
-      const compatibleConTodos = allRecipes.filter(r => {
+      const compatibleConTodos = recipesPracticidad.filter(r => {
         if (!slotMembers.every(m => esCompatibleConMiembro(r, m))) return false
         // Aplicar restricciones de invitados
         if (guestRestrictions.includes('vegetariana') && !r.perfiles?.vegetariana) return false
@@ -733,7 +777,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         if (guestRestrictions.includes('sin_lacteos') && !r.filtros_nutricionales?.sin_lacteos) return false
         return true
       })
-      const compatibleConAlguno = allRecipes.filter(r =>
+      const compatibleConAlguno = recipesPracticidad.filter(r =>
         slotMembers.some(m => esCompatibleConMiembro(r, m))
       )
 
