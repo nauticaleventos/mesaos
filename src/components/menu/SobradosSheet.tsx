@@ -32,6 +32,7 @@ export default function SobradosSheet({ onClose }: Props) {
   const [asignando, setAsignando] = useState<string | null>(null)
   const [asignados, setAsignados] = useState<Record<string, string>>({}) // id → label asignado
   const [errorId,   setErrorId]   = useState<string | null>(null)
+  const [errorMsg,  setErrorMsg]  = useState<string>('')
 
   const handleAdd = async (name: string, qty?: string) => {
     if (!family?.id || !name.trim()) return
@@ -106,11 +107,14 @@ export default function SobradosSheet({ onClose }: Props) {
     setAsignando(l.id)
     setPickerId(null)
     setErrorId(null)
+    setErrorMsg('')
     const ok = await asignarSobraEnMenu(family.id, getMondayOfWeek(), slot.dayOfWeek, slot.mealType, l.ingredient_name)
     if (ok) {
       setAsignados(prev => ({ ...prev, [l.id]: slot.label }))
     } else {
       setErrorId(l.id)
+      // El error detallado aparece en la consola del browser (F12 → Console)
+      setErrorMsg('Error al guardar — abrí F12 → Console para ver el detalle')
     }
     setAsignando(null)
   }
@@ -202,7 +206,7 @@ export default function SobradosSheet({ onClose }: Props) {
                           {yaAsignado ? (
                             <p className="mt-1 text-xs text-oliva font-medium">✓ En tu menú: {yaAsignado}</p>
                           ) : errorId === l.id ? (
-                            <p className="mt-1 text-xs text-red-500">Error al guardar. ¿Corriste la migración 017 en Supabase?</p>
+                            <p className="mt-1 text-xs text-red-500">{errorMsg}</p>
                           ) : enCurso ? (
                             <p className="mt-1 text-xs text-muted">Agregando…</p>
                           ) : opciones.length > 0 && (

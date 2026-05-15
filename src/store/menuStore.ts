@@ -608,7 +608,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         day_of_week:    dayOfWeek,
         meal_type:      mealType,
         meal_component: 'sobra',
-        recipe_id:      null,
+        // recipe_id omitido — columna nullable después de migración 017
         nombre_custom:  nombreCustom,
         member_id:      null,
         is_main_recipe: false,
@@ -619,7 +619,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       .single()
 
     if (error) {
-      console.error('[asignarSobraEnMenu]', error.message)
+      console.error('[asignarSobraEnMenu] code:', error.code, '| msg:', error.message, '| details:', error.details, '| hint:', error.hint)
       return false
     }
 
