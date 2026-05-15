@@ -104,15 +104,25 @@ function norm(s: string) {
 // ── Sistema de normalización para lista de compras ───────────────────────────
 // Regla: mostrar QUÉ se compra en la tienda, no cómo se prepara en casa.
 
-// Aliases: variantes de nombre que deben normalizarse al mismo producto
+// Aliases: variantes de nombre → producto estándar de compra
 const ALIASES: Record<string, string> = {
-  'pimenton rojo': 'pimenton',
+  // Cebollas — en Colombia: cabezona=regular, larga=cebolleta, morada=roja
+  'cebolla cabezona': 'cebolla', 'cebollas cabezonas': 'cebolla',
+  'cebolla blanca': 'cebolla', 'cebollas blancas': 'cebolla',
+  'cebolla cabezona blanca': 'cebolla',
+  'cebollas': 'cebolla',
+  'cebolla roja': 'cebolla morada', 'cebollas rojas': 'cebolla morada',
+  'cebolla junca': 'cebolla larga',  // junca = larga en algunas regiones
+  // Pimentones
+  'pimenton rojo': 'pimenton', 'pimientos rojos': 'pimenton',
   'pimiento rojo': 'pimenton',
-  'pimenton verde': 'pimenton verde',
-  'pimenton amarillo': 'pimenton amarillo',
-  'cebolla cabezona': 'cebolla',
-  'cebolla blanca': 'cebolla',
-  'cebolla junca': 'cebolla junca',  // mantener — distinta en Colombia
+  // Champiñones
+  'champinones': 'champinon', 'champiñones': 'champinon',
+  'hongo': 'champinon', 'hongos': 'champinon',
+  // Otros comunes
+  'tomates': 'tomate',
+  'ajos': 'ajo',
+  'limones': 'limon',
 }
 
 // Productos que deben mantenerse tal cual (se compran así en la tienda)
@@ -165,6 +175,8 @@ const PREP_CASA = [
   'puro','pura','puros','puras',
   'entero','entera','enteros','enteras',
   'natural','naturales',
+  'finas','finos','fino','fina',
+  'cabezona','cabezonas',
   'al gusto','al dente',
   'en rodajas','en cubos','en tiras','en juliana','en brunoise',
   'en trozos','en dados','en laminas','en rebanadas','en mitades',
@@ -201,7 +213,9 @@ function normIngrediente(s: string): string {
     n = n.replace(new RegExp(`(^|\\s)${p.replace(/\s+/g,'\\s+')}(\\s|$)`, 'g'), ' ').trim()
   }
 
-  // 5b. Quitar todo lo que venga después de "para", "con" si es descriptivo
+  // 5b. Quitar palabras sueltas colgadas al final (preposiciones sin complemento)
+  // "champiñones shitake en" → "champiñones shitake"
+  n = n.replace(/\s+(en|de|con|para|a|y|o)$/, '').trim()
   // "zanahoria para sopa" → "zanahoria"
   n = n.replace(/\s+(para|con)\s+.*$/, '').trim()
 
