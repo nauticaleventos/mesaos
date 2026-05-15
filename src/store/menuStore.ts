@@ -607,7 +607,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         week_start:     weekStart,
         day_of_week:    dayOfWeek,
         meal_type:      mealType,
-        meal_component: 'sobra',
+        meal_component: 'completo',
         // recipe_id omitido — columna nullable después de migración 017
         nombre_custom:  nombreCustom,
         member_id:      null,
@@ -625,7 +625,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     if (inserted) {
       const entry: EnrichedMenuEntry = {
         ...(inserted as Omit<EnrichedMenuEntry, 'recipe'>),
-        meal_component: 'sobra',
+        meal_component: 'completo',
         nombre_custom:  nombreCustom,
         status:         'planned',
         recipe:         undefined,
