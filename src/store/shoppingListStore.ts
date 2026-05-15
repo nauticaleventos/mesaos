@@ -333,7 +333,7 @@ async function buildItems(
   // Deduplicación final por nombre normalizado (red de seguridad)
   const dedup = new Map<string, typeof result[0]>()
   for (const item of result) {
-    const k = norm(item.ingrediente_nombre)
+    const k = normIngrediente(item.ingrediente_nombre)
     if (dedup.has(k)) {
       const existing = dedup.get(k)!
       existing.cantidad_total += item.cantidad_total
