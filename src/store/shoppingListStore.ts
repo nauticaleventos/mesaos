@@ -53,14 +53,35 @@ function norm(s: string) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
 }
 
-// Extrae el ingrediente base eliminando descriptores de preparación y unidades de conteo
-// "dientes de ajo picado" → "ajo"  |  "cebolla finamente picada" → "cebolla"
+// Extrae el ingrediente base para la lista de compras.
+// Solo importa QUÉ comprar, no cómo prepararlo.
+// "1/2 cebolla finamente picada" → "cebolla"
+// "dientes de ajo picado" → "ajo"
+const PREP_WORDS = [
+  'picado','picada','picados','picadas',
+  'rallado','rallada','rallados','ralladas',
+  'finamente','grueso','gruesa',
+  'triturado','triturada','molido','molida',
+  'cocido','cocida','crudo','cruda',
+  'fresco','fresca','frescos','frescas',
+  'seco','seca','secos','secas',
+  'mediano','mediana','medianos','medianas',
+  'grande','grandes','pequeño','pequeña','pequeno','pequena',
+  'fileteado','fileteada','rebanado','rebanada',
+  'troceado','troceada','cortado','cortada',
+  'al gusto','al dente','en rodajas','en cubos','en tiras','en juliana',
+]
+
 function normIngrediente(s: string): string {
   let n = norm(s)
-  // Eliminar unidades de conteo al inicio: "dientes de", "hojas de", "ramas de", "tazas de", etc.
-  n = n.replace(/^(dientes?|hojas?|ramas?|tazas?|cucharadas?|cucharaditas?|cabezas?|piezas?|lonjas?|rodajas?|trozos?|filetes?|presas?)\s+de\s+/, '')
-  // Eliminar descriptores de preparación al final
-  n = n.replace(/\s+(picado[a]?s?|rallado[a]?s?|finamente|triturado[a]?s?|molido[a]?s?|en\s+\w+|al\s+gusto|fresco[a]?s?|seco[a]?s?|cocido[a]?s?|crudo[a]?s?|mediano[a]?s?|grande[a]?s?|pequen[ao]s?)(\s.*)?$/, '')
+  // 1. Quitar números y fracciones al inicio: "1/2 cebolla" → "cebolla"
+  n = n.replace(/^[\d\/\.,\s]+/, '').trim()
+  // 2. Quitar unidades de conteo: "dientes de ajo" → "ajo"
+  n = n.replace(/^(dientes?|hojas?|ramas?|cabezas?|trozos?|filetes?|presas?|manojos?|lonjas?|rodajas?|piezas?)\s+de\s+/, '')
+  // 3. Quitar descriptores de preparación (en cualquier posición)
+  for (const p of PREP_WORDS) {
+    n = n.replace(new RegExp(`\\s+${p.replace(/\s/g,'\\s+')}(\\s|$)`, 'g'), ' ').trim()
+  }
   return n.trim()
 }
 
