@@ -330,7 +330,22 @@ async function buildItems(
     })
   }
 
-  return result.sort((a, b) => a.categoria_pasillo.localeCompare(b.categoria_pasillo))
+  // Deduplicación final por nombre normalizado (red de seguridad)
+  const dedup = new Map<string, typeof result[0]>()
+  for (const item of result) {
+    const k = norm(item.ingrediente_nombre)
+    if (dedup.has(k)) {
+      const existing = dedup.get(k)!
+      existing.cantidad_total += item.cantidad_total
+      existing.recetas_origen = [...new Set([...existing.recetas_origen, ...item.recetas_origen])]
+      if (item.en_nevera) existing.en_nevera = true
+      if (!item.faltante) existing.faltante = false
+    } else {
+      dedup.set(k, { ...item })
+    }
+  }
+
+  return [...dedup.values()].sort((a, b) => a.categoria_pasillo.localeCompare(b.categoria_pasillo))
 }
 
 export const useShoppingListStore = create<ShoppingListState>((set) => ({
