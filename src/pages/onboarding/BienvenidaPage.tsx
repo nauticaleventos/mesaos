@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { supabase } from '../../lib/supabase'
 import { useFamilyStore } from '../../store/familyStore'
@@ -49,14 +49,17 @@ async function marcarVista(userId: string) {
 }
 
 export default function BienvenidaPage() {
-  const session  = useAuthStore(s => s.session)
-  const family   = useFamilyStore(s => s.family)
-  const navigate = useNavigate()
-  const userId   = session?.user?.id ?? ''
+  const session        = useAuthStore(s => s.session)
+  const family         = useFamilyStore(s => s.family)
+  const navigate       = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isPreview      = searchParams.has('preview')
+  const userId         = session?.user?.id ?? ''
 
   const [paso, setPaso] = useState<number>(() => initialStep(userId))
 
-  if (family) { navigate('/', { replace: true }); return null }
+  // Redirigir si ya tiene familia, excepto en modo preview
+  if (family && !isPreview) { navigate('/', { replace: true }); return null }
 
   const avanzar = () => {
     if (paso < 3) {
@@ -69,6 +72,7 @@ export default function BienvenidaPage() {
   }
 
   const completar = async () => {
+    if (isPreview) { navigate('/', { replace: true }); return }
     await marcarVista(userId)
     navigate('/onboarding', { replace: true })
   }
