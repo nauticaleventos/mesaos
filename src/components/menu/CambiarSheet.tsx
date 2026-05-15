@@ -50,7 +50,7 @@ export default function CambiarSheet({ entry, onClose }: Props) {
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="font-semibold text-text">Cambiar receta</p>
-              <p className="text-xs text-muted mt-0.5 line-clamp-1">{entry.recipe.nombre}</p>
+              <p className="text-xs text-muted mt-0.5 line-clamp-1">{entry.recipe?.nombre}</p>
             </div>
             <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-gray-100 flex-shrink-0">
               <X size={18} className="text-muted" />

@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { X, Plus, Trash2 } from 'lucide-react'
+import { X, Plus, Trash2, ArrowRight } from 'lucide-react'
 import { useLeftoversStore, type Leftover } from '../../store/leftoversStore'
 import { useFamilyStore } from '../../store/familyStore'
+import { useMenuStore } from '../../store/menuStore'
+import { getMondayOfWeek } from '../../lib/motorMenu'
 
 const SUGERENCIAS = [
   'Pollo asado', 'Pechuga de pollo', 'Carne de res', 'Carne molida',
@@ -16,9 +18,12 @@ interface Props {
 export default function SobradosSheet({ onClose }: Props) {
   const { family }                                 = useFamilyStore()
   const { leftovers, addLeftover, removeLeftover } = useLeftoversStore()
+  const { menu, config, asignarSobraEnMenu }       = useMenuStore()
   const [nombre,   setNombre]   = useState('')
   const [cantidad, setCantidad] = useState('')
   const [saving,   setSaving]   = useState(false)
+  const [asignando, setAsignando] = useState<string | null>(null) // id del leftover en curso
+  const [asignados, setAsignados] = useState<Set<string>>(new Set())
 
   const handleAdd = async (name: string, qty?: string) => {
     if (!family?.id || !name.trim()) return
@@ -27,6 +32,48 @@ export default function SobradosSheet({ onClose }: Props) {
     setNombre('')
     setCantidad('')
     setSaving(false)
+  }
+
+  // Encuentra el próximo slot de almuerzo o cena a partir de hoy
+  const proxComidaSlot = (): { dayOfWeek: number; mealType: string; label: string } | null => {
+    const now = new Date()
+    const dow = now.getDay()
+    const isoDow = dow === 0 ? 7 : dow
+    const h = now.getHours()
+
+    const MEAL_ORDER = ['almuerzo', 'cena']
+    const MEAL_AFTER: Record<string, number> = { almuerzo: 14, cena: 22 }
+    const MEAL_LABEL: Record<string, string> = { almuerzo: 'almuerzo', cena: 'cena' }
+
+    // También considerar desayuno si está planificado
+    if (config?.planear_desayuno) {
+      MEAL_ORDER.unshift('desayuno')
+      MEAL_AFTER['desayuno'] = 10
+      MEAL_LABEL['desayuno'] = 'desayuno'
+    }
+
+    for (let offset = 0; offset <= 6; offset++) {
+      const checkDow = ((isoDow - 1 + offset) % 7) + 1
+      for (const meal of MEAL_ORDER) {
+        if (offset === 0 && h >= MEAL_AFTER[meal]) continue
+        const exists = menu.some(e => e.day_of_week === checkDow && e.meal_type === meal)
+        if (exists) {
+          const dayLabel = offset === 0 ? 'hoy' : offset === 1 ? 'mañana' : `día ${checkDow}`
+          return { dayOfWeek: checkDow, mealType: meal, label: `${MEAL_LABEL[meal]} de ${dayLabel}` }
+        }
+      }
+    }
+    return null
+  }
+
+  const asignarEnMenu = async (l: Leftover) => {
+    if (!family?.id) return
+    const slot = proxComidaSlot()
+    if (!slot) return
+    setAsignando(l.id)
+    await asignarSobraEnMenu(family.id, getMondayOfWeek(), slot.dayOfWeek, slot.mealType, l.ingredient_name)
+    setAsignados(prev => new Set([...prev, l.id]))
+    setAsignando(null)
   }
 
   // ── ESTRUCTURA IDÉNTICA A DiaDificilSheet ─────────────────────────────────
@@ -98,18 +145,35 @@ export default function SobradosSheet({ onClose }: Props) {
                 Esta semana ({leftovers.length})
               </p>
               <div className="flex flex-col gap-2">
-                {leftovers.map((l: Leftover) => (
-                  <div key={l.id}
-                    className="flex items-center justify-between py-2 px-3 rounded-xl bg-oliva-claro/40 border border-oliva/20">
-                    <div>
-                      <p className="text-sm font-medium text-text">🍗 {l.ingredient_name}</p>
-                      {l.quantity && <p className="text-xs text-muted">{l.quantity}</p>}
+                {leftovers.map((l: Leftover) => {
+                  const yaAsignado = asignados.has(l.id)
+                  const slot = proxComidaSlot()
+                  return (
+                    <div key={l.id}
+                      className="flex items-start justify-between gap-2 py-2 px-3 rounded-xl bg-oliva-claro/40 border border-oliva/20">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-text">🍗 {l.ingredient_name}</p>
+                        {l.quantity && <p className="text-xs text-muted">{l.quantity}</p>}
+                        {slot && (
+                          <button
+                            onClick={() => asignarEnMenu(l)}
+                            disabled={asignando === l.id || yaAsignado}
+                            className="mt-1 flex items-center gap-1 text-xs font-medium text-accent hover:opacity-70 disabled:opacity-40 transition-opacity">
+                            {yaAsignado
+                              ? '✓ Agregado al menú'
+                              : asignando === l.id
+                                ? '...'
+                                : <><ArrowRight size={11}/> Poner en {slot.label}</>
+                            }
+                          </button>
+                        )}
+                      </div>
+                      <button onClick={() => removeLeftover(l.id)} className="p-1.5 text-muted hover:text-error transition-colors flex-shrink-0">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                    <button onClick={() => removeLeftover(l.id)} className="p-1.5 text-muted hover:text-error transition-colors">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}

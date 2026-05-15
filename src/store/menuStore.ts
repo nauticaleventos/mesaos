@@ -12,15 +12,16 @@ export interface EnrichedMenuEntry {
   day_of_week:    number
   meal_type:      string   // puede ser nombre personalizado: "Merienda mañana"
   meal_time?:     string   // hora configurada: "09:00"
-  meal_component: string   // 'completo' | 'proteina' | 'carbohidrato' | 'ensalada' | 'salsa'
-  recipe_id:      string
+  meal_component: string   // 'completo' | 'proteina' | 'carbohidrato' | 'ensalada' | 'salsa' | 'sobra'
+  recipe_id:      string | null
+  nombre_custom?: string   // usado cuando recipe_id es null (sobras manuales)
   member_id:      string | null
   is_main_recipe: boolean
   servings:       number
   status:               'planned' | 'cooked' | 'skipped' | 'swapped'
   accion_preparacion?:  'cocinar' | 'calentar' | 'ensamblar' | 'descongelar' | 'preparar_fresco'
   dia_dificil?:         boolean
-  recipe:               RecipeForMenu
+  recipe?:              RecipeForMenu
 }
 
 export type { MenuConfig, RecipeForMenu } from '../lib/motorMenu'
@@ -48,6 +49,7 @@ interface MenuState {
   quitarComponente:     (entryId: string) => Promise<void>
   agregarComponente:    (familyId: string, weekStart: string, dayOfWeek: number, mealType: string, recipeId: string, component: string) => Promise<void>
   replicarEnSemana:     (familyId: string, weekStart: string, fromDay: number, mealType: string, recipeId: string, component: string) => Promise<number>
+  asignarSobraEnMenu:   (familyId: string, weekStart: string, dayOfWeek: number, mealType: string, nombreCustom: string) => Promise<void>
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -118,26 +120,27 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
     if (!entries || entries.length === 0) { set({ menu: [], loading: false }); return }
 
-    // Cargar recetas referenciadas
-    const recipeIds = [...new Set(entries.map((e: { recipe_id: string }) => e.recipe_id))]
-    const { data: recipes } = await supabase
-      .from('recipes')
-      .select(RECIPE_SELECT)
-      .in('id', recipeIds)
+    // Cargar recetas referenciadas (solo entradas con recipe_id)
+    const recipeIds = [...new Set(
+      entries.map((e: { recipe_id: string | null }) => e.recipe_id).filter(Boolean) as string[]
+    )]
+    const { data: recipes } = recipeIds.length > 0
+      ? await supabase.from('recipes').select(RECIPE_SELECT).in('id', recipeIds)
+      : { data: [] }
 
     const recipeMap = new Map((recipes ?? []).map(r => [r.id, r]))
 
     const enriched: EnrichedMenuEntry[] = (entries as {
       id: string; day_of_week: number; meal_type: string; meal_component: string;
-      recipe_id: string; member_id: string | null; is_main_recipe: boolean;
-      servings: number; status: string
+      recipe_id: string | null; nombre_custom?: string; member_id: string | null;
+      is_main_recipe: boolean; servings: number; status: string
     }[])
-      .filter(e => recipeMap.has(e.recipe_id))
+      .filter(e => e.recipe_id === null || recipeMap.has(e.recipe_id))
       .map(e => ({
         ...e,
         meal_component: e.meal_component ?? 'completo',
         status: e.status as EnrichedMenuEntry['status'],
-        recipe: recipeMap.get(e.recipe_id) as RecipeForMenu,
+        recipe: e.recipe_id ? recipeMap.get(e.recipe_id) as RecipeForMenu : undefined,
       }))
 
     set({ menu: enriched, loading: false })
@@ -344,7 +347,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         await supabase.from('leftover_proteins').insert({
           family_id:      wm.family_id,
           recipe_id:      entry.recipe_id,
-          protein_nombre: entry.recipe.nombre,
+          protein_nombre: entry.recipe?.nombre ?? entry.nombre_custom ?? '',
           cooking_date:   new Date().toISOString().split('T')[0],
           available:      true,
         })
@@ -398,7 +401,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
     // Para "no_apetece": excluir recetas con nombre similar a la actual
     if (razon === 'no_apetece') {
-      const currentName = entry.recipe.nombre.toLowerCase()
+      const currentName = (entry.recipe?.nombre ?? '').toLowerCase()
       candidates = candidates.filter(r =>
         !r.nombre.toLowerCase().split(' ').some(w => w.length > 4 && currentName.includes(w))
       )
@@ -568,5 +571,36 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       }
     }
     return added
+  },
+
+  asignarSobraEnMenu: async (familyId, weekStart, dayOfWeek, mealType, nombreCustom) => {
+    const { data: inserted } = await supabase
+      .from('weekly_menu')
+      .insert({
+        family_id:      familyId,
+        week_start:     weekStart,
+        day_of_week:    dayOfWeek,
+        meal_type:      mealType,
+        meal_component: 'sobra',
+        recipe_id:      null,
+        nombre_custom:  nombreCustom,
+        member_id:      null,
+        is_main_recipe: false,
+        servings:       1,
+        status:         'planned',
+      })
+      .select()
+      .single()
+
+    if (inserted) {
+      const entry: EnrichedMenuEntry = {
+        ...(inserted as Omit<EnrichedMenuEntry, 'recipe'>),
+        meal_component: 'sobra',
+        nombre_custom:  nombreCustom,
+        status:         'planned',
+        recipe:         undefined,
+      }
+      set(s => ({ menu: [...s.menu, entry] }))
+    }
   },
 }))

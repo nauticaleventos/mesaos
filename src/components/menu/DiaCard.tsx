@@ -98,6 +98,7 @@ function agruparPorReceta(entries: EnrichedMenuEntry[], allMembers: FamilyMember
 }[] {
   const map = new Map<string, { entry: EnrichedMenuEntry; memberIds: (string | null)[] }>()
   for (const e of entries) {
+    if (e.recipe_id === null) continue  // custom entries se renderizan aparte
     if (map.has(e.recipe_id)) {
       map.get(e.recipe_id)!.memberIds.push(e.member_id)
     } else {
@@ -270,12 +271,14 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
   const [ajustesRecipe, setAjustesRecipe]     = useState<{ name: string; members: FamilyMember[] } | null>(null)
 
   const visibles = components.filter(e => e.meal_component !== 'vinagreta')
-  const main = visibles.find(e => e.is_main_recipe) ?? visibles[0]
-  if (!main) return null
+  const customEntries = visibles.filter(e => e.recipe_id === null)
+  const recipeEntries = visibles.filter(e => e.recipe_id !== null)
+  const main = recipeEntries.find(e => e.is_main_recipe) ?? recipeEntries[0]
+  if (!main && customEntries.length === 0) return null
 
-  const isCooked     = main.status === 'cooked'
-  const isSkipped    = main.status === 'skipped'
-  const isDiaDificil = !!(main as typeof main & { dia_dificil?: boolean }).dia_dificil
+  const isCooked     = main?.status === 'cooked'
+  const isSkipped    = main?.status === 'skipped'
+  const isDiaDificil = !!(main as (typeof main & { dia_dificil?: boolean }) | undefined)?.dia_dificil
   const tipoBase  = tipo.toLowerCase()
   const isSimple  = tipoBase === 'desayuno' || tipoBase === 'snack' ||
                     tipoBase.includes('merienda') || tipoBase.includes('snack')
@@ -350,7 +353,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
         {/* Recetas */}
         <div className={`flex flex-col gap-0 px-4 pb-1 ${isCooked ? 'opacity-60' : ''} ${isSkipped ? 'opacity-40' : ''}`}>
           {grupos.map(({ entry: e, members: eMembers }) => {
-            const r    = e.recipe
+            const r    = e.recipe!
             const cm   = calcularMatch(r.ingredientes ?? [], fridgeItems)
             const badge = matchBadge(cm.estado)
             return (
@@ -462,13 +465,13 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
 
   // ── ALMUERZO / CENA ───────────────────────────────────────────────────────
   const componentOrder = ['proteina', 'completo', 'guarnicion', 'carbohidrato', 'ensalada', 'salsa', 'bebida']
-  const visiblesSorted = [...visibles].sort((a, b) =>
+  const recipeEntriesSorted = [...recipeEntries].sort((a, b) =>
     (componentOrder.indexOf(a.meal_component) + 1 || 99) -
     (componentOrder.indexOf(b.meal_component) + 1 || 99)
   )
 
   const componentGroups = new Map<string, { entry: EnrichedMenuEntry; members: FamilyMember[] }>()
-  for (const e of visiblesSorted) {
+  for (const e of recipeEntriesSorted) {
     const key = `${e.meal_component}::${e.recipe_id}`
     if (componentGroups.has(key)) {
       if (e.member_id) {
@@ -481,9 +484,9 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
     }
   }
 
-  const altMemberIds = new Set(visibles.filter(e => e.member_id !== null && e.is_main_recipe).map(e => e.member_id!))
+  const altMemberIds = new Set(recipeEntries.filter(e => e.member_id !== null && e.is_main_recipe).map(e => e.member_id!))
   const membersFamilia = members.filter(m => !altMemberIds.has(m.id!))
-  const hasProtein = components.some(c => c.meal_component === 'proteina' || c.meal_component === 'completo')
+  const hasProtein = recipeEntries.some(c => c.meal_component === 'proteina' || c.meal_component === 'completo')
 
   return (
     <div className={`${!isLast ? 'border-b border-border/60' : ''}`}>
@@ -500,7 +503,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
             </span>
           )}
         </div>
-        {!isCooked && !isSkipped && (
+        {main && !isCooked && !isSkipped && (
           <button onClick={() => setShowCambiar(true)}
             className="text-[11px] text-muted hover:text-accent transition-colors font-medium flex items-center gap-1 flex-shrink-0">
             <RefreshCw size={10} /> Cambiar
@@ -512,7 +515,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
       {/* Componentes */}
       <div className={`flex flex-col px-4 pb-2 ${isCooked ? 'opacity-60' : ''} ${isSkipped ? 'opacity-40' : ''}`}>
         {[...componentGroups.values()].map(({ entry: e, members: eMembers }) => {
-          const r     = e.recipe
+          const r     = e.recipe!
           const cm    = calcularMatch(r.ingredientes ?? [], fridgeItems)
           const badge = matchBadge(cm.estado)
           const emoji = COMPONENT_EMOJI[e.meal_component] ?? ''
@@ -585,7 +588,21 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
           )
         })}
 
-        {/* Sobrantes */}
+        {/* Entradas de sobras asignadas al menú */}
+        {customEntries.map(e => (
+          <div key={e.id} className="flex items-center gap-2 py-2 border-b border-border/30 last:border-0">
+            <span className="text-base leading-none w-5 flex-shrink-0">♻️</span>
+            <p className="flex-1 text-sm font-medium text-oliva">{e.nombre_custom}</p>
+            {!isCooked && !isSkipped && (
+              <button onClick={() => quitarComponente(e.id)}
+                className="p-1 rounded-lg hover:bg-red-50 hover:text-red-500 text-muted transition-colors flex-shrink-0">
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
+        ))}
+
+        {/* Sobrantes pendientes (chips) */}
         {leftovers.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1 pl-7">
             {leftovers.map(l => (
@@ -596,7 +613,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
           </div>
         )}
 
-        {!hasProtein && !isSkipped && (
+        {!hasProtein && customEntries.length === 0 && !isSkipped && (
           <button onClick={onAddSobrante}
             className="flex items-center gap-1.5 pt-1 pl-7 text-xs text-accent font-medium hover:opacity-70">
             + Agregar proteína
@@ -633,15 +650,17 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, leftovers
         )}
       </div>
 
-      <AccionesRow expanded={expanded} onExpand={() => setExpanded(e => !e)}
-        isCooked={isCooked} isSkipped={isSkipped}
-        onVerReceta={() => navigate(`/receta/${main.recipe_id}`)}
-        onCocinada={() => { onCocinada(); setExpanded(false) }}
-        onSaltar={() => { onSaltar(); setExpanded(false) }}
-        onRestaurar={() => { onRestaurar(); setExpanded(false) }}
-        onCambiar={() => setShowCambiar(true)}
-      />
-      {showCambiar && <CambiarSheet entry={main} onClose={() => setShowCambiar(false)} />}
+      {main && (
+        <AccionesRow expanded={expanded} onExpand={() => setExpanded(e => !e)}
+          isCooked={isCooked} isSkipped={isSkipped}
+          onVerReceta={() => navigate(`/receta/${main.recipe_id}`)}
+          onCocinada={() => { onCocinada(); setExpanded(false) }}
+          onSaltar={() => { onSaltar(); setExpanded(false) }}
+          onRestaurar={() => { onRestaurar(); setExpanded(false) }}
+          onCambiar={() => setShowCambiar(true)}
+        />
+      )}
+      {showCambiar && main && <CambiarSheet entry={main} onClose={() => setShowCambiar(false)} />}
       {ajustesRecipe && (
         <AjustesPorcionModal
           recipeName={ajustesRecipe.name}
