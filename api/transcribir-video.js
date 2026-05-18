@@ -178,27 +178,29 @@ async function procesarInstagram(url, plat) {
 
   // Apify Instagram Post Scraper
   // Actor: apify/instagram-scraper o apify/instagram-reel-scraper
-  const actorId = plat === 'facebook' ? 'apify/facebook-posts-scraper' : 'apify/instagram-scraper'
+  // Apify usa ~ como separador en la API (no /)
+  const actorId = plat === 'facebook' ? 'apify~facebook-posts-scraper' : 'apify~instagram-scraper'
 
   try {
-    // Lanzar el actor de Apify
-    const runRes = await fetch(`https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items`, {
+    // Lanzar el actor de Apify (sync — espera resultado)
+    const runRes = await fetch(`https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?timeout=50`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apifyToken}`,
       },
       body: JSON.stringify({
-        directUrls: [url],
+        directUrls:  [url],
         resultsType: 'posts',
         resultsLimit: 1,
         addParentData: false,
       }),
-      signal: AbortSignal.timeout(55000), // 55s — dentro del límite de Vercel
+      signal: AbortSignal.timeout(55000),
     })
 
     if (!runRes.ok) {
       const errText = await runRes.text()
+      console.error(`Apify error ${runRes.status}:`, errText.substring(0, 500))
       throw new Error(`Apify error ${runRes.status}: ${errText.substring(0, 200)}`)
     }
 
