@@ -96,8 +96,7 @@ export default function FormaSocial({ onExtracted, onBack, onGoToTexto, onGoToFo
           <div className="text-center">
             <p className="font-semibold text-text">Link del post o video</p>
             <p className="text-sm text-muted mt-1">
-              Pegá el link de TikTok o YouTube.
-              Para Instagram, usá "Pegar texto" o "Subir foto".
+              Copiá el link desde cualquier red social y pegalo acá.
             </p>
           </div>
         </div>
@@ -105,13 +104,12 @@ export default function FormaSocial({ onExtracted, onBack, onGoToTexto, onGoToFo
         {/* Tips */}
         <div className="grid grid-cols-2 gap-2">
           {[
-            { nombre: 'TikTok',   emoji: '🎵', tip: 'Compartir → Copiar link', ok: true },
-            { nombre: 'YouTube',  emoji: '▶️', tip: 'Compartir → Copiar link', ok: true },
-            { nombre: 'Instagram',emoji: '📸', tip: 'Usar "Pegar texto" mejor', ok: false },
-            { nombre: 'Facebook', emoji: '👥', tip: 'Usar "Pegar texto" mejor', ok: false },
-          ].map(({ nombre, emoji, tip, ok }) => (
-            <div key={nombre}
-              className={`p-3 rounded-xl border ${ok ? 'border-border bg-white' : 'border-border bg-gray-50 opacity-60'}`}>
+            { nombre: 'TikTok',   emoji: '🎵', tip: 'Compartir → Copiar link' },
+            { nombre: 'YouTube',  emoji: '▶️', tip: 'Compartir → Copiar link' },
+            { nombre: 'Instagram',emoji: '📸', tip: '··· → Copiar link' },
+            { nombre: 'Facebook', emoji: '👥', tip: 'Compartir → Copiar link' },
+          ].map(({ nombre, emoji, tip }) => (
+            <div key={nombre} className="p-3 rounded-xl border border-border bg-white">
               <p className="text-sm font-medium text-text">{emoji} {nombre}</p>
               <p className="text-xs text-muted mt-0.5">{tip}</p>
             </div>
