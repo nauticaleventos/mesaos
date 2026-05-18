@@ -403,13 +403,33 @@ export default function RecetaPage() {
       <div className="px-4 py-3 flex flex-col gap-3">
         <p className="text-xs font-semibold text-muted uppercase tracking-wider">Sobre esta receta</p>
 
-        {/* Fuente */}
-        {(recipe as Recipe & { source_url?: string; source_platform?: string }).source_url && (
-          <a href={(recipe as Recipe & { source_url?: string }).source_url} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-accent hover:underline">
-            🔗 Ver fuente original
-          </a>
-        )}
+        {/* Atribución de fuente */}
+        {(() => {
+          const r = recipe as Recipe & { source_url?: string; source_platform?: string }
+          if (!r.source_url) return null
+          const autor = extraerAutor(r.source_url, r.source_platform)
+          const plataforma = nombrePlataforma(r.source_platform)
+          return (
+            <div className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 border border-border">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-base">{iconoPlataforma(r.source_platform)}</span>
+                <span className="text-sm text-text font-medium">
+                  Receta de {autor}
+                </span>
+                {plataforma && (
+                  <span className="text-xs text-muted">en {plataforma}</span>
+                )}
+              </div>
+              <a href={r.source_url} target="_blank" rel="noopener noreferrer"
+                className="text-xs text-accent hover:underline break-all">
+                🔗 Ver publicación original
+              </a>
+              <p className="text-xs text-muted leading-relaxed">
+                Si te gustan las recetas, te invitamos a darle like y compartir ❤️
+              </p>
+            </div>
+          )
+        })()}
 
         {/* Rating del miembro */}
         {memberId && (
@@ -633,6 +653,48 @@ export default function RecetaPage() {
       )}
     </div>
   )
+}
+
+function extraerAutor(url: string, platform?: string | null): string {
+  try {
+    const { hostname, pathname } = new URL(url)
+    if (platform === 'instagram' || hostname.includes('instagram')) {
+      // instagram.com/username/p/... o instagram.com/reel/...
+      const parts = pathname.split('/').filter(Boolean)
+      if (parts[0] && parts[0] !== 'p' && parts[0] !== 'reel' && parts[0] !== 'tv')
+        return `@${parts[0]}`
+    }
+    if (platform === 'tiktok' || hostname.includes('tiktok')) {
+      // tiktok.com/@username/video/...
+      const match = pathname.match(/@([^/]+)/)
+      if (match) return `@${match[1]}`
+    }
+    if (platform === 'youtube' || hostname.includes('youtube') || hostname.includes('youtu.be')) {
+      // youtube.com/@channel o youtube.com/c/channel
+      const match = pathname.match(/\/@?([^/]+)/)
+      if (match) return match[1]
+    }
+    // Fallback: dominio limpio
+    return hostname.replace('www.', '')
+  } catch {
+    return 'el autor original'
+  }
+}
+
+function nombrePlataforma(platform?: string | null): string {
+  const map: Record<string, string> = {
+    instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube',
+    facebook: 'Facebook', web: '', texto: '', foto: '', manual: '',
+  }
+  return map[platform ?? ''] ?? ''
+}
+
+function iconoPlataforma(platform?: string | null): string {
+  const map: Record<string, string> = {
+    instagram: '📸', tiktok: '🎵', youtube: '▶️',
+    facebook: '👥', web: '🌐',
+  }
+  return map[platform ?? ''] ?? '🔗'
 }
 
 function Divider() {
