@@ -131,14 +131,15 @@ export default function FormaSocial({ onExtracted, onBack, onGoToTexto, onGoToFo
         )}
 
         {loading ? (
-          <div className="flex items-center gap-3 py-4 justify-center">
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
             <div className="flex gap-1">
               {[0,150,300].map(d => (
                 <span key={d} className="w-2 h-2 rounded-full bg-accent animate-bounce"
                       style={{ animationDelay: `${d}ms` }} />
               ))}
             </div>
-            <p className="text-sm text-muted">Analizando receta… 🤖</p>
+            <p className="text-sm font-medium text-text">Tita está escuchando el video... 🎧</p>
+            <p className="text-xs text-muted">Transcribiendo audio — puede tardar 30-60 segundos</p>
           </div>
         ) : (
           <button onClick={procesar} disabled={!url.trim()} className="btn-primary">

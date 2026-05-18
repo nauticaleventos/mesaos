@@ -161,56 +161,61 @@ export default async function handler(req, res) {
 
       const plat = platform ?? detectPlatform(content)
 
-      // Instagram/Facebook: bloquean scraping — pedir al usuario alternativas
-      if (plat === 'instagram' || plat === 'facebook') {
-        return res.status(422).json({ error: 'INSTAGRAM_BLOCKED' })
-      }
+      // ── Plataformas de video: llamar a /api/transcribir-video primero ─────────
+      if (['tiktok', 'youtube', 'instagram', 'facebook'].includes(plat)) {
+        let pageContent = ''
 
-      let pageContent = ''
-
-      // ── TikTok: oEmbed oficial ──────────────────────────────────────────────
-      if (plat === 'tiktok') {
         try {
-          const oe = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(content)}`,
-            { signal: AbortSignal.timeout(6000) })
-          if (oe.ok) {
-            const d = await oe.json()
-            pageContent = [
-              d.title        ? `Caption: ${d.title}` : '',
-              d.author_name  ? `Usuario: ${d.author_name}` : '',
-            ].filter(Boolean).join('\n')
-          }
-        } catch { /* continuar sin oEmbed */ }
-      }
+          // Llamar al endpoint de transcripción (mismo servidor)
+          const baseUrl = req.headers.origin
+            ?? `https://${req.headers.host}`
+            ?? 'https://mesa-os-beta.vercel.app'
 
-      // ── YouTube: oEmbed + og:description ───────────────────────────────────
-      else if (plat === 'youtube') {
-        try {
-          const oe = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(content)}&format=json`,
-            { signal: AbortSignal.timeout(6000) })
-          if (oe.ok) {
-            const d = await oe.json()
-            pageContent = `Título: ${d.title}\nCanal: ${d.author_name}`
-          }
-        } catch { /* continuar sin oEmbed */ }
-
-        // Complementar con og:description de la página
-        try {
-          const pageRes = await fetch(content, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; mesa.os recipe importer)' },
-            signal: AbortSignal.timeout(6000),
+          const transRes = await fetch(`${baseUrl}/api/transcribir-video`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ url: content, plataforma: plat }),
+            signal:  AbortSignal.timeout(50000),  // 50s — deja margen para Claude
           })
-          if (pageRes.ok) {
-            const html = await pageRes.text()
-            const desc = (html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i)
-                       || html.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i))?.[1] ?? ''
-            if (desc) pageContent += `\nDescripción: ${desc.substring(0, 2000)}`
+
+          if (transRes.ok) {
+            const transData = await transRes.json()
+            pageContent = transData.texto_completo ?? ''
+
+            // Instagram sin token → retornar INSTAGRAM_BLOCKED directamente
+            if (transData.error === 'INSTAGRAM_BLOCKED' || !pageContent) {
+              return res.status(422).json({ error: 'INSTAGRAM_BLOCKED' })
+            }
+          } else {
+            const errData = await transRes.json().catch(() => ({}))
+            // Si Apify/transcripción no disponible en Instagram → fallback amigable
+            if (plat === 'instagram' || plat === 'facebook') {
+              return res.status(422).json({ error: 'INSTAGRAM_BLOCKED' })
+            }
+            // Para TikTok/YouTube: continuar con pageContent vacío (Claude usará la URL)
+            console.warn('transcribir-video falló:', errData.error)
           }
-        } catch { /* ignorar */ }
+        } catch (transcErr) {
+          console.warn('transcribir-video timeout/error:', transcErr.message)
+          // Fallback: Instagram → bloqueo, otros → continuar sin transcripción
+          if (plat === 'instagram' || plat === 'facebook') {
+            return res.status(422).json({ error: 'INSTAGRAM_BLOCKED' })
+          }
+        }
+
+        const userMsg = pageContent
+          ? `Este contenido fue extraído de ${plat} (audio transcripto + caption).\nURL: ${content}\n\nContenido completo:\n${pageContent}\n\nExtraé la receta completa. El nombre es el plato en sí, no el título del post.`
+          : `Extraé la receta de esta URL de ${plat}: ${content}\nPlataforma: ${plat}`
+
+        const text = await callClaude(apiKey, [{ role: 'user', content: userMsg }], systemFull)
+        recipe = parseRecipeJSON(text)
+        recipe.source_url = source_url
+        recipe.source_platform = plat
       }
 
       // ── Otros (blogs, webs) ─────────────────────────────────────────────────
       else {
+        let pageContent = ''
         try {
           const pageRes = await fetch(content, {
             headers: { 'User-Agent': 'Mozilla/5.0 (compatible; mesa.os recipe importer)' },
@@ -227,16 +232,16 @@ export default async function handler(req, res) {
               .substring(0, 8000)
           }
         } catch { /* Claude intentará desde su conocimiento */ }
+
+        const userMsg = pageContent
+          ? `Este contenido fue extraído de la web.\nURL: ${content}\nContenido:\n${pageContent}\n\nExtraé la receta completa.`
+          : `Extraé la receta de esta URL: ${content}\nUsa tu conocimiento si no podés acceder.`
+
+        const text = await callClaude(apiKey, [{ role: 'user', content: userMsg }], systemFull)
+        recipe = parseRecipeJSON(text)
+        recipe.source_url = source_url
+        recipe.source_platform = plat ?? 'web'
       }
-
-      const userMsg = pageContent
-        ? `Este contenido fue extraído de ${plat ?? 'la web'}.\nURL: ${content}\nContenido:\n${pageContent}\n\nExtraé la receta completa. El nombre es el plato en sí, no el título del post.`
-        : `Extraé la receta de esta URL: ${content}\nPlataforma: ${plat ?? 'web'}\nUsa tu conocimiento si no podés acceder.`
-
-      const text = await callClaude(apiKey, [{ role: 'user', content: userMsg }], systemFull)
-      recipe = parseRecipeJSON(text)
-      recipe.source_url = source_url
-      recipe.source_platform = plat ?? 'web'
     }
 
     // ── Foto ──────────────────────────────────────────────────────────────────
