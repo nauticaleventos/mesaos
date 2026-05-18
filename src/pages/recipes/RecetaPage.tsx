@@ -131,9 +131,37 @@ export default function RecetaPage() {
   }
 
   const handleShare = async () => {
+    if (!recipe) return
     const url = window.location.href
-    if (navigator.share) await navigator.share({ title: recipe?.nombre ?? '', url })
-    else { await navigator.clipboard.writeText(url); showToast('🔗 Enlace copiado') }
+
+    // Armar texto formateado para WhatsApp / notas
+    const ingredientesTexto = (recipe.ingredientes ?? [])
+      .map((i: { nombre: string; cantidad?: number | null; unidad?: string | null }) =>
+        `• ${i.cantidad ? `${i.cantidad}${i.unidad ? ' ' + i.unidad : ''} ` : ''}${i.nombre}`)
+      .join('\n')
+    const pasosTexto = (recipe.pasos ?? [])
+      .map((p: string, idx: number) => `${idx + 1}. ${p}`)
+      .join('\n')
+
+    const texto = [
+      `🍽️ *${recipe.nombre}*`,
+      recipe.descripcion_corta ? `_${recipe.descripcion_corta}_` : '',
+      '',
+      '📋 *Ingredientes:*',
+      ingredientesTexto,
+      '',
+      '👨‍🍳 *Preparación:*',
+      pasosTexto,
+      '',
+      `Ver receta completa: ${url}`,
+    ].filter(l => l !== undefined).join('\n')
+
+    if (navigator.share) {
+      await navigator.share({ title: recipe.nombre, text: texto, url })
+    } else {
+      await navigator.clipboard.writeText(texto)
+      showToast('📋 Receta copiada')
+    }
   }
 
   const handleRating = async (rating: number) => {

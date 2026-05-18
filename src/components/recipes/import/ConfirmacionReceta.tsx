@@ -153,7 +153,9 @@ export default function ConfirmacionReceta({ receta: recetaInit, familyId, onSav
       visibility,
       created_by_user_id:    user?.id ?? null,
       created_in_family_id:  familyId,
-      source:                form.source_platform,
+      source_platform:       form.source_platform ?? null,
+      source_url:            form.source_url ?? null,
+      tipo_componente:       (form as RecipeImport & { tipo_componente?: string }).tipo_componente ?? null,
       is_active_for_menu:    activoMenu,
     }
 
@@ -552,7 +554,12 @@ export default function ConfirmacionReceta({ receta: recetaInit, familyId, onSav
       </div>
 
       {/* Footer fijo con botón guardar */}
-      <div className="border-t border-border bg-white px-4 py-4 flex-shrink-0">
+      <div className="border-t border-border bg-white px-4 py-4 flex-shrink-0 flex flex-col gap-2">
+        {error && (
+          <div className="p-3 rounded-xl bg-red-50 border border-red-200">
+            <p className="text-sm text-error font-medium">{error}</p>
+          </div>
+        )}
         <button onClick={guardar} disabled={saving} className="btn-primary">
           {saving ? (
             <span className="flex items-center justify-center gap-2">
