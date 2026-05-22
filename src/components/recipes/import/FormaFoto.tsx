@@ -72,13 +72,18 @@ export default function FormaFoto({ onExtracted, onBack }: Props) {
         {error && <div className="p-3 rounded-xl bg-red-50 border border-red-200"><p className="text-sm text-error">{error}</p></div>}
 
         {loading && (
-          <div className="flex items-center gap-3 py-4 justify-center">
+          <div className="flex flex-col items-center gap-4 py-4 text-center">
             <div className="flex gap-1">{[0,150,300].map(d => <span key={d} className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${d}ms` }} />)}</div>
-            <p className="text-sm text-muted">Leyendo receta… 📸</p>
+            <p className="text-sm font-medium text-text">Tita está leyendo la foto… 📸</p>
+            <p className="text-xs text-muted">Puede tardar 20-40 segundos</p>
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200">
+              <span className="text-base">⚠️</span>
+              <p className="text-xs font-medium text-amber-800">No salgas de esta pantalla o perderás el proceso</p>
+            </div>
           </div>
         )}
 
-        <button onClick={onBack} className="btn-ghost">← Volver</button>
+        {!loading && <button onClick={onBack} className="btn-ghost">← Volver</button>}
       </div>
     </ModalWrap>
   )
