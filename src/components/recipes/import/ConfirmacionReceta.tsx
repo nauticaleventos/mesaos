@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Trash2, ChevronUp, ChevronDown, Search } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useFamilyStore } from '../../../store/familyStore'
@@ -77,7 +77,22 @@ export default function ConfirmacionReceta({ receta: recetaInit, familyId, recip
     return alerts
   }
 
-  // ── Búsqueda de foto Unsplash ────────────────────────────────────────────────
+  // ── Auto-buscar foto si viene de redes/web y no tiene imagen ────────────────
+  useEffect(() => {
+    const plat = recetaInit.source_platform
+    const tieneInternet = plat && !['manual', 'texto', 'foto'].includes(plat)
+    if (tieneInternet && !imgUrl && form.nombre) {
+      buscarFotoUnsplash(form.nombre).then(foto => {
+        if (foto) {
+          setImgUrl(foto.url)
+          setImgCredito({ fotografo: foto.fotografo, perfil_url: foto.perfil })
+        }
+      })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+// ── Búsqueda de foto Unsplash ────────────────────────────────────────────────
   const buscarFoto = async () => {
     setBuscandoFoto(true)
     const foto = await buscarFotoUnsplash(form.nombre)
