@@ -1,6 +1,44 @@
 // POST /api/import-recipe
 // Maneja los 5 tipos de importación de recetas
 
+const SUPABASE_URL         = process.env.SUPABASE_URL
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
+
+async function subirImagenExterna(externalUrl) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null
+  try {
+    const imgRes = await fetch(externalUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; mesa.os importer)' },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!imgRes.ok) return null
+
+    const buffer      = await imgRes.arrayBuffer()
+    const contentType = imgRes.headers.get('content-type') ?? 'image/jpeg'
+    const ext         = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg'
+    const uuid        = crypto.randomUUID()
+    const path        = `imports/${uuid}.${ext}`
+
+    const uploadRes = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/recipe-photos/${path}`,
+      {
+        method:  'POST',
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+          'Content-Type':  contentType,
+          'x-upsert':      'true',
+        },
+        body: buffer,
+      }
+    )
+    if (!uploadRes.ok) return null
+
+    return `${SUPABASE_URL}/storage/v1/object/public/recipe-photos/${path}`
+  } catch {
+    return null
+  }
+}
+
 const SYSTEM_PROMPT = `Sos un asistente experto en extracción de recetas culinarias para familias latinoamericanas, especialmente colombianas.
 
 Tu trabajo es analizar el contenido y extraer la receta de forma precisa y estructurada en JSON, siguiendo EXACTAMENTE el formato de la app mesa.os.
@@ -211,9 +249,9 @@ export default async function handler(req, res) {
 
         const text = await callClaude(apiKey, [{ role: 'user', content: userMsg }], systemFull)
         recipe = parseRecipeJSON(text)
-        recipe.source_url   = source_url
+        recipe.source_url      = source_url
         recipe.source_platform = plat
-        recipe.imagen_url   = thumbnail
+        recipe.imagen_url      = thumbnail ? await subirImagenExterna(thumbnail) : null
       }
 
       // ── Otros (blogs, webs) ─────────────────────────────────────────────────
@@ -249,7 +287,7 @@ export default async function handler(req, res) {
         recipe = parseRecipeJSON(text)
         recipe.source_url      = source_url
         recipe.source_platform = plat ?? 'web'
-        recipe.imagen_url      = ogImage
+        recipe.imagen_url      = ogImage ? await subirImagenExterna(ogImage) : null
       }
     }
 
