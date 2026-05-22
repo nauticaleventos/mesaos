@@ -210,7 +210,8 @@ async function procesarInstagram(url, plat) {
     if (!post) throw new Error('Apify no devolvió datos del post')
 
     const caption   = post.caption ?? post.text ?? post.description ?? ''
-    const thumbnail = post.displayUrl ?? post.thumbnailUrl ?? post.images?.[0] ?? null
+    // displayUrl de Instagram CDN expira y no es fetchable desde Vercel → ignorar
+    const thumbnail = null
     // Apify a veces incluye videoUrl para transcripción
     const videoUrl  = post.videoUrl ?? null
 

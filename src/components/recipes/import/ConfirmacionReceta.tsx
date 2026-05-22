@@ -6,10 +6,11 @@ import { buscarFotoUnsplash } from '../../../lib/unsplash'
 import type { RecipeImport, IngredienteImport } from '../../../lib/claudeImport'
 
 interface Props {
-  receta:   RecipeImport
-  familyId: string
-  onSaved:  () => void
-  onBack:   () => void
+  receta:    RecipeImport
+  familyId:  string
+  recipeId?: string        // si se pasa → modo edición (UPDATE)
+  onSaved:   () => void
+  onBack:    () => void
 }
 
 const TIPO_OPCIONES   = ['desayuno','almuerzo','cena','snack','postre','bebida','brunch']
@@ -40,7 +41,7 @@ const FILTROS_LABELS: { key: keyof NonNullable<RecipeImport['filtros_nutricional
   { key: 'bajo_purinas',       label: 'Bajo purinas'       },
 ]
 
-export default function ConfirmacionReceta({ receta: recetaInit, familyId, onSaved, onBack }: Props) {
+export default function ConfirmacionReceta({ receta: recetaInit, familyId, recipeId, onSaved, onBack }: Props) {
   const { members } = useFamilyStore()
 
   // ── State del formulario ────────────────────────────────────────────────────
@@ -159,17 +160,28 @@ export default function ConfirmacionReceta({ receta: recetaInit, familyId, onSav
       is_active_for_menu:    activoMenu,
     }
 
-    const { data: saved, error: dbErr } = await supabase
-      .from('recipes')
-      .insert(recipeData)
-      .select('id')
-      .single()
+    let savedId: string | null = null
 
-    if (dbErr || !saved) {
-      setError(dbErr?.message ?? 'Error al guardar')
-      setSaving(false)
-      return
+    if (recipeId) {
+      // Modo edición — UPDATE
+      const { error: dbErr } = await supabase
+        .from('recipes')
+        .update(recipeData)
+        .eq('id', recipeId)
+      if (dbErr) { setError(dbErr.message); setSaving(false); return }
+      savedId = recipeId
+    } else {
+      // Modo creación — INSERT
+      const { data: inserted, error: dbErr } = await supabase
+        .from('recipes')
+        .insert(recipeData)
+        .select('id')
+        .single()
+      if (dbErr || !inserted) { setError(dbErr?.message ?? 'Error al guardar'); setSaving(false); return }
+      savedId = inserted.id
     }
+
+    const saved = { id: savedId }
 
     // Asignar a miembros seleccionados → recipe_suggestions
     if (miembrosAsignados.size > 0 && user) {
@@ -196,7 +208,7 @@ export default function ConfirmacionReceta({ receta: recetaInit, familyId, onSav
         <button onClick={onBack} className="text-muted hover:text-text text-sm flex items-center gap-1">
           ← Volver
         </button>
-        <p className="font-semibold text-text">Revisar receta</p>
+        <p className="font-semibold text-text">{recipeId ? 'Editar receta' : 'Revisar receta'}</p>
         {form.confidence === 'low' && (
           <span className="text-xs text-advertencia font-medium">⚠️ Revisá</span>
         )}

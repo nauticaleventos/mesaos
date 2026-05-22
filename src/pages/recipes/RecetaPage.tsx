@@ -6,6 +6,7 @@ import { useRecipesStore, type Recipe } from '../../store/recipesStore'
 import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore, type FridgeItem } from '../../store/fridgeStore'
 import ClasificacionWizard from '../../components/recipes/ClasificacionWizard'
+import ConfirmacionReceta from '../../components/recipes/import/ConfirmacionReceta'
 import RecipePlaceholder from '../../components/recipes/RecipePlaceholder'
 import { calcularMultiplicadorPorcion } from '../../lib/motorMenu'
 import { inferirEmojisReceta, multToFraccion } from '../../lib/porcionEmoji'
@@ -65,6 +66,7 @@ export default function RecetaPage() {
   const [showWizard, setShowWizard] = useState(false)
   const [showMenu, setShowMenu]   = useState(false)  // ⋯ menu
   const [showPhotos, setShowPhotos] = useState(false)
+  const [showEdit, setShowEdit]   = useState(false)
   const { photos, loadPhotos }    = useRecipePhotosStore()
   const [familyRatings, setFamilyRatings] = useState<{ member_id: string; rating: number }[]>([])
   const [loadedRatings, setLoadedRatings] = useState(false)
@@ -271,6 +273,52 @@ export default function RecetaPage() {
           onConfirm={handleWizardConfirm} onClose={() => setShowWizard(false)} />
       )}
 
+      {showEdit && id && recipe && family && (
+        <ConfirmacionReceta
+          recipeId={id}
+          familyId={family.id}
+          receta={{
+            nombre:                 recipe.nombre,
+            descripcion_corta:      recipe.descripcion_corta ?? null,
+            origen:                 recipe.origen ?? null,
+            tipo_comida:            (recipe.tipo_comida ?? []) as string[],
+            ocasion:                (recipe.ocasion ?? []) as string[],
+            tiempo_total_min:       recipe.tiempo_total_min ?? null,
+            tiempo_preparacion_min: recipe.tiempo_preparacion_min ?? null,
+            tiempo_coccion_min:     recipe.tiempo_coccion_min ?? null,
+            dificultad:             recipe.dificultad ?? null,
+            porciones:              recipe.porciones ?? null,
+            costo_estimado:         recipe.costo_estimado ?? null,
+            ingredientes:           (recipe.ingredientes ?? []) as import('../../lib/claudeImport').IngredienteImport[],
+            pasos:                  recipe.pasos ?? [],
+            tags:                   recipe.tags ?? [],
+            info_nutricional_aprox: recipe.info_nutricional_aprox ? {
+              calorias_porcion:  recipe.info_nutricional_aprox.calorias_porcion,
+              proteina_g:        recipe.info_nutricional_aprox.proteina_g,
+              carbohidratos_g:   recipe.info_nutricional_aprox.carbohidratos_g,
+              grasa_g:           recipe.info_nutricional_aprox.grasa_g,
+              sodio_mg:          recipe.info_nutricional_aprox.sodio_mg ?? null,
+              azucar_g:          recipe.info_nutricional_aprox.azucar_g ?? null,
+              fibra_g:           recipe.info_nutricional_aprox.fibra_g ?? null,
+            } : null,
+            perfiles:               (recipe.perfiles ?? {}) as import('../../lib/claudeImport').RecipeImport['perfiles'],
+            filtros_nutricionales:  (recipe.filtros_nutricionales ?? {}) as import('../../lib/claudeImport').RecipeImport['filtros_nutricionales'],
+            source_url:             recipe.source_url ?? null,
+            source_platform:        recipe.source_platform ?? null,
+            language_original:      null,
+            confidence:             'high',
+            imagen_url:             recipe.imagen_url ?? null,
+          }}
+          onSaved={() => {
+            setShowEdit(false)
+            // Recargar receta desde BD
+            supabase.from('recipes').select('*').eq('id', id).single()
+              .then(({ data }) => { if (data) setRecipe(data as Recipe) })
+          }}
+          onBack={() => setShowEdit(false)}
+        />
+      )}
+
       {showPhotos && id && recipe && (
         <PhotosModal
           recipeId={id}
@@ -314,9 +362,13 @@ export default function RecetaPage() {
                 {esEstelar ? '☆ Quitar estrella' : '⭐ Para lucirme'}
               </button>
             )}
+            <button onClick={() => { setShowEdit(true); setShowMenu(false) }}
+              className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors border-b border-border">
+              ✏️ Editar receta
+            </button>
             <button onClick={() => { setShowWizard(true); setShowMenu(false) }}
               className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors border-b border-border">
-              ✏️ Editar etiquetas
+              🏷️ Editar etiquetas
             </button>
             <button onClick={() => { window.open(`/receta/${id}/imprimir`, '_blank'); setShowMenu(false) }}
               className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors border-b border-border">
