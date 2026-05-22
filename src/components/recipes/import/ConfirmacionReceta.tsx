@@ -62,6 +62,7 @@ export default function ConfirmacionReceta({ receta: recetaInit, familyId, recip
   const [buscandoFoto, setBuscandoFoto] = useState(false)
   const [saving, setSaving]             = useState(false)
   const [error, setError]               = useState<string | null>(null)
+  const [duplicado, setDuplicado]       = useState<string | null>(null) // nombre de receta duplicada
 
   // Warning de alergias por miembro
   const alertasMiembro = (memberId: string): string[] => {
@@ -133,11 +134,25 @@ export default function ConfirmacionReceta({ receta: recetaInit, familyId, recip
   }
 
   // ── Guardar ─────────────────────────────────────────────────────────────────
-  const guardar = async () => {
+  const guardar = async (forzar = false) => {
     if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return }
     if (ingredientes.filter(i => i.nombre.trim()).length === 0) { setError('Agregar al menos un ingrediente'); return }
     if (pasos.filter(p => p.trim()).length === 0) { setError('Agregar al menos un paso'); return }
 
+    // Verificar duplicado (solo en modo creación)
+    if (!forzar && !recipeId) {
+      const { data: existentes } = await supabase
+        .from('recipes')
+        .select('nombre')
+        .ilike('nombre', form.nombre.trim())
+        .limit(1)
+      if (existentes && existentes.length > 0) {
+        setDuplicado(existentes[0].nombre)
+        return
+      }
+    }
+
+    setDuplicado(null)
     setError(null); setSaving(true)
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -580,6 +595,23 @@ export default function ConfirmacionReceta({ receta: recetaInit, familyId, recip
         </div>
       </div>
 
+      {/* Modal duplicado */}
+      {duplicado && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] px-4">
+          <div className="card w-full max-w-sm flex flex-col gap-4 p-5">
+            <p className="font-semibold text-text text-center">⚠️ Receta duplicada</p>
+            <p className="text-sm text-muted text-center">
+              Ya existe una receta llamada <strong>"{duplicado}"</strong>.
+              ¿Querés guardarla de todos modos?
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setDuplicado(null)} className="btn-ghost flex-1">Cancelar</button>
+              <button onClick={() => guardar(true)} className="btn-primary flex-1">Guardar igual</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer fijo con botón guardar */}
       <div className="border-t border-border bg-white px-4 py-4 flex-shrink-0 flex flex-col gap-2">
         {error && (
@@ -587,7 +619,7 @@ export default function ConfirmacionReceta({ receta: recetaInit, familyId, recip
             <p className="text-sm text-error font-medium">{error}</p>
           </div>
         )}
-        <button onClick={guardar} disabled={saving} className="btn-primary">
+        <button onClick={() => guardar()} disabled={saving} className="btn-primary">
           {saving ? (
             <span className="flex items-center justify-center gap-2">
               <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
