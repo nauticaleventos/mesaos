@@ -164,6 +164,7 @@ export default async function handler(req, res) {
       // ── Plataformas de video: llamar a /api/transcribir-video primero ─────────
       if (['tiktok', 'youtube', 'instagram', 'facebook'].includes(plat)) {
         let pageContent = ''
+        let thumbnail   = null
 
         try {
           // Llamar al endpoint de transcripción (mismo servidor)
@@ -181,6 +182,7 @@ export default async function handler(req, res) {
           if (transRes.ok) {
             const transData = await transRes.json()
             pageContent = transData.texto_completo ?? ''
+            thumbnail   = transData.thumbnail ?? null
 
             // Instagram sin token → retornar INSTAGRAM_BLOCKED directamente
             if (transData.error === 'INSTAGRAM_BLOCKED' || !pageContent) {
@@ -209,13 +211,15 @@ export default async function handler(req, res) {
 
         const text = await callClaude(apiKey, [{ role: 'user', content: userMsg }], systemFull)
         recipe = parseRecipeJSON(text)
-        recipe.source_url = source_url
+        recipe.source_url   = source_url
         recipe.source_platform = plat
+        recipe.imagen_url   = thumbnail
       }
 
       // ── Otros (blogs, webs) ─────────────────────────────────────────────────
       else {
         let pageContent = ''
+        let ogImage     = null
         try {
           const pageRes = await fetch(content, {
             headers: { 'User-Agent': 'Mozilla/5.0 (compatible; mesa.os recipe importer)' },
@@ -223,6 +227,10 @@ export default async function handler(req, res) {
           })
           if (pageRes.ok) {
             const html = await pageRes.text()
+            // Extraer og:image antes de limpiar el HTML
+            const ogMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+              ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)
+            ogImage = ogMatch?.[1] ?? null
             pageContent = html
               .replace(/<script[\s\S]*?<\/script>/gi, '')
               .replace(/<style[\s\S]*?<\/style>/gi, '')
@@ -239,8 +247,9 @@ export default async function handler(req, res) {
 
         const text = await callClaude(apiKey, [{ role: 'user', content: userMsg }], systemFull)
         recipe = parseRecipeJSON(text)
-        recipe.source_url = source_url
+        recipe.source_url      = source_url
         recipe.source_platform = plat ?? 'web'
+        recipe.imagen_url      = ogImage
       }
     }
 
