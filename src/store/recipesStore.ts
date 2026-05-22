@@ -47,6 +47,8 @@ export interface Recipe {
   created_by_user_id?:    string | null
   created_in_family_id?:  string | null
   source?:                string | null
+  source_url?:            string | null
+  source_platform?:       string | null
   is_active_for_menu?:    boolean
   perfiles?: {
     ninos?:                 boolean
