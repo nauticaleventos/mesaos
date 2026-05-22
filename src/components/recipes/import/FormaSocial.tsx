@@ -129,7 +129,7 @@ export default function FormaSocial({ onExtracted, onBack, onGoToTexto, onGoToFo
         )}
 
         {loading ? (
-          <div className="flex flex-col items-center gap-3 py-4 text-center">
+          <div className="flex flex-col items-center gap-4 py-4 text-center">
             <div className="flex gap-1">
               {[0,150,300].map(d => (
                 <span key={d} className="w-2 h-2 rounded-full bg-accent animate-bounce"
@@ -138,13 +138,17 @@ export default function FormaSocial({ onExtracted, onBack, onGoToTexto, onGoToFo
             </div>
             <p className="text-sm font-medium text-text">Tita está escuchando el video... 🎧</p>
             <p className="text-xs text-muted">Transcribiendo audio — puede tardar 30-60 segundos</p>
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 mt-1">
+              <span className="text-base">⚠️</span>
+              <p className="text-xs font-medium text-amber-800">No salgas de esta pantalla o perderás el proceso</p>
+            </div>
           </div>
         ) : (
           <button onClick={procesar} disabled={!url.trim()} className="btn-primary">
             Analizar receta
           </button>
         )}
-        <button onClick={onBack} className="btn-ghost">← Volver</button>
+        {!loading && <button onClick={onBack} className="btn-ghost">← Volver</button>}
       </div>
     </ModalWrap>
   )
