@@ -281,10 +281,14 @@ function esCompatibleConMiembro(recipe: RecipeForMenu, m: FamilyMember): boolean
  * Base = 1 porción estándar de la receta.
  */
 export function calcularMultiplicadorPorcion(m: FamilyMember): number {
-  const age  = m.age ?? 18
-  if (age < 6)  return 0.50   // bebé/niño pequeño
-  if (age < 12) return 0.65   // niño escolar
-  if (age < 16) return 0.85   // adolescente
+  if (m.is_portion_anchor) return 1.0
+  if (m.portion_multiplier && m.portion_multiplier !== 1.0) return m.portion_multiplier
+
+  // Fallback por edad/objetivo cuando no hay multiplicador configurado
+  const age = m.age ?? 18
+  if (age < 6)  return 0.50
+  if (age < 12) return 0.65
+  if (age < 16) return 0.85
 
   const goal = m.goal
   if (goal === 'deficit' || goal === 'deficit_agresivo') return 0.80
