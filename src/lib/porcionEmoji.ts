@@ -68,7 +68,10 @@ export function inferirEmojisReceta(
 // ── Multiplicador → fracción visual ──────────────────────────────────────────
 
 export function multToFraccion(mult: number): string {
-  return mult < 0.85 ? '½' : '1'
+  if (mult < 0.85) return '½'
+  if (mult < 1.25) return '1'
+  if (mult < 1.75) return '1½'
+  return '2'
 }
 
 // ── Formatea la línea de porción para UN miembro ─────────────────────────────
