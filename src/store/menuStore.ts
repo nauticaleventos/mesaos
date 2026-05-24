@@ -410,7 +410,8 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     const entry = get().menu.find(e => e.id === entryId)
     if (!entry) return []
 
-    const usedIds = new Set(get().menu.map(e => e.recipe_id))
+    // Solo excluir la receta que se quiere cambiar, no todo el menú
+    const currentRecipeId = entry.recipe_id
 
     let query = supabase
       .from('recipes')
@@ -424,9 +425,19 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     if (!data) return []
 
     const mealType = entry.meal_type
+    // snack y merienda son equivalentes en tipo_comida
+    const tipoMatchFn = (r: RecipeForMenu) => {
+      if (!r.tipo_comida) return false
+      if (mealType === 'snack')
+        return r.tipo_comida.includes('snack') || r.tipo_comida.includes('merienda')
+      if (mealType === 'desayuno')
+        return r.tipo_comida.includes('desayuno') || r.tipo_comida.includes('brunch')
+      return r.tipo_comida.includes(mealType)
+    }
+
+    // Paso 1: candidatas que no son la receta actual
     let candidates = (data as RecipeForMenu[]).filter(r =>
-      !usedIds.has(r.id) &&
-      r.tipo_comida?.includes(mealType)
+      r.id !== currentRecipeId && tipoMatchFn(r)
     )
 
     // Para "no_apetece": excluir recetas con nombre similar a la actual

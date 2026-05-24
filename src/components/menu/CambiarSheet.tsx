@@ -118,7 +118,10 @@ export default function CambiarSheet({ entry, onClose }: Props) {
           )}
 
           {!loading && razon && alternativas.length === 0 && (
-            <p className="text-center text-sm text-muted py-4">No encontré alternativas disponibles para este criterio.</p>
+            <div className="text-center py-4 flex flex-col gap-1">
+              <p className="text-sm text-muted">No encontré alternativas para este criterio.</p>
+              <p className="text-xs text-muted">Agregá más recetas al recetario para tener más opciones.</p>
+            </div>
           )}
         </div>
       </div>
