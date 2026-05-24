@@ -24,6 +24,32 @@ const empty = (): NewFridgeItem => ({
   added_by_photo: false, notes: null,
 })
 
+function inferirUbicacion(categoria: string, nombre: string): 'nevera' | 'congelador' | 'despensa' {
+  const n = nombre.toLowerCase()
+  const c = categoria.toLowerCase()
+
+  // Keywords en nombre que fuerzan congelador
+  if (['helado','congelado','congelada','frozen','hielo'].some(k => n.includes(k))) return 'congelador'
+  // Categoría congelados
+  if (c === 'congelados') return 'congelador'
+
+  // Categorías que van a nevera
+  if (['proteína','lácteos','frutas y verduras'].includes(c)) return 'nevera'
+  // Keywords en nombre para nevera
+  if (['leche','yogur','queso','huevo','crema','mantequilla','nata',
+       'pollo','carne','res','cerdo','pescado','mariscos','embutido',
+       'fruta','verdura','ensalada','zumo','jugo fresco'].some(k => n.includes(k))) return 'nevera'
+
+  // Categorías que van a despensa
+  if (['granos y cereales','salsas y condimentos','bebidas','snacks','otros'].includes(c)) return 'despensa'
+  // Keywords en nombre para despensa
+  if (['harina','arroz','pasta','lenteja','garbanzo','frijol','avena',
+       'aceite','vinagre','sal','azúcar','cafe','té ','miel',
+       'enlatado','lata','conserva','seco'].some(k => n.includes(k))) return 'despensa'
+
+  return 'nevera' // default
+}
+
 export default function AddItemForm({ initial, onSave, onCancel }: Props) {
   const [form, setForm]           = useState<NewFridgeItem>({ ...empty(), ...initial })
   const [loadingTip, setLoadingTip] = useState(false)
@@ -59,7 +85,10 @@ export default function AddItemForm({ initial, onSave, onCancel }: Props) {
           type="text" placeholder="Ej: Pechuga de pollo, Leche entera..."
           value={form.name}
           onChange={e => set('name', e.target.value)}
-          onBlur={fetchTip}
+          onBlur={e => {
+            fetchTip()
+            set('location', inferirUbicacion(form.category, e.target.value))
+          }}
           required autoFocus
         />
       </div>
@@ -86,7 +115,11 @@ export default function AddItemForm({ initial, onSave, onCancel }: Props) {
       <div className="flex gap-2">
         <div className="flex-1">
           <label className="input-label">Categoría</label>
-          <select value={form.category} onChange={e => set('category', e.target.value)}>
+          <select value={form.category} onChange={e => {
+            const cat = e.target.value
+            set('category', cat)
+            set('location', inferirUbicacion(cat, form.name))
+          }}>
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
