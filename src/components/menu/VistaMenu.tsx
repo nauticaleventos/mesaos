@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { RefreshCw, Printer, Leaf, Zap } from 'lucide-react'
+import { RefreshCw, Printer, Leaf, Zap, Share2 } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 import { useMenuStore } from '../../store/menuStore'
 import { useLeftoversStore } from '../../store/leftoversStore'
 import { useFamilyStore } from '../../store/familyStore'
@@ -21,6 +22,31 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
 
   const [showSobrados,   setShowSobrados]   = useState(false)
   const [showDiaDificil, setShowDiaDificil] = useState(false)
+  const [sharing,        setSharing]        = useState(false)
+  const [shareUrl,       setShareUrl]       = useState<string | null>(null)
+  const [copied,         setCopied]         = useState(false)
+
+  const compartirMenu = async () => {
+    if (!family?.id) return
+    setSharing(true)
+    try {
+      const ws = getMondayOfWeek()
+      const token = crypto.randomUUID().replace(/-/g, '')
+      const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      const { error } = await supabase.from('shared_menus').insert({
+        family_id: family.id, week_start: ws, token, expires_at: expires,
+      })
+      if (!error) setShareUrl(`${window.location.origin}/menu/compartido/${token}`)
+    } catch { /* ignorar */ }
+    setSharing(false)
+  }
+
+  const copiarLink = async () => {
+    if (!shareUrl) return
+    await navigator.clipboard.writeText(shareUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   // Cargar sobrantes al montar
   useEffect(() => {
@@ -65,6 +91,10 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
           <button onClick={() => window.open(`/menu/imprimir/${getMondayOfWeek()}`, '_blank')}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:border-accent hover:text-accent transition-colors print:hidden">
             <Printer size={15} />
+          </button>
+          <button onClick={compartirMenu} disabled={sharing}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:border-accent hover:text-accent transition-colors print:hidden disabled:opacity-40">
+            {sharing ? <span className="w-3.5 h-3.5 border-2 border-muted/40 border-t-muted rounded-full animate-spin" /> : <Share2 size={15} />}
           </button>
           <button onClick={() => setShowDiaDificil(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-yellow-300 text-yellow-600 text-sm font-medium hover:bg-yellow-50 transition-colors print:hidden">
@@ -139,6 +169,35 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
       {showDiaDificil && <DiaDificilSheet onClose={() => setShowDiaDificil(false)} />}
       {showSobrados   && createPortal(
         <SobradosSheet onClose={() => setShowSobrados(false)} />,
+        document.body
+      )}
+
+      {/* Modal compartir */}
+      {shareUrl && createPortal(
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 px-4 pb-8">
+          <div className="card w-full max-w-sm flex flex-col gap-4 p-5">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-text">Compartir menú con el chef</p>
+              <button onClick={() => setShareUrl(null)} className="text-muted hover:text-text">✕</button>
+            </div>
+            <p className="text-xs text-muted">El chef puede ver el menú sin necesitar cuenta. El link expira en 7 días.</p>
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 border border-border">
+              <p className="text-xs text-text flex-1 break-all font-mono">{shareUrl}</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={copiarLink} className="btn-primary flex-1">
+                {copied ? '✓ Copiado!' : '📋 Copiar link'}
+              </button>
+              {typeof navigator !== 'undefined' && 'share' in navigator && (
+                <button onClick={() => navigator.share({ title: 'Menú semanal', url: shareUrl })}
+                  className="btn-ghost flex-1">
+                  📤 Compartir
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-muted text-center">Podés enviar este link por WhatsApp, email o cualquier app de mensajería.</p>
+          </div>
+        </div>,
         document.body
       )}
     </div>

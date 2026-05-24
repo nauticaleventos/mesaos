@@ -13,6 +13,7 @@ import RecetasPage    from './pages/recipes/RecetasPage'
 import RecetaPage     from './pages/recipes/RecetaPage'
 import RecetaImprimir from './pages/recipes/RecetaImprimir'
 import MenuImprimir   from './pages/menu/MenuImprimir'
+import MenuCompartido from './pages/menu/MenuCompartido'
 import UnirsePage        from './pages/invite/UnirsePage'
 import MenuPage          from './pages/menu/MenuPage'
 import RecetasAutoPage      from './pages/admin/RecetasAutoPage'
@@ -79,6 +80,7 @@ function AppRoutes() {
       <Route path="/receta/:id/imprimir" element={<RecetaImprimir />} />
       <Route path="/menu/imprimir/:weekStart" element={<MenuImprimir />} />
       <Route path="/menu/imprimir" element={<MenuImprimir />} />
+      <Route path="/menu/compartido/:token" element={<MenuCompartido />} />
       {/* Pública — link de invitación */}
       <Route path="/unirse/:token" element={<UnirsePage />} />
 
