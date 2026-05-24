@@ -18,6 +18,7 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
   const { menu }                   = useMenuStore()
   const { family }                 = useFamilyStore()
   const { leftovers, loadLeftovers } = useLeftoversStore()
+
   const [showSobrados,   setShowSobrados]   = useState(false)
   const [showDiaDificil, setShowDiaDificil] = useState(false)
 
@@ -61,7 +62,7 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
           )}
         </div>
         <div className="flex gap-2">
-          <button onClick={() => window.print()}
+          <button onClick={() => window.open(`/menu/imprimir/${getMondayOfWeek()}`, '_blank')}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:border-accent hover:text-accent transition-colors print:hidden">
             <Printer size={15} />
           </button>
