@@ -452,18 +452,14 @@ function calcularScore(
   isDayFinde:        boolean,
   tipo:              MealType,
 ): number {
-  // Filtro base de tipo_comida
-  if (!recipe.tipo_comida.includes(tipo === 'snack' ? 'snack' : tipo)) return -1
-
-  // Excluir bebidas de almuerzo y cena (leche de ajonjolí, jugos, etc. no son platos principales)
-  if (tipo === 'almuerzo' || tipo === 'cena') {
-    if (recipe.tipo_comida.includes('bebida')) return -1
-    const n = normalizar(recipe.nombre)
-    const esBebida = ['leche', 'jugo', 'agua', 'té ', 'te ', 'café', 'cafe',
-      'smoothie', 'batido', 'bebida', 'limonada', 'infusion', 'zumo', 'refresco',
-      'tizana', 'chicha', 'aguapanela', 'agua de'].some(k => n.includes(k))
-    if (esBebida) return -1
-  }
+  // Filtro base de tipo_comida — el usuario decide qué tipo de receta va a qué slot
+  const tipoOk =
+    tipo === 'snack'
+      ? (recipe.tipo_comida.includes('snack') || recipe.tipo_comida.includes('merienda'))
+      : tipo === 'desayuno'
+        ? (recipe.tipo_comida.includes('desayuno') || recipe.tipo_comida.includes('brunch'))
+        : recipe.tipo_comida.includes(tipo)
+  if (!tipoOk) return -1
 
   // Variedad: no repetir misma semana
   if (usedThisWeek.has(recipe.id)) return -1
@@ -662,10 +658,9 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         const isBatch = config.cocina_frequency === '1x_week' || config.cocina_frequency === '2x_week'
 
         // Pool general: compatible con al menos un miembro, tipo correcto, no usada hoy ni ayer
-        // Para desayuno: excluir guarniciones y ensaladas sueltas (no son platos de desayuno)
-        const TC_INVALIDOS_DESAYUNO = new Set(['guarnicion', 'ensalada', 'salsa', 'vinagreta', 'sopa'])
         const poolBase = filtrarPorPracticidad(allRecipes, tipo, isDayFinde)
         // Para snack: aceptar tipo_comida 'snack' O 'merienda' (ambos se usan en la BD)
+        // Para desayuno: aceptar 'desayuno' O 'brunch'
         const tipoMatch = (r: RecipeForMenu) =>
           tipo === 'snack'
             ? (r.tipo_comida.includes('snack') || r.tipo_comida.includes('merienda'))
@@ -674,7 +669,6 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
               : r.tipo_comida.includes(tipo)
         const pool = poolBase.filter(r => {
           if (!tipoMatch(r)) return false
-          if (tipo === 'desayuno' && r.tipo_componente && TC_INVALIDOS_DESAYUNO.has(r.tipo_componente)) return false
           if (usedToday.has(r.id)) return false
           if (guestRestrictions.includes('vegetariana') && !r.perfiles?.vegetariana) return false
           if (guestRestrictions.includes('sin_gluten')  && !r.filtros_nutricionales?.sin_gluten)  return false
@@ -847,15 +841,8 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
       // Filtrar por practicidad y tiempo máximo según el día
       const recipesPracticidad = filtrarPorPracticidad(allRecipes, tipo, isDayFinde)
 
-      // Helper: receta es válida para este tipo de comida (estricto)
-      const esValidaParaTipo = (r: RecipeForMenu) => {
-        if (!r.tipo_comida.includes(tipo)) return false
-        // Excluir salsas, vinagretas y bebidas como plato principal — sopa SÍ es plato principal
-        const TC_NO_PRINCIPALES = new Set(['salsa', 'vinagreta', 'bebida'])
-        if (r.tipo_componente && TC_NO_PRINCIPALES.has(r.tipo_componente)) return false
-        if (r.tipo_comida.includes('bebida')) return false
-        return true
-      }
+      // Helper: receta es válida para este tipo de comida — solo respeta tipo_comida del usuario
+      const esValidaParaTipo = (r: RecipeForMenu) => r.tipo_comida.includes(tipo)
 
       // Filtrar recetas compatibles con los miembros presentes en este slot
       const compatibleConTodos = recipesPracticidad.filter(r => {
