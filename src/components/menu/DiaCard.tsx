@@ -81,12 +81,14 @@ const OPCIONES_AGREGAR: Record<string, { tc: string; label: string; emoji: strin
   ],
   almuerzo: [
     { tc: 'guarnicion',        label: 'Guarnición',      emoji: '🍚' },
+    { tc: 'sopa',              label: 'Sopa',            emoji: '🍲' },
     { tc: 'ensalada',          label: 'Ensalada',        emoji: '🥗' },
     { tc: 'salsa',             label: 'Salsa',           emoji: '🫙' },
     { tc: 'bebida',            label: 'Bebida',          emoji: '🥤' },
   ],
   cena: [
     { tc: 'guarnicion',        label: 'Guarnición',      emoji: '🍚' },
+    { tc: 'sopa',              label: 'Sopa',            emoji: '🍲' },
     { tc: 'ensalada',          label: 'Ensalada',        emoji: '🥗' },
     { tc: 'salsa',             label: 'Salsa',           emoji: '🫙' },
     { tc: 'bebida',            label: 'Bebida',          emoji: '🥤' },
@@ -419,8 +421,8 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
               <div className="flex gap-3 flex-wrap pt-1">
                 {opciones.map(op => (
                   <button key={op.tc} onClick={() => abrirAgregar(op.tc)}
-                    className="flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors font-medium">
-                    <Plus size={11}/> {op.label}
+                    className="flex items-center gap-1.5 text-xs text-accent/70 hover:text-accent transition-colors font-semibold border border-accent/20 rounded-full px-2.5 py-1 hover:bg-accent/5 active:scale-95">
+                    <Plus size={10}/> {op.label}
                   </button>
                 ))}
               </div>
@@ -628,8 +630,8 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
               <div className="flex gap-3 flex-wrap">
                 {opciones.map(op => (
                   <button key={op.tc} onClick={() => abrirAgregar(op.tc)}
-                    className="flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors font-medium">
-                    <Plus size={11}/> {op.label}
+                    className="flex items-center gap-1.5 text-xs text-accent/70 hover:text-accent transition-colors font-semibold border border-accent/20 rounded-full px-2.5 py-1 hover:bg-accent/5 active:scale-95">
+                    <Plus size={10}/> {op.label}
                   </button>
                 ))}
               </div>
