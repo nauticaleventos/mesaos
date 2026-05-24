@@ -655,7 +655,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
 
         // Pool general: compatible con al menos un miembro, tipo correcto, no usada hoy ni ayer
         // Para desayuno: excluir guarniciones y ensaladas sueltas (no son platos de desayuno)
-        const TC_INVALIDOS_DESAYUNO = new Set(['guarnicion', 'ensalada', 'salsa', 'vinagreta'])
+        const TC_INVALIDOS_DESAYUNO = new Set(['guarnicion', 'ensalada', 'salsa', 'vinagreta', 'sopa'])
         const poolBase = filtrarPorPracticidad(allRecipes, tipo, isDayFinde)
         // Para snack: aceptar tipo_comida 'snack' O 'merienda' (ambos se usan en la BD)
         const tipoMatch = (r: RecipeForMenu) =>
@@ -842,7 +842,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
       // Helper: receta es válida para este tipo de comida (estricto)
       const esValidaParaTipo = (r: RecipeForMenu) => {
         if (!r.tipo_comida.includes(tipo)) return false
-        // Excluir salsas, vinagretas y bebidas como plato principal
+        // Excluir salsas, vinagretas y bebidas como plato principal — sopa SÍ es plato principal
         const TC_NO_PRINCIPALES = new Set(['salsa', 'vinagreta', 'bebida'])
         if (r.tipo_componente && TC_NO_PRINCIPALES.has(r.tipo_componente)) return false
         if (r.tipo_comida.includes('bebida')) return false

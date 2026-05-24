@@ -32,10 +32,11 @@ const CUANDO: { id: string; emoji: string; label: string }[] = [
 
 const TIPOS: { id: string; emoji: string; label: string }[] = [
   { id: 'proteina_principal', emoji: '🍖', label: 'Proteína'    },
+  { id: 'plato_unico',        emoji: '🥘', label: 'Plato único' },
+  { id: 'sopa',               emoji: '🍲', label: 'Sopa'        },
   { id: 'guarnicion',         emoji: '🍚', label: 'Guarnición'  },
   { id: 'ensalada',           emoji: '🥗', label: 'Ensalada'    },
   { id: 'salsa',              emoji: '🫙', label: 'Salsa'       },
-  { id: 'plato_unico',        emoji: '🥘', label: 'Plato único' },
   { id: 'postre',             emoji: '🍰', label: 'Postre'      },
   { id: 'bebida',             emoji: '🥤', label: 'Bebida'      },
   { id: 'merienda',           emoji: '🥪', label: 'Merienda'    },
