@@ -204,7 +204,8 @@ export function ModalWrap({ children, onClose, titulo, headerRight }: {
         {headerRight ?? <div className="w-8" />}
       </div>
       {/* Body scrollable */}
-      <div className="flex-1 overflow-y-auto px-4 py-5 pb-8">
+      <div className="flex-1 overflow-y-auto px-4 py-5"
+        style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
         {children}
       </div>
     </div>

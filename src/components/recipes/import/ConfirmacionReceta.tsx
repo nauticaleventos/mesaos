@@ -613,7 +613,8 @@ export default function ConfirmacionReceta({ receta: recetaInit, familyId, recip
       )}
 
       {/* Footer fijo con botón guardar */}
-      <div className="border-t border-border bg-white px-4 py-4 flex-shrink-0 flex flex-col gap-2">
+      <div className="border-t border-border bg-white px-4 pt-4 flex-shrink-0 flex flex-col gap-2"
+        style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
         {error && (
           <div className="p-3 rounded-xl bg-red-50 border border-red-200">
             <p className="text-sm text-error font-medium">{error}</p>
