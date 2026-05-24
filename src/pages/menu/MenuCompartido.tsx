@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { ChefHat, Clock, Calendar } from 'lucide-react'
+import { ChefHat, Clock, Calendar, Printer } from 'lucide-react'
 
 const DAY_NAMES_FULL = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 const MEAL_LABEL: Record<string, { label: string; emoji: string }> = {
@@ -226,6 +226,14 @@ export default function MenuCompartido() {
 
         {mealTypes.length === 0 && (
           <p className="text-center text-muted py-8">No hay comidas para este día.</p>
+        )}
+
+        {selectedDay && mealTypes.length > 0 && (
+          <button
+            onClick={() => window.open(`/menu/compartido/${token}/dia/${selectedDay}`, '_blank')}
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border-2 border-accent text-accent font-semibold text-sm hover:bg-accent/5 transition-colors">
+            <Printer size={16} /> Imprimir / PDF recetas del día
+          </button>
         )}
       </div>
 
