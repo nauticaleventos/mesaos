@@ -661,7 +661,9 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         const tipoMatch = (r: RecipeForMenu) =>
           tipo === 'snack'
             ? (r.tipo_comida.includes('snack') || r.tipo_comida.includes('merienda'))
-            : r.tipo_comida.includes(tipo)
+            : tipo === 'desayuno'
+              ? (r.tipo_comida.includes('desayuno') || r.tipo_comida.includes('brunch'))
+              : r.tipo_comida.includes(tipo)
         const pool = poolBase.filter(r => {
           if (!tipoMatch(r)) return false
           if (tipo === 'desayuno' && r.tipo_componente && TC_INVALIDOS_DESAYUNO.has(r.tipo_componente)) return false
@@ -837,8 +839,19 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
       // Filtrar por practicidad y tiempo máximo según el día
       const recipesPracticidad = filtrarPorPracticidad(allRecipes, tipo, isDayFinde)
 
+      // Helper: receta es válida para este tipo de comida (estricto)
+      const esValidaParaTipo = (r: RecipeForMenu) => {
+        if (!r.tipo_comida.includes(tipo)) return false
+        // Excluir salsas, vinagretas y bebidas como plato principal
+        const TC_NO_PRINCIPALES = new Set(['salsa', 'vinagreta', 'bebida'])
+        if (r.tipo_componente && TC_NO_PRINCIPALES.has(r.tipo_componente)) return false
+        if (r.tipo_comida.includes('bebida')) return false
+        return true
+      }
+
       // Filtrar recetas compatibles con los miembros presentes en este slot
       const compatibleConTodos = recipesPracticidad.filter(r => {
+        if (!esValidaParaTipo(r)) return false
         if (!slotMembers.every(m => esCompatibleConMiembro(r, m))) return false
         // Aplicar restricciones de invitados
         if (guestRestrictions.includes('vegetariana') && !r.perfiles?.vegetariana) return false
@@ -847,7 +860,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         return true
       })
       const compatibleConAlguno = recipesPracticidad.filter(r =>
-        slotMembers.some(m => esCompatibleConMiembro(r, m))
+        esValidaParaTipo(r) && slotMembers.some(m => esCompatibleConMiembro(r, m))
       )
 
       // Buscar mejor receta
@@ -897,10 +910,11 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           if (s > altScore) { altScore = s; altRecipe = r }
         }
 
-        // 2. Fallback: si no hay proteína disponible, buscar plato completo
+        // 2. Fallback: si no hay proteína disponible, buscar plato completo del mismo tipo
         if (!altRecipe) {
           for (const r of allRecipes) {
             if (altUsedIds.has(r.id) || !esCompatibleConMiembro(r, m)) continue
+            if (!r.tipo_comida.includes(tipo)) continue
             const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed, new Set([m.id!]), isDayFinde, tipo)
             if (s > altScore) { altScore = s; altRecipe = r }
           }
