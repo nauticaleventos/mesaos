@@ -73,10 +73,12 @@ const DIFICULTAD_COLOR: Record<string, string> = {
 const OPCIONES_AGREGAR: Record<string, { tc: string; label: string; emoji: string }[]> = {
   desayuno: [
     { tc: 'desayuno',          label: 'Receta desayuno', emoji: '☀️' },
+    { tc: 'libre',             label: 'Cualquier receta',emoji: '🍽️' },
     { tc: 'bebida',            label: 'Bebida',          emoji: '🥤' },
   ],
   snack: [
     { tc: 'merienda',          label: 'Merienda',        emoji: '🍿' },
+    { tc: 'libre',             label: 'Cualquier receta',emoji: '🍽️' },
     { tc: 'bebida',            label: 'Bebida',          emoji: '🥤' },
   ],
   almuerzo: [
@@ -84,6 +86,7 @@ const OPCIONES_AGREGAR: Record<string, { tc: string; label: string; emoji: strin
     { tc: 'sopa',              label: 'Sopa',            emoji: '🍲' },
     { tc: 'ensalada',          label: 'Ensalada',        emoji: '🥗' },
     { tc: 'salsa',             label: 'Salsa',           emoji: '🫙' },
+    { tc: 'libre',             label: 'Cualquier receta',emoji: '🍽️' },
     { tc: 'bebida',            label: 'Bebida',          emoji: '🥤' },
   ],
   cena: [
@@ -91,6 +94,7 @@ const OPCIONES_AGREGAR: Record<string, { tc: string; label: string; emoji: strin
     { tc: 'sopa',              label: 'Sopa',            emoji: '🍲' },
     { tc: 'ensalada',          label: 'Ensalada',        emoji: '🥗' },
     { tc: 'salsa',             label: 'Salsa',           emoji: '🫙' },
+    { tc: 'libre',             label: 'Cualquier receta',emoji: '🍽️' },
     { tc: 'bebida',            label: 'Bebida',          emoji: '🥤' },
   ],
 }
@@ -287,9 +291,10 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
 
   const buscarReceta = async (q: string, tc: string) => {
     if (!q.trim()) { setRecetasAgregar([]); return }
-    // Para desayuno: buscar por tipo_comida, no por tipo_componente
     let query = supabase.from('recipes').select('id, nombre').eq('is_active_for_menu', true).ilike('nombre', `%${q}%`).limit(8)
-    if (tc === 'desayuno') {
+    if (tc === 'libre') {
+      // Sin filtro: cualquier receta del recetario
+    } else if (tc === 'desayuno') {
       query = query.contains('tipo_comida', ['desayuno'])
     } else {
       query = query.eq('tipo_componente', tc)
@@ -307,7 +312,9 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
 
   const confirmarAgregar = async (recipeId: string, nombre: string) => {
     if (!family?.id) return
-    const comp = tipoAgregar === 'desayuno' ? 'completo' : tipoAgregar
+    const comp = tipoAgregar === 'desayuno' ? 'completo'
+               : tipoAgregar === 'libre'    ? 'completo'
+               : tipoAgregar
     await agregarComponente(family.id, weekStart, dayOfWeek, tipo, recipeId, comp)
     setUltimoAgregado({ recipeId, component: comp, nombre })
     setShowAgregar(false)

@@ -72,7 +72,7 @@ export default function AddItemForm({ initial, onSave, onCancel }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim()) return
-    onSave(form)
+    onSave({ ...form, location: inferirUbicacion(form.category, form.name) })
   }
 
   return (

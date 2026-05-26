@@ -413,32 +413,27 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     // Solo excluir la receta que se quiere cambiar, no todo el menú
     const currentRecipeId = entry.recipe_id
 
+    const mealType = entry.meal_type
+    // Tipos válidos para cada slot (para filtrar en BD)
+    const tiposValidos = mealType === 'snack'
+      ? ['snack', 'merienda']
+      : mealType === 'desayuno'
+        ? ['desayuno', 'brunch']
+        : [mealType]
+
     let query = supabase
       .from('recipes')
       .select(RECIPE_SELECT)
       .eq('is_active_for_menu', true)
-      .not('tipo_comida', 'is', null)
+      .overlaps('tipo_comida', tiposValidos)
 
     if (razon === 'muy_dificil') query = query.eq('dificultad', 'facil')
 
-    const { data } = await query.limit(80)
+    const { data } = await query.limit(200)
     if (!data) return []
 
-    const mealType = entry.meal_type
-    // snack y merienda son equivalentes en tipo_comida
-    const tipoMatchFn = (r: RecipeForMenu) => {
-      if (!r.tipo_comida) return false
-      if (mealType === 'snack')
-        return r.tipo_comida.includes('snack') || r.tipo_comida.includes('merienda')
-      if (mealType === 'desayuno')
-        return r.tipo_comida.includes('desayuno') || r.tipo_comida.includes('brunch')
-      return r.tipo_comida.includes(mealType)
-    }
-
-    // Paso 1: candidatas que no son la receta actual
-    let candidates = (data as RecipeForMenu[]).filter(r =>
-      r.id !== currentRecipeId && tipoMatchFn(r)
-    )
+    // Excluir la receta actual
+    let candidates = (data as RecipeForMenu[]).filter(r => r.id !== currentRecipeId)
 
     // Para "no_apetece": excluir recetas con nombre similar a la actual
     if (razon === 'no_apetece') {
