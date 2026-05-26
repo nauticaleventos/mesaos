@@ -62,7 +62,7 @@ export default function DiaDificilSheet({ onClose }: Props) {
       <div className="fixed inset-0 z-40" style={{ backgroundColor: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
 
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[88vh] overflow-y-auto" style={{ backgroundColor: '#ffffff', isolation: 'isolate' }}>
-        <div className="flex flex-col gap-4 p-4 pb-10">
+        <div className="flex flex-col gap-4 p-4" style={{ paddingBottom: 'calc(2.5rem + env(safe-area-inset-bottom, 0px))' }}>
 
           <div className="w-10 h-1 rounded-full bg-border mx-auto" />
 

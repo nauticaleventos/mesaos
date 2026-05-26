@@ -11,6 +11,13 @@ const SUGERENCIAS = [
   'Cerdo', 'Camarones', 'Tofu',
 ]
 
+const PALABRAS_PROTEINA = ['pollo', 'pechuga', 'carne', 'res', 'cerdo', 'salmón', 'salmon',
+  'atún', 'atun', 'camarones', 'pavo', 'cordero', 'lomo', 'filete', 'chuleta', 'costilla',
+  'bistec', 'muslo', 'ternera', 'chorizo', 'pernil', 'chicharrón', 'chicharron']
+
+const esProteina = (nombre: string) =>
+  PALABRAS_PROTEINA.some(p => nombre.toLowerCase().includes(p))
+
 interface SlotOpcion {
   dayOfWeek: number
   mealType:  string
@@ -126,7 +133,7 @@ export default function SobradosSheet({ onClose }: Props) {
       <div className="fixed inset-0 z-40" style={{ backgroundColor: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
 
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[88vh] overflow-y-auto" style={{ backgroundColor: '#ffffff', isolation: 'isolate' }}>
-        <div className="flex flex-col gap-4 p-4 pb-10">
+        <div className="flex flex-col gap-4 p-4" style={{ paddingBottom: 'calc(2.5rem + env(safe-area-inset-bottom, 0px))' }}>
 
           <div className="w-10 h-1 rounded-full bg-border mx-auto" />
 
@@ -203,7 +210,12 @@ export default function SobradosSheet({ onClose }: Props) {
 
                           {/* Botón o estado */}
                           {yaAsignado ? (
-                            <p className="mt-1 text-xs text-oliva font-medium">✓ En tu menú: {yaAsignado}</p>
+                            <div className="mt-1">
+                              <p className="text-xs text-oliva font-medium">✓ En tu menú: {yaAsignado}</p>
+                              {esProteina(l.ingredient_name) && (
+                                <p className="text-xs text-muted mt-0.5">¿Le sumás una salsa? Abrí el día y tocá + Agregar 🫙</p>
+                              )}
+                            </div>
                           ) : errorId === l.id ? (
                             <p className="mt-1 text-xs text-red-500">{errorMsg}</p>
                           ) : enCurso ? (
