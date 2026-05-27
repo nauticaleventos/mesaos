@@ -290,10 +290,10 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
   const weekStart = getMondayOfWeek()
 
   const buscarReceta = async (q: string, tc: string) => {
-    if (!q.trim()) { setRecetasAgregar([]); return }
-    let query = supabase.from('recipes').select('id, nombre').eq('is_active_for_menu', true).ilike('nombre', `%${q}%`).limit(8)
+    let query = supabase.from('recipes').select('id, nombre').eq('is_active_for_menu', true).limit(12)
+    if (q.trim()) query = query.ilike('nombre', `%${q.trim()}%`)
     if (tc === 'libre') {
-      // Sin filtro: cualquier receta del recetario
+      // Sin filtro de tipo: cualquier receta
     } else if (tc === 'desayuno') {
       query = query.contains('tipo_comida', ['desayuno'])
     } else {
@@ -308,6 +308,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
     setShowAgregar(true)
     setBusquedaAgregar('')
     setRecetasAgregar([])
+    buscarReceta('', tc)  // carga sugerencias al abrir sin necesidad de escribir
   }
 
   const confirmarAgregar = async (recipeId: string, nombre: string) => {
@@ -329,7 +330,16 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
     setUltimoAgregado(null)
   }
 
-  const opciones = OPCIONES_AGREGAR[tipo] ?? []
+  // Normalizar tipo para lookup (puede llegar "Almuerzo", "merienda tarde", etc.)
+  const tipoNorm = (() => {
+    const n = tipo.toLowerCase()
+    if (n.includes('snack') || n.includes('merienda') || n.includes('onces')) return 'snack'
+    if (n.includes('desayuno') || n.includes('brunch')) return 'desayuno'
+    if (n.includes('almuerzo')) return 'almuerzo'
+    if (n.includes('cena')) return 'cena'
+    return n
+  })()
+  const opciones = OPCIONES_AGREGAR[tipoNorm] ?? []
 
   // ── DESAYUNO / SNACK ──────────────────────────────────────────────────────
   if (isSimple) {

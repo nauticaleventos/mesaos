@@ -410,32 +410,43 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     const entry = get().menu.find(e => e.id === entryId)
     if (!entry) return []
 
-    // Solo excluir la receta que se quiere cambiar, no todo el menú
     const currentRecipeId = entry.recipe_id
 
-    const mealType = entry.meal_type
-    // Tipos válidos para cada slot (para filtrar en BD)
-    const tiposValidos = mealType === 'snack'
-      ? ['snack', 'merienda']
-      : mealType === 'desayuno'
-        ? ['desayuno', 'brunch']
-        : [mealType]
+    // Normalizar meal_type: puede llegar como "Almuerzo", "merienda tarde", etc.
+    const raw = (entry.meal_type ?? '').toLowerCase()
+    const normalizedType = raw.includes('snack') || raw.includes('merienda') || raw.includes('onces')
+      ? 'snack'
+      : raw.includes('desayuno') || raw.includes('brunch')
+        ? 'desayuno'
+        : raw.includes('almuerzo') || raw.includes('lunch')
+          ? 'almuerzo'
+          : raw.includes('cena') || raw.includes('dinner')
+            ? 'cena'
+            : raw
 
+    const tiposValidos = normalizedType === 'snack'
+      ? ['snack', 'merienda']
+      : normalizedType === 'desayuno'
+        ? ['desayuno', 'brunch']
+        : [normalizedType]
+
+    // Usar contains() que es compatible con text[] y jsonb.
+    // Para múltiples tipos (snack/merienda) filtramos en JS después.
     let query = supabase
       .from('recipes')
       .select(RECIPE_SELECT)
       .eq('is_active_for_menu', true)
-      .overlaps('tipo_comida', tiposValidos)
 
     if (razon === 'muy_dificil') query = query.eq('dificultad', 'facil')
 
-    const { data } = await query.limit(200)
-    if (!data) return []
+    const { data, error } = await query.limit(400)
+    if (error || !data) return []
 
-    // Excluir la receta actual
-    let candidates = (data as RecipeForMenu[]).filter(r => r.id !== currentRecipeId)
+    // Filtrar por tipo en JS — funciona independientemente del tipo de columna en BD
+    let candidates = (data as RecipeForMenu[])
+      .filter(r => tiposValidos.some(t => (r.tipo_comida ?? []).includes(t)))
+      .filter(r => r.id !== currentRecipeId)
 
-    // Para "no_apetece": excluir recetas con nombre similar a la actual
     if (razon === 'no_apetece') {
       const currentName = (entry.recipe?.nombre ?? '').toLowerCase()
       candidates = candidates.filter(r =>
@@ -443,7 +454,6 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       )
     }
 
-    // Mezclar aleatoriamente y devolver 5
     return candidates.sort(() => Math.random() - 0.5).slice(0, 5)
   },
 
