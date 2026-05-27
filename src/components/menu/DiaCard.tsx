@@ -266,6 +266,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
 
   const [expanded, setExpanded]           = useState(false)
   const [showCambiar, setShowCambiar]     = useState(false)
+  const [cambiarEntry, setCambiarEntry]   = useState<import('../../store/menuStore').EnrichedMenuEntry | null>(null)
   const [ratingEntry, setRatingEntry]     = useState<import('../../store/menuStore').EnrichedMenuEntry | null>(null)
   const [showAgregar, setShowAgregar]     = useState(false)
   const [showOpciones, setShowOpciones]   = useState(false)
@@ -489,9 +490,11 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
           }}
           onSaltar={() => { onSaltar(); setExpanded(false) }}
           onRestaurar={() => { onRestaurar(); setExpanded(false) }}
-          onCambiar={() => setShowCambiar(true)}
+          onCambiar={() => { setCambiarEntry(null); setShowCambiar(true) }}
         />
-        {showCambiar && <CambiarSheet entry={main} onClose={() => setShowCambiar(false)} />}
+        {showCambiar && (cambiarEntry ?? main) && (
+          <CambiarSheet entry={(cambiarEntry ?? main)!} onClose={() => { setShowCambiar(false); setCambiarEntry(null) }} />
+        )}
         {ajustesRecipe && (
           <AjustesPorcionModal
             recipeName={ajustesRecipe.name}
@@ -626,14 +629,22 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
                 )}
               </button>
 
-              {/* Quitar — todos los componentes incluyendo proteína */}
+              {/* Acciones por componente: Cambiar + Quitar */}
               {!isCooked && !isSkipped && (
-                <button onClick={() => quitarComponente(e.id)}
-                  className={`p-1 rounded-lg transition-colors flex-shrink-0 mt-0.5
-                    ${esProteina ? 'hover:bg-red-50 hover:text-red-500 text-muted/50' : 'hover:bg-red-50 hover:text-red-500 text-muted'}`}
-                  title="Quitar">
-                  <Trash2 size={13} />
-                </button>
+                <div className="flex items-center gap-0.5 flex-shrink-0 mt-0.5">
+                  <button
+                    onClick={() => { setCambiarEntry(e); setShowCambiar(true) }}
+                    className="p-1 rounded-lg hover:bg-accent/10 hover:text-accent text-muted/40 transition-colors"
+                    title="Cambiar">
+                    <RefreshCw size={12} />
+                  </button>
+                  <button onClick={() => quitarComponente(e.id)}
+                    className={`p-1 rounded-lg transition-colors
+                      ${esProteina ? 'hover:bg-red-50 hover:text-red-500 text-muted/50' : 'hover:bg-red-50 hover:text-red-500 text-muted'}`}
+                    title="Quitar">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               )}
             </div>
           )
@@ -714,7 +725,9 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
           onCambiar={() => setShowCambiar(true)}
         />
       )}
-      {showCambiar && main && <CambiarSheet entry={main} onClose={() => setShowCambiar(false)} />}
+      {showCambiar && (cambiarEntry ?? main) && (
+        <CambiarSheet entry={(cambiarEntry ?? main)!} onClose={() => { setShowCambiar(false); setCambiarEntry(null) }} />
+      )}
       {ajustesRecipe && (
         <AjustesPorcionModal
           recipeName={ajustesRecipe.name}
