@@ -764,17 +764,29 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         const onBase: string[]    = []
         const needAlt: FamilyMember[] = []
 
-        for (const m of slotMembers) {
-          const mUsed = usedPerMember.get(m.id!) ?? new Set<string>()
-          const canEat = esCompatibleConMiembro(baseRecipe, m) && !mUsed.has(baseRecipe.id)
-          const baseS  = canEat
-            ? calcularScore(baseRecipe, input, mUsed, 0, new Set([m.id!]), isDayFinde, tipo)
-            : -1
-          if (baseS >= 0) {
+        // Si la receta es compatible con TODOS los miembros del slot → asignar a todos
+        // sin revisar usedPerMember (la variedad semanal no justifica dividir el slot)
+        const esUniversal = slotMembers.every(m => esCompatibleConMiembro(baseRecipe, m))
+
+        if (esUniversal) {
+          for (const m of slotMembers) {
             onBase.push(m.id!)
-            const u = new Set(mUsed); u.add(baseRecipe.id); usedPerMember.set(m.id!, u)
-          } else {
-            needAlt.push(m)
+            const u = new Set(usedPerMember.get(m.id!) ?? []); u.add(baseRecipe.id)
+            usedPerMember.set(m.id!, u)
+          }
+        } else {
+          for (const m of slotMembers) {
+            const mUsed = usedPerMember.get(m.id!) ?? new Set<string>()
+            const canEat = esCompatibleConMiembro(baseRecipe, m)
+            const baseS  = canEat
+              ? calcularScore(baseRecipe, input, mUsed, 0, new Set([m.id!]), isDayFinde, tipo)
+              : -1
+            if (canEat && baseS >= 0) {
+              onBase.push(m.id!)
+              const u = new Set(mUsed); u.add(baseRecipe.id); usedPerMember.set(m.id!, u)
+            } else {
+              needAlt.push(m)
+            }
           }
         }
 
