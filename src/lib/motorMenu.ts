@@ -705,13 +705,17 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           if (combined > baseScore) { baseScore = combined; baseRecipe = r }
         }
 
-        // Fallback A: poolUniversal agotado por historial → ignorar usedPerMember
+        // Fallback A: poolUniversal existe pero todas tienen historial → penalizar pero NO borrar
+        // La penalización semanal sigue activa — prefiere recetas menos repetidas.
+        // Solo se usa como último recurso cuando el pool fresco está agotado.
         if (!baseRecipe && poolUniversal.length > 0) {
           for (const r of poolUniversal) {
             let sumScore = 0
             for (const m of slotMembers) {
+              const mUsed = usedPerMember.get(m.id!) ?? new Set<string>()
               const s = calcularScore(r, input, new Set<string>(), 0, new Set([m.id!]), isDayFinde, tipo)
-              sumScore += Math.max(s, 0)  // ignorar penalizaciones, lo universal gana igual
+              // Penalizar (−80) recetas ya usadas esta semana por este miembro, pero no excluirlas
+              sumScore += mUsed.has(r.id) ? Math.max(s - 80, 0) : Math.max(s, 0)
             }
             if (sumScore > baseScore || baseRecipe === null) { baseScore = sumScore; baseRecipe = r }
           }
@@ -888,22 +892,44 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         esValidaParaTipo(r) && slotMembers.some(m => esCompatibleConMiembro(r, m))
       )
 
-      // Buscar mejor receta
-      // PRIORIDAD: siempre preferir 1 receta para todos (menos tiempo en cocina).
-      // Solo caer a compatibleConAlguno si compatibleConTodos está VACÍO.
-      // El score bajo de inventario NO justifica dividir en recetas por miembro.
+      // Orden de prioridad:
+      // 1. Universal fresca (compatible con todos + no usada esta semana) → ideal
+      // 2. Universal usada (acepta repetición, pero 1 receta para todos) → si pool fresco agotado
+      // 3. Per-miembro fresca → solo si NO existe ninguna receta universal
+      // 4. Per-miembro usada → último recurso
       let bestScore  = -Infinity
       let bestRecipe: RecipeForMenu | null = null
 
+      // Paso 1: universal fresca
       for (const r of compatibleConTodos) {
         const score = calcularScore(r, input, usedThisWeek, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
         if (score > bestScore) { bestScore = score; bestRecipe = r }
       }
-      // Solo buscar en compatibleConAlguno si NO hay ninguna receta universal
-      if (!bestRecipe) {
-        for (const r of compatibleConAlguno) {
-          const score = calcularScore(r, input, usedThisWeek, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
-          if (score > bestScore) { bestScore = score; bestRecipe = r }
+
+      if (!bestRecipe || bestScore < 0) {
+        if (compatibleConTodos.length > 0) {
+          // Paso 2: pool universal existe pero todas fueron usadas esta semana
+          // → aceptar repetición antes que dividir en por-miembro
+          // Usar recentRecipeIds para elegir la menos reciente
+          let retryScore = -Infinity
+          for (const r of compatibleConTodos) {
+            const score = calcularScore(r, input, new Set<string>(), proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
+            if (score > retryScore) { retryScore = score; bestRecipe = r }
+          }
+          bestScore = retryScore
+        } else {
+          // Paso 3 y 4: no hay universal — caer a per-miembro
+          for (const r of compatibleConAlguno) {
+            const score = calcularScore(r, input, usedThisWeek, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
+            if (score > bestScore) { bestScore = score; bestRecipe = r }
+          }
+          // Si per-miembro también agotado, aceptar repetición
+          if (!bestRecipe || bestScore < 0) {
+            for (const r of compatibleConAlguno) {
+              const score = calcularScore(r, input, new Set<string>(), proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
+              if (score > bestScore) { bestScore = score; bestRecipe = r }
+            }
+          }
         }
       }
       if (!bestRecipe) continue
