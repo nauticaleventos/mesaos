@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, SkipForward, Clock, ExternalLink, RefreshCw, RotateCcw, Plus, Trash2 } from 'lucide-react'
 import RecipePlaceholder from '../recipes/RecipePlaceholder'
@@ -268,10 +268,19 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
   const [showCambiar, setShowCambiar]     = useState(false)
   const [ratingEntry, setRatingEntry]     = useState<import('../../store/menuStore').EnrichedMenuEntry | null>(null)
   const [showAgregar, setShowAgregar]     = useState(false)
+  const [showOpciones, setShowOpciones]   = useState(false)
   const [tipoAgregar, setTipoAgregar]     = useState('')
   const [busquedaAgregar, setBusquedaAgregar] = useState('')
   const [recetasAgregar, setRecetasAgregar]   = useState<{id:string;nombre:string}[]>([])
   const [ultimoAgregado, setUltimoAgregado]   = useState<{recipeId:string;component:string;nombre:string} | null>(null)
+
+  // Cerrar el popover de opciones al click fuera
+  useEffect(() => {
+    if (!showOpciones) return
+    const close = () => setShowOpciones(false)
+    const id = setTimeout(() => document.addEventListener('click', close), 0)
+    return () => { clearTimeout(id); document.removeEventListener('click', close) }
+  }, [showOpciones])
   const [replicando, setReplicando]           = useState(false)
   const [ajustesRecipe, setAjustesRecipe]     = useState<{ name: string; members: FamilyMember[] } | null>(null)
 
@@ -435,13 +444,24 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
         {!isCooked && !isSkipped && (
           <div className="px-4 pb-2">
             {!showAgregar ? (
-              <div className="flex gap-3 flex-wrap pt-1">
-                {opciones.map(op => (
-                  <button key={op.tc} onClick={() => abrirAgregar(op.tc)}
-                    className="flex items-center gap-1.5 text-xs text-accent/70 hover:text-accent transition-colors font-semibold border border-accent/20 rounded-full px-2.5 py-1 hover:bg-accent/5 active:scale-95">
-                    <Plus size={10}/> {op.label}
-                  </button>
-                ))}
+              <div className="relative inline-block pt-1">
+                <button
+                  onClick={e => { e.stopPropagation(); setShowOpciones(v => !v) }}
+                  className="flex items-center justify-center w-7 h-7 rounded-full border border-accent/30 text-accent/60 hover:text-accent hover:border-accent hover:bg-accent/5 transition-all active:scale-95">
+                  <Plus size={14}/>
+                </button>
+                {showOpciones && opciones.length > 0 && (
+                  <div className="absolute left-0 bottom-full mb-1 z-20 bg-white rounded-xl shadow-lg border border-border py-1 min-w-[160px]"
+                       onClick={e => e.stopPropagation()}>
+                    {opciones.map(op => (
+                      <button key={op.tc}
+                        onClick={() => { setShowOpciones(false); abrirAgregar(op.tc) }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-text hover:bg-accent-light hover:text-accent transition-colors text-left">
+                        <span>{op.emoji}</span> {op.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <AgregarPanel
@@ -644,13 +664,24 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
         {!isCooked && !isSkipped && (
           <div className="pl-7 pt-1">
             {!showAgregar ? (
-              <div className="flex gap-3 flex-wrap">
-                {opciones.map(op => (
-                  <button key={op.tc} onClick={() => abrirAgregar(op.tc)}
-                    className="flex items-center gap-1.5 text-xs text-accent/70 hover:text-accent transition-colors font-semibold border border-accent/20 rounded-full px-2.5 py-1 hover:bg-accent/5 active:scale-95">
-                    <Plus size={10}/> {op.label}
-                  </button>
-                ))}
+              <div className="relative inline-block">
+                <button
+                  onClick={e => { e.stopPropagation(); setShowOpciones(v => !v) }}
+                  className="flex items-center justify-center w-7 h-7 rounded-full border border-accent/30 text-accent/60 hover:text-accent hover:border-accent hover:bg-accent/5 transition-all active:scale-95">
+                  <Plus size={14}/>
+                </button>
+                {showOpciones && opciones.length > 0 && (
+                  <div className="absolute left-0 bottom-full mb-1 z-20 bg-white rounded-xl shadow-lg border border-border py-1 min-w-[160px]"
+                       onClick={e => e.stopPropagation()}>
+                    {opciones.map(op => (
+                      <button key={op.tc}
+                        onClick={() => { setShowOpciones(false); abrirAgregar(op.tc) }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-text hover:bg-accent-light hover:text-accent transition-colors text-left">
+                        <span>{op.emoji}</span> {op.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <AgregarPanel
