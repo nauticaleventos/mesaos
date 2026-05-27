@@ -574,14 +574,66 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
   const { config, allMembers, slotAttendance, allRecipes } = input
 
   const result:             MenuSlot[] = []
-  const usedThisWeek         = new Set<string>()    // almuerzo/cena platos principales
-  const usedThisWeekProtOnly = new Set<string>()    // solo proteínas (para acompañamientos)
+  // Map<recipeId, dayNumber> — guarda cuándo se usó cada receta para regla de 3 días
+  const usedByDay         = new Map<string, number>()  // almuerzo/cena platos principales
+  const usedByDayProtOnly = new Map<string, number>()  // solo proteínas (para acompañamientos)
   const carbWeekTrack  = new Map<string, { count: number; lastDay: number }>()
   const saladWeekTrack = new Map<string, { count: number; lastDay: number }>()
-  // Desayuno/snack: cada miembro tiene su propio historial semanal
-  const usedPerMember  = new Map<string, Set<string>>()
+  // Desayuno/snack: memberId → Map<recipeId, dayNumber>
+  const usedPerMember  = new Map<string, Map<string, number>>()
   let   proteinDaysUsed = 0
   let   usedYesterdayNames: string[] = []  // nombres del día anterior para evitar repetir
+
+  /**
+   * Retorna un Set de IDs excluidos por estar demasiado cerca (< minGapDays días).
+   * Si minGapDays=1 → excluir recetas usadas hoy.
+   * Si minGapDays=3 → excluir recetas usadas en los últimos 2 días.
+   */
+  const recentlyUsed = (map: Map<string, number>, currentDay: number, minGapDays = 3): Set<string> => {
+    const excl = new Set<string>()
+    for (const [id, day] of map) {
+      if (currentDay - day < minGapDays) excl.add(id)
+    }
+    return excl
+  }
+
+  /**
+   * esElegible: verifica reglas de variedad antes de seleccionar una receta.
+   * Regla 1: NUNCA el mismo día (usedToday).
+   * Regla 3: Mínimo 3 días entre repeticiones.
+   */
+  const esElegible = (id: string, currentDay: number, usedToday: Set<string>): boolean => {
+    if (usedToday.has(id)) return false
+    const lastDay = usedByDay.get(id)
+    if (lastDay !== undefined && currentDay - lastDay < 3) return false
+    return true
+  }
+
+  const esElegibleMiembro = (id: string, memberId: string, currentDay: number, usedToday: Set<string>): boolean => {
+    if (usedToday.has(id)) return false
+    const memberMap = usedPerMember.get(memberId)
+    const lastDay = memberMap?.get(id)
+    if (lastDay !== undefined && currentDay - lastDay < 3) return false
+    return true
+  }
+
+  // Set de recetas excluidas para un miembro según gap de días
+  const memberExcl = (memberId: string, currentDay: number, gap = 3): Set<string> => {
+    const memberMap = usedPerMember.get(memberId)
+    if (!memberMap) return new Set()
+    const excl = new Set<string>()
+    for (const [id, d] of memberMap) {
+      if (currentDay - d < gap) excl.add(id)
+    }
+    return excl
+  }
+
+  // Registrar receta usada por un miembro
+  const markUsedByMember = (memberId: string, recipeId: string, currentDay: number) => {
+    const memberMap = usedPerMember.get(memberId) ?? new Map<string, number>()
+    memberMap.set(recipeId, currentDay)
+    usedPerMember.set(memberId, memberMap)
+  }
 
   // Construir lista de comidas a planificar (respeta meals_per_day de miembros)
   const mealSlots = buildMealSlots(allMembers, config)
@@ -694,9 +746,9 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         for (const r of poolUniversal) {
           let sumScore = 0; let compatCount = 0
           for (const m of slotMembers) {
-            const mUsed = usedPerMember.get(m.id!) ?? new Set<string>()
-            if (mUsed.has(r.id)) continue
-            const s = calcularScore(r, input, mUsed, 0, new Set([m.id!]), isDayFinde, tipo)
+            if (!esElegibleMiembro(r.id, m.id!, day, usedToday)) continue
+            const excl = memberExcl(m.id!, day, 3)
+            const s = calcularScore(r, input, excl, 0, new Set([m.id!]), isDayFinde, tipo)
             if (s >= 0) { sumScore += s; compatCount++ }
           }
           if (compatCount === 0) continue
@@ -705,45 +757,50 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           if (combined > baseScore) { baseScore = combined; baseRecipe = r }
         }
 
-        // Fallback A: poolUniversal existe pero todas tienen historial → penalizar pero NO borrar
-        // La penalización semanal sigue activa — prefiere recetas menos repetidas.
-        // Solo se usa como último recurso cuando el pool fresco está agotado.
+        // Fallback A: pool universal existe pero todas recientes — relajar gap progresivamente
         if (!baseRecipe && poolUniversal.length > 0) {
-          for (const r of poolUniversal) {
-            let sumScore = 0
-            for (const m of slotMembers) {
-              const mUsed = usedPerMember.get(m.id!) ?? new Set<string>()
-              const s = calcularScore(r, input, new Set<string>(), 0, new Set([m.id!]), isDayFinde, tipo)
-              // Penalizar (−80) recetas ya usadas esta semana por este miembro, pero no excluirlas
-              sumScore += mUsed.has(r.id) ? Math.max(s - 80, 0) : Math.max(s, 0)
+          for (const gap of [2, 1, 0]) {
+            if (baseRecipe) break
+            for (const r of poolUniversal) {
+              let sumScore = 0; let compatCount = 0
+              for (const m of slotMembers) {
+                const excl = gap === 0 ? new Set<string>() : memberExcl(m.id!, day, gap)
+                if (usedToday.has(r.id)) continue
+                if (gap > 0 && excl.has(r.id)) continue
+                const s = calcularScore(r, input, excl, 0, new Set([m.id!]), isDayFinde, tipo)
+                sumScore += Math.max(s, 0); compatCount++
+              }
+              if (compatCount > 0 && sumScore > baseScore) { baseScore = sumScore; baseRecipe = r }
             }
-            if (sumScore > baseScore || baseRecipe === null) { baseScore = sumScore; baseRecipe = r }
           }
         }
 
-        // Fallback B: solo si NO hay receta universal disponible → pool general con shareBonus
+        // Fallback B: no hay universal — pool general con elegibilidad relajada progresivamente
         if (!baseRecipe && poolUniversal.length === 0) {
-          for (const r of pool) {
-            let sumScore = 0; let compatCount = 0
-            for (const m of slotMembers) {
-              if (!esCompatibleConMiembro(r, m)) continue
-              const mUsed = usedPerMember.get(m.id!) ?? new Set<string>()
-              if (mUsed.has(r.id)) continue
-              const s = calcularScore(r, input, mUsed, 0, new Set([m.id!]), isDayFinde, tipo)
-              if (s >= 0) { sumScore += s; compatCount++ }
+          for (const gap of [3, 2, 1, 0]) {
+            if (baseRecipe) break
+            for (const r of pool) {
+              let sumScore = 0; let compatCount = 0
+              for (const m of slotMembers) {
+                if (!esCompatibleConMiembro(r, m)) continue
+                const excl = gap === 0 ? new Set<string>() : memberExcl(m.id!, day, gap)
+                if (usedToday.has(r.id) || (gap > 0 && excl.has(r.id))) continue
+                const s = calcularScore(r, input, excl, 0, new Set([m.id!]), isDayFinde, tipo)
+                if (s >= 0) { sumScore += s; compatCount++ }
+              }
+              if (compatCount === 0) continue
+              if (sumScore + compatCount * 50 > baseScore) {
+                baseScore = sumScore + compatCount * 50; baseRecipe = r
+              }
             }
-            if (compatCount === 0) continue
-            const combined = sumScore + compatCount * 50
-            if (combined > baseScore) { baseScore = combined; baseRecipe = r }
           }
         }
 
-        // Fallback C: pool completamente vacío → cualquier receta del tipo
+        // Fallback C: pool vacío → expandir a todas las recetas del tipo
         if (!baseRecipe) {
           const poolExpanded = allRecipes.filter(r =>
-            tipoMatch(r) &&
-            r.etiqueta_practicidad !== 'batch' &&
-            slotMembers.some(m => esCompatibleConMiembro(r, m))
+            tipoMatch(r) && r.etiqueta_practicidad !== 'batch' &&
+            !usedToday.has(r.id) && slotMembers.some(m => esCompatibleConMiembro(r, m))
           )
           for (const r of poolExpanded) {
             let sumScore = 0; let compatCount = 0
@@ -752,8 +809,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
               const s = calcularScore(r, input, new Set<string>(), 0, new Set([m.id!]), isDayFinde, tipo)
               if (s >= 0) { sumScore += s; compatCount++ }
             }
-            if (compatCount === 0) continue
-            if (sumScore + compatCount * 50 > baseScore) {
+            if (compatCount > 0 && sumScore + compatCount * 50 > baseScore) {
               baseScore = sumScore + compatCount * 50; baseRecipe = r
             }
           }
@@ -775,19 +831,18 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         if (esUniversal) {
           for (const m of slotMembers) {
             onBase.push(m.id!)
-            const u = new Set(usedPerMember.get(m.id!) ?? []); u.add(baseRecipe.id)
-            usedPerMember.set(m.id!, u)
+            markUsedByMember(m.id!, baseRecipe.id, day)
           }
         } else {
           for (const m of slotMembers) {
-            const mUsed = usedPerMember.get(m.id!) ?? new Set<string>()
             const canEat = esCompatibleConMiembro(baseRecipe, m)
+            const excl   = memberExcl(m.id!, day, 3)
             const baseS  = canEat
-              ? calcularScore(baseRecipe, input, mUsed, 0, new Set([m.id!]), isDayFinde, tipo)
+              ? calcularScore(baseRecipe, input, excl, 0, new Set([m.id!]), isDayFinde, tipo)
               : -1
             if (canEat && baseS >= 0) {
               onBase.push(m.id!)
-              const u = new Set(mUsed); u.add(baseRecipe.id); usedPerMember.set(m.id!, u)
+              markUsedByMember(m.id!, baseRecipe.id, day)
             } else {
               needAlt.push(m)
             }
@@ -800,21 +855,19 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         const altMap   = new Map<string, RecipeForMenu>()   // memberId → recipe
 
         for (const m of needAlt) {
-          const mUsed = usedPerMember.get(m.id!) ?? new Set<string>()
-          // Excluir recetas similares a la base O a alternativas ya asignadas hoy
+          const mExcl = memberExcl(m.id!, day, 3)
           const noSimilarHoy = (r: RecipeForMenu) =>
             !usedTodayNames.some(n => sonSimilares(r.nombre, n)) &&
             !usedYesterdayNames.some(n => sonSimilares(r.nombre, n))
 
-          // Candidatas simples primero (≤25min o fácil); si no hay, abrir más
           const simple = pool.filter(r =>
-            esCompatibleConMiembro(r, m) && !mUsed.has(r.id) &&
+            esCompatibleConMiembro(r, m) && !mExcl.has(r.id) &&
             !usedToday.has(r.id) && !altUsed.has(r.id) &&
             noSimilarHoy(r) &&
             (r.dificultad === 'facil' || (r.tiempo_total_min ?? 999) <= 25)
           )
           const broader = pool.filter(r =>
-            esCompatibleConMiembro(r, m) && !mUsed.has(r.id) &&
+            esCompatibleConMiembro(r, m) && !mExcl.has(r.id) &&
             !usedToday.has(r.id) && !altUsed.has(r.id) &&
             noSimilarHoy(r)
           )
@@ -822,7 +875,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
 
           let best: RecipeForMenu | null = null, bestS = -Infinity
           for (const r of candidates) {
-            const s = calcularScore(r, input, mUsed, 0, new Set([m.id!]), isDayFinde, tipo)
+            const s = calcularScore(r, input, mExcl, 0, new Set([m.id!]), isDayFinde, tipo)
             if (s > bestS) { bestS = s; best = r }
           }
 
@@ -831,11 +884,10 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
             altUsed.add(best.id)
             usedToday.add(best.id)
             usedTodayNames.push(best.nombre)
-            const u = new Set(mUsed); u.add(best.id); usedPerMember.set(m.id!, u)
+            markUsedByMember(m.id!, best.id, day)
           } else {
-            // Fallback: unirlos a la base aunque no sea ideal
             onBase.push(m.id!)
-            const u = new Set(mUsed); u.add(baseRecipe.id); usedPerMember.set(m.id!, u)
+            markUsedByMember(m.id!, baseRecipe.id, day)
           }
         }
 
@@ -893,56 +945,68 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
       )
 
       // Orden de prioridad:
-      // 1. Universal fresca (compatible con todos + no usada esta semana) → ideal
-      // 2. Universal usada (acepta repetición, pero 1 receta para todos) → si pool fresco agotado
-      // 3. Per-miembro fresca → solo si NO existe ninguna receta universal
-      // 4. Per-miembro usada → último recurso
+      // Prioridad:
+      // 1. Universal elegible (compatible con todos, ≥3 días desde último uso)
+      // 2. Universal con gap reducido (si no hay fresca, relajar a 2 días, luego 1)
+      // 3. Per-miembro elegible (solo si NO existe ninguna receta universal)
+      // 4. Per-miembro con repetición → último recurso
       let bestScore  = -Infinity
       let bestRecipe: RecipeForMenu | null = null
 
-      // Paso 1: universal fresca
-      for (const r of compatibleConTodos) {
-        const score = calcularScore(r, input, usedThisWeek, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
-        if (score > bestScore) { bestScore = score; bestRecipe = r }
+      const trySelect = (pool: RecipeForMenu[], gap: number) => {
+        const excl = recentlyUsed(usedByDay, day, gap)
+        for (const r of pool) {
+          if (usedToday.has(r.id)) continue
+          if (excl.has(r.id))      continue
+          const score = calcularScore(r, input, excl, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
+          if (score > bestScore) { bestScore = score; bestRecipe = r }
+        }
       }
 
-      if (!bestRecipe || bestScore < 0) {
-        if (compatibleConTodos.length > 0) {
-          // Paso 2: pool universal existe pero todas fueron usadas esta semana
-          // → aceptar repetición antes que dividir en por-miembro
-          // Usar recentRecipeIds para elegir la menos reciente
-          let retryScore = -Infinity
+      // Paso 1: universal elegible (gap ≥ 3 días)
+      trySelect(compatibleConTodos, 3)
+
+      // Paso 2: relajar gap progresivamente si no hay universal fresca
+      if (!bestRecipe && compatibleConTodos.length > 0) {
+        for (const gap of [2, 1]) {
+          if (bestRecipe) break
+          trySelect(compatibleConTodos, gap)
+        }
+        // Último recurso: aceptar cualquier universal aunque se repita
+        if (!bestRecipe) {
+          const excl = new Set<string>()
           for (const r of compatibleConTodos) {
-            const score = calcularScore(r, input, new Set<string>(), proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
-            if (score > retryScore) { retryScore = score; bestRecipe = r }
-          }
-          bestScore = retryScore
-        } else {
-          // Paso 3 y 4: no hay universal — caer a per-miembro
-          for (const r of compatibleConAlguno) {
-            const score = calcularScore(r, input, usedThisWeek, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
+            if (usedToday.has(r.id)) continue
+            const score = calcularScore(r, input, excl, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
             if (score > bestScore) { bestScore = score; bestRecipe = r }
           }
-          // Si per-miembro también agotado, aceptar repetición
-          if (!bestRecipe || bestScore < 0) {
-            for (const r of compatibleConAlguno) {
-              const score = calcularScore(r, input, new Set<string>(), proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
-              if (score > bestScore) { bestScore = score; bestRecipe = r }
-            }
+        }
+      }
+
+      // Paso 3: no hay universal → per-miembro con mismo esquema
+      if (!bestRecipe) {
+        trySelect(compatibleConAlguno, 3)
+        if (!bestRecipe) trySelect(compatibleConAlguno, 2)
+        if (!bestRecipe) trySelect(compatibleConAlguno, 1)
+        if (!bestRecipe) {
+          const excl = new Set<string>()
+          for (const r of compatibleConAlguno) {
+            if (usedToday.has(r.id)) continue
+            const score = calcularScore(r, input, excl, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
+            if (score > bestScore) { bestScore = score; bestRecipe = r }
           }
         }
       }
       if (!bestRecipe) continue
 
-      // Registrar el ganador inicial como plato principal (impide que repita como plato)
-      usedThisWeek.add(bestRecipe.id)
+      // Registrar
+      usedByDay.set(bestRecipe.id, day)
       usedToday.add(bestRecipe.id)
       usedTodayNames.push(bestRecipe.nombre)
       if (tieneProteinaAnimal(bestRecipe)) proteinDaysUsed++
-      // Si el ganador inicial ya es proteína, registrar también en el set de proteínas
       const initialComp = clasificarComponente(bestRecipe)
       if (initialComp === 'proteina' || initialComp === 'completo') {
-        usedThisWeekProtOnly.add(bestRecipe.id)
+        usedByDayProtOnly.set(bestRecipe.id, day)
       }
 
       // Alternativas para miembros incompatibles — siempre buscar PROTEÍNA primero
@@ -959,18 +1023,18 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           !r.tipo_comida.includes('bebida') &&
           (clasificarComponente(r) === 'proteina' || r.tipo_componente === 'proteina_principal')
         )
+        const exclAlt = recentlyUsed(usedByDay, day, 3)
         let altScore = -Infinity, altRecipe: RecipeForMenu | null = null
         for (const r of proteinCandidates) {
-          const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed, new Set([m.id!]), isDayFinde, tipo)
+          const s = calcularScore(r, input, exclAlt, proteinDaysUsed, new Set([m.id!]), isDayFinde, tipo)
           if (s > altScore) { altScore = s; altRecipe = r }
         }
 
-        // 2. Fallback: si no hay proteína disponible, buscar plato completo del mismo tipo
         if (!altRecipe) {
           for (const r of allRecipes) {
             if (altUsedIds.has(r.id) || !esCompatibleConMiembro(r, m)) continue
             if (!r.tipo_comida.includes(tipo)) continue
-            const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed, new Set([m.id!]), isDayFinde, tipo)
+            const s = calcularScore(r, input, exclAlt, proteinDaysUsed, new Set([m.id!]), isDayFinde, tipo)
             if (s > altScore) { altScore = s; altRecipe = r }
           }
         }
@@ -978,8 +1042,8 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         if (altRecipe) {
           alternativas.push({ memberId: m.id!, recipe: altRecipe })
           altUsedIds.add(altRecipe.id)
-          usedThisWeek.add(altRecipe.id)
-          usedThisWeekProtOnly.add(altRecipe.id)
+          usedByDay.set(altRecipe.id, day)
+          usedByDayProtOnly.set(altRecipe.id, day)
         }
       }
 
@@ -996,23 +1060,22 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
       // Si el "mejor" no es proteína/completo (p.ej. una bebida o carbo ganó el score),
       // buscar explícitamente una proteína entre los compatibles
       if ((tipo === 'almuerzo' || tipo === 'cena') && mainComponent !== 'proteina' && mainComponent !== 'completo') {
+        const exclProt = recentlyUsed(usedByDay, day, 3)
         const proteinaCandidates = compatibleConTodos.filter(r =>
           clasificarComponente(r) === 'proteina' &&
           !r.tipo_comida.includes('bebida') &&
-          !usedThisWeek.has(r.id)
+          !usedToday.has(r.id) && !exclProt.has(r.id)
         )
         let bestProt: RecipeForMenu | null = null, bestProtScore = -Infinity
         for (const r of proteinaCandidates) {
-          const s = calcularScore(r, input, usedThisWeek, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
+          const s = calcularScore(r, input, exclProt, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
           if (s > bestProtScore) { bestProtScore = s; bestProt = r }
         }
         if (bestProt) {
           bestRecipe    = bestProt
           mainComponent = 'proteina'
-          // ── FIX: registrar el fallback protein en ambos sets ─────────────
-          // Sin esto, la misma proteína podía ganar en almuerzo Y cena del mismo día
-          usedThisWeek.add(bestProt.id)
-          usedThisWeekProtOnly.add(bestProt.id)
+          usedByDay.set(bestProt.id, day)
+          usedByDayProtOnly.set(bestProt.id, day)
           if (!usedToday.has(bestProt.id)) {
             usedToday.add(bestProt.id)
             usedTodayNames.push(bestProt.nombre)
@@ -1063,7 +1126,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         if (membersWantG1.length > 0 && guarnicionPool.length > 0) {
           let bestS = -Infinity
           for (const r of guarnicionPool) {
-            const s = calcularScore(r, input, usedThisWeekProtOnly, proteinDaysUsed,
+            const s = calcularScore(r, input, recentlyUsed(usedByDayProtOnly, day, 2), proteinDaysUsed,
               new Set(membersWantG1.map(m => m.id!)), isDayFinde, tipo)
             if (s > bestS) { bestS = s; guarn1 = r }
           }
@@ -1087,7 +1150,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           const pool2 = guarnicionPool.filter(r => r.id !== guarn1?.id)
           let bestG2: RecipeForMenu | null = null, bestS2 = -Infinity
           for (const r of pool2) {
-            const s = calcularScore(r, input, usedThisWeekProtOnly, proteinDaysUsed,
+            const s = calcularScore(r, input, recentlyUsed(usedByDayProtOnly, day, 2), proteinDaysUsed,
               new Set(membersWantG2.map(m => m.id!)), isDayFinde, tipo)
             if (s > bestS2) { bestS2 = s; bestG2 = r }
           }
@@ -1110,7 +1173,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         if (membersWantSalad.length > 0 && saladPool.length > 0) {
           let bestSalad: RecipeForMenu | null = null, bestSs = -Infinity
           for (const r of saladPool) {
-            const s = calcularScore(r, input, usedThisWeekProtOnly, proteinDaysUsed,
+            const s = calcularScore(r, input, recentlyUsed(usedByDayProtOnly, day, 2), proteinDaysUsed,
               new Set(membersWantSalad.map(m => m.id!)), isDayFinde, tipo)
             if (s > bestSs) { bestSs = s; bestSalad = r }
           }
@@ -1133,7 +1196,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         if (membersWantSalsa.length > 0 && salsaPool.length > 0) {
           let bestSalsa: RecipeForMenu | null = null, bestSss = -Infinity
           for (const r of salsaPool) {
-            const s = calcularScore(r, input, usedThisWeekProtOnly, proteinDaysUsed,
+            const s = calcularScore(r, input, recentlyUsed(usedByDayProtOnly, day, 2), proteinDaysUsed,
               new Set(membersWantSalsa.map(m => m.id!)), isDayFinde, tipo)
             if (s > bestSss) { bestSss = s; bestSalsa = r }
           }
