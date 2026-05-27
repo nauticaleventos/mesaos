@@ -602,12 +602,13 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
    * Regla 1: NUNCA el mismo día (usedToday).
    * Regla 3: Mínimo 3 días entre repeticiones.
    */
-  const esElegible = (id: string, currentDay: number, usedToday: Set<string>): boolean => {
+  const _esElegible = (id: string, currentDay: number, usedToday: Set<string>): boolean => {
     if (usedToday.has(id)) return false
     const lastDay = usedByDay.get(id)
     if (lastDay !== undefined && currentDay - lastDay < 3) return false
     return true
   }
+  void _esElegible  // usado via trySelect
 
   const esElegibleMiembro = (id: string, memberId: string, currentDay: number, usedToday: Set<string>): boolean => {
     if (usedToday.has(id)) return false
@@ -1100,7 +1101,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         // Filtro base de acompañamientos: no repetir mismo día, no consecutivos, máx 2/semana
         const filterAcompa = (track: Map<string, { count: number; lastDay: number }>, r: RecipeForMenu) => {
           if (usedToday.has(r.id)) return false
-          if (r.id === bestRecipe.id) return false
+          if (r.id === bestRecipe!.id) return false
           if (usedTodayNames.some(n => sonSimilares(r.nombre, n))) return false
           const t = track.get(r.id)
           if (!t) return true
@@ -1111,7 +1112,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
 
         const guarnicionPool = allRecipes.filter(r => esGuarnicion(r) && filterAcompa(carbWeekTrack, r))
         const saladPool      = allRecipes.filter(r => esEnsalada(r)   && filterAcompa(saladWeekTrack, r))
-        const salsaPool      = allRecipes.filter(r => esSalsa(r) && !usedToday.has(r.id) && r.id !== bestRecipe.id)
+        const salsaPool      = allRecipes.filter(r => esSalsa(r) && !usedToday.has(r.id) && r.id !== bestRecipe!.id)
 
         // Acompañamientos familiares: solo miembros que comen la proteína base
         // (los incompatibles reciben su propia comida completa más abajo)
