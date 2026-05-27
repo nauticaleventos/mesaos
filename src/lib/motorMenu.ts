@@ -677,47 +677,59 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           return slotMembers.some(m => esCompatibleConMiembro(r, m))
         })
 
-        // 1. Receta base: la que maximiza el score sumado + bonus por cantidad de personas que la comparten
+        // ── Paso 1: buscar la MEJOR receta compatible con TODOS los miembros ──────
+        // Principio: 1 receta para toda la familia → menos tiempo en cocina.
+        // Solo si no existe receta universal se recurre a variantes por miembro.
+        const poolUniversal = pool.filter(r => slotMembers.every(m => esCompatibleConMiembro(r, m)))
+
         let baseRecipe: RecipeForMenu | null = null
         let baseScore  = -Infinity
 
-        for (const r of pool) {
+        // Intentar primero con poolUniversal (respeta historial semanal)
+        for (const r of poolUniversal) {
           let sumScore = 0; let compatCount = 0
           for (const m of slotMembers) {
-            if (!esCompatibleConMiembro(r, m)) continue
             const mUsed = usedPerMember.get(m.id!) ?? new Set<string>()
             if (mUsed.has(r.id)) continue
             const s = calcularScore(r, input, mUsed, 0, new Set([m.id!]), isDayFinde, tipo)
             if (s >= 0) { sumScore += s; compatCount++ }
           }
           if (compatCount === 0) continue
-          // Bonus por preparación compartida: más personas → menos trabajo
-          // ×50 por persona + 100 extra si la receta es compatible con TODOS (máxima preferencia)
-          const shareBonus    = compatCount * 50
-          const allShareBonus = compatCount === slotMembers.length ? 100 : 0
-          // Bonus batch: recetas fáciles/rápidas se priorizan si se cocina poco
           const batchBonus = isBatch && (r.dificultad === 'facil' || (r.tiempo_total_min ?? 999) <= 20) ? 25 : 0
-          const combined = sumScore + shareBonus + allShareBonus + batchBonus
+          const combined = sumScore + batchBonus
           if (combined > baseScore) { baseScore = combined; baseRecipe = r }
         }
 
-        // Fallback 1: pool agotado por usedPerMember → ignorar historial semanal
+        // Fallback A: poolUniversal agotado por historial → ignorar usedPerMember
+        if (!baseRecipe && poolUniversal.length > 0) {
+          for (const r of poolUniversal) {
+            let sumScore = 0
+            for (const m of slotMembers) {
+              const s = calcularScore(r, input, new Set<string>(), 0, new Set([m.id!]), isDayFinde, tipo)
+              if (s >= 0) sumScore += s
+            }
+            if (sumScore > baseScore) { baseScore = sumScore; baseRecipe = r }
+          }
+        }
+
+        // Fallback B: no hay receta universal → usar pool general con shareBonus
         if (!baseRecipe) {
           for (const r of pool) {
             let sumScore = 0; let compatCount = 0
             for (const m of slotMembers) {
               if (!esCompatibleConMiembro(r, m)) continue
-              const s = calcularScore(r, input, new Set<string>(), 0, new Set([m.id!]), isDayFinde, tipo)
+              const mUsed = usedPerMember.get(m.id!) ?? new Set<string>()
+              if (mUsed.has(r.id)) continue
+              const s = calcularScore(r, input, mUsed, 0, new Set([m.id!]), isDayFinde, tipo)
               if (s >= 0) { sumScore += s; compatCount++ }
             }
             if (compatCount === 0) continue
-            const combined = sumScore + compatCount * 50 + (compatCount === slotMembers.length ? 100 : 0)
+            const combined = sumScore + compatCount * 50
             if (combined > baseScore) { baseScore = combined; baseRecipe = r }
           }
         }
 
-        // Fallback 2: pool vacío incluso ignorando usedPerMember
-        // → expandir sobre TODAS las recetas del tipo, ignorando usedToday y cap de tiempo
+        // Fallback C: pool completamente vacío → cualquier receta del tipo
         if (!baseRecipe) {
           const poolExpanded = allRecipes.filter(r =>
             tipoMatch(r) &&
@@ -732,8 +744,9 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
               if (s >= 0) { sumScore += s; compatCount++ }
             }
             if (compatCount === 0) continue
-            const combined = sumScore + compatCount * 50 + (compatCount === slotMembers.length ? 100 : 0)
-            if (combined > baseScore) { baseScore = combined; baseRecipe = r }
+            if (sumScore + compatCount * 50 > baseScore) {
+              baseScore = sumScore + compatCount * 50; baseRecipe = r
+            }
           }
         }
 
@@ -806,12 +819,12 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         }
 
         // 4. Construir componentes
-        // memberId=null significa "toda la familia" — solo usarlo cuando el slot
-        // incluye a TODOS los miembros de la familia (no un subconjunto como "solo Sarah")
+        // memberId=null cuando TODOS los miembros del slot comen la misma receta.
+        // Evita N filas idénticas (1 por persona) cuando la receta es para todos.
         const components: MenuComponent[] = []
-        const slotEsTodaLaFamilia = slotMembers.length === allMembers.length
 
-        if (onBase.length === slotMembers.length && slotEsTodaLaFamilia) {
+        if (onBase.length === slotMembers.length) {
+          // Todos en el slot comen la base → 1 entrada compartida
           components.push({ component: 'completo', recipe: baseRecipe, memberId: null, servings: slotServings })
         } else {
           for (const id of onBase) {
