@@ -711,14 +711,14 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
             let sumScore = 0
             for (const m of slotMembers) {
               const s = calcularScore(r, input, new Set<string>(), 0, new Set([m.id!]), isDayFinde, tipo)
-              if (s >= 0) sumScore += s
+              sumScore += Math.max(s, 0)  // ignorar penalizaciones, lo universal gana igual
             }
-            if (sumScore > baseScore) { baseScore = sumScore; baseRecipe = r }
+            if (sumScore > baseScore || baseRecipe === null) { baseScore = sumScore; baseRecipe = r }
           }
         }
 
-        // Fallback B: no hay receta universal → usar pool general con shareBonus
-        if (!baseRecipe) {
+        // Fallback B: solo si NO hay receta universal disponible → pool general con shareBonus
+        if (!baseRecipe && poolUniversal.length === 0) {
           for (const r of pool) {
             let sumScore = 0; let compatCount = 0
             for (const m of slotMembers) {
@@ -877,6 +877,9 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
       )
 
       // Buscar mejor receta
+      // PRIORIDAD: siempre preferir 1 receta para todos (menos tiempo en cocina).
+      // Solo caer a compatibleConAlguno si compatibleConTodos está VACÍO.
+      // El score bajo de inventario NO justifica dividir en recetas por miembro.
       let bestScore  = -Infinity
       let bestRecipe: RecipeForMenu | null = null
 
@@ -884,7 +887,8 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         const score = calcularScore(r, input, usedThisWeek, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
         if (score > bestScore) { bestScore = score; bestRecipe = r }
       }
-      if (!bestRecipe || bestScore < 0) {
+      // Solo buscar en compatibleConAlguno si NO hay ninguna receta universal
+      if (!bestRecipe) {
         for (const r of compatibleConAlguno) {
           const score = calcularScore(r, input, usedThisWeek, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
           if (score > bestScore) { bestScore = score; bestRecipe = r }
