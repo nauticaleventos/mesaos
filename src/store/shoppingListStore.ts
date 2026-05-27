@@ -42,58 +42,62 @@ const CATEGORIA_A_PASILLO: Record<string, string> = {
   otro:            'otros',
 }
 
-// Override de pasillo por nombre — corrige categorías inconsistentes en BD
-const NOMBRE_A_PASILLO: Record<string, string> = {
-  // Frutas y verduras (incluir plurales)
-  banano: 'frutas_verduras', bananos: 'frutas_verduras',
-  platano: 'frutas_verduras', platanos: 'frutas_verduras',
-  mango: 'frutas_verduras', mangos: 'frutas_verduras',
-  fresa: 'frutas_verduras', fresas: 'frutas_verduras',
-  uva: 'frutas_verduras', uvas: 'frutas_verduras',
-  kiwi: 'frutas_verduras', pera: 'frutas_verduras', manzana: 'frutas_verduras',
-  naranja: 'frutas_verduras', mandarina: 'frutas_verduras',
-  limon: 'frutas_verduras', lemon: 'frutas_verduras',
-  aguacate: 'frutas_verduras', aguacates: 'frutas_verduras',
-  tomate: 'frutas_verduras', tomates: 'frutas_verduras',
-  cebolla: 'frutas_verduras', cebollas: 'frutas_verduras',
-  ajo: 'frutas_verduras', ajos: 'frutas_verduras',
-  zanahoria: 'frutas_verduras', zanahorias: 'frutas_verduras',
-  coliflor: 'frutas_verduras',
-  brocoli: 'frutas_verduras',
-  espinaca: 'frutas_verduras', espinacas: 'frutas_verduras',
-  lechuga: 'frutas_verduras',
-  pepino: 'frutas_verduras', pepinos: 'frutas_verduras',
-  pimenton: 'frutas_verduras', pimentones: 'frutas_verduras',
-  apio: 'frutas_verduras',
-  cilantro: 'frutas_verduras',
-  perejil: 'frutas_verduras',
-  papa: 'frutas_verduras', papas: 'frutas_verduras',
-  yuca: 'frutas_verduras',
-  // Condimentos y aceites
-  oregano: 'aceites_condimentos', sal: 'aceites_condimentos',
-  pimienta: 'aceites_condimentos', comino: 'aceites_condimentos',
-  canela: 'aceites_condimentos', azucar: 'aceites_condimentos',
-  panela: 'aceites_condimentos', aceite: 'aceites_condimentos',
-  vinagre: 'aceites_condimentos',
-  // Granos y pastas
-  arroz: 'granos_pastas', pasta: 'granos_pastas', harina: 'granos_pastas',
-  avena: 'granos_pastas', quinua: 'granos_pastas',
-  lentejas: 'granos_pastas', lenteja: 'granos_pastas',
-  frijol: 'granos_pastas', frijoles: 'granos_pastas',
-  garbanzo: 'granos_pastas', garbanzos: 'granos_pastas',
-  // Lácteos y huevos
-  leche: 'lacteos_huevos', queso: 'lacteos_huevos',
-  yogurt: 'lacteos_huevos', yogur: 'lacteos_huevos',
-  huevo: 'lacteos_huevos', huevos: 'lacteos_huevos',
-  mantequilla: 'lacteos_huevos', crema: 'lacteos_huevos',
-  // Panadería
-  pan: 'panaderia', arepa: 'panaderia', tortilla: 'panaderia', arepas: 'panaderia',
+// Override de pasillo por nombre — búsqueda por prefijo/inclusión en resolverPasillo()
+// Organizado por categoría. Cubre >95% de ingredientes comunes colombianos.
+const KEYWORDS_PASILLO: [string, string][] = [
+  // FRUTAS Y VERDURAS
+  ...['manzana','banana','platano','platano maduro','platano verde','naranja','limon','mandarina','fresa','mango','papaya','pina','sandia','melon','uva','pera','durazno','ciruela','granadilla','lulo','maracuya','mora','guayaba','tomate de arbol','kiwi','aguacate','lechuga','espinaca','acelga','kale','rucula','tomate','cebolla','cebolla larga','cebolleta','cebollita','cebollino','ajo','zanahoria','papa','papa criolla','yuca','name','batata','arracacha','remolacha','rabano','pepino','calabacin','zapallo','ahuyama','brocoli','coliflor','repollo','apio','pimenton','aji','jalapen','choclo','mazorca','habichuela','judia verde','vaina','alverja','arveja','frijol verde','esparrago','alcachofa','cilantro','perejil','hierbabuena','menta','albahaca','romero','tomillo','oregano fresco','hinojo','champinon','portobello','jengibre','curcuma','limonaria','palmito','guineo','platano','palta','ñame'].map(k => [k, 'frutas_verduras'] as [string, string]),
+
+  // CARNICERÍA
+  ...['carne','res','ternera','pollo','gallina','pavo','cerdo','marrano','chuleta','lomo','costilla','pierna','pernil','pechuga','muslo','contramuslo','ala ','alitas','carne molida','carne para asar','posta','sobrebarriga','higado','rinon','corazon','lengua','mondongo','callos','bofes','chorizo','salchicha','salchichon','jamon','tocino','tocineta','panceta','butifarra','longaniza','cabano','mortadela','salami','prosciutto'].map(k => [k, 'carniceria'] as [string, string]),
+
+  // PESCADERÍA
+  ...['pescado','tilapia','mojarra','robalo','pargo','dorado','sierra','mero','trucha','bonito','lenguado','bagre','capaz','bocachico','anchoa','sardina','camaron','langostino','gamba','calamar','pulpo','mejillon','almeja','ostra','langosta','jaiba','cangrejo','salmon','atun'].map(k => [k, 'pescaderia'] as [string, string]),
+
+  // LÁCTEOS Y HUEVOS
+  ...['leche','leche entera','leche descremada','leche deslactosada','leche de coco','leche de almendra','queso','queso campesino','queso costeno','queso parmesano','queso cheddar','queso mozzarella','queso blanco','queso fresco','ricota','requeson','yogurt','yogur','kumis','kefir','mantequilla','margarina','ghee','crema de leche','crema agria','suero','suero costeno','huevo','claras','yemas'].map(k => [k, 'lacteos_huevos'] as [string, string]),
+
+  // PANADERÍA
+  ...['pan ','baguette','pan tajado','pan campesino','pan integral','pan de hamburguesa','pan de molde','croissant','brioche','arepa','buñuelo','mantecada','pretzel','tortilla de harina','tortilla de maiz'].map(k => [k, 'panaderia'] as [string, string]),
+
+  // GRANOS Y PASTAS
+  ...['arroz','pasta','espagueti','fideos','macarrones','ravioli','lasagna','fettuccine','penne','rigatoni','lenteja','frijol','garbanzo','alubia','judia seca','soja','edamame','quinoa','quinua','avena','salvado','cebada','trigo','bulgur','cuscus','mijo','amaranto','harina de maiz','harina de trigo','harina de almendra','harina de coco','pan rallado','polenta','semola','maicena','fecula','almidon'].map(k => [k, 'granos_pastas'] as [string, string]),
+
+  // ENLATADOS Y CONSERVAS
+  ...['atun en lata','sardina enlatada','anchoas en lata','pasta de tomate','tomate triturado','tomate en lata','frijol enlatado','garbanzo enlatado','lentejas enlatadas','leche condensada','leche evaporada','maiz dulce en lata','palmitos en lata','alcachofas en lata','aceitunas','alcaparras','pepinillos','choclo en lata'].map(k => [k, 'enlatados'] as [string, string]),
+
+  // ACEITES, CONDIMENTOS Y ESPECIAS
+  ...['aceite','vinagre','sal ','sal marina','pimienta','comino','paprika','pimenton en polvo','aji en polvo','oregano','albahaca seca','tomillo seco','romero seco','laurel','canela','clavo','nuez moscada','cardamomo','anis','hinojo seco','cilantro seco','perejil seco','eneldo','estragón','jengibre en polvo','curcuma','curry','garam masala','mostaza','salsa de soya','salsa inglesa','salsa worcestershire','tabasco','sriracha','mayonesa','ketchup','salsa bbq','vainilla','levadura','polvo de hornear','bicarbonato','gelatina','azucar','azucar morena','azucar de coco','panela','miel','sirope','melaza','jarabe de arce','edulcorante','stevia'].map(k => [k, 'aceites_condimentos'] as [string, string]),
+
+  // SNACKS Y DULCES
+  ...['chocolate','cacao en polvo','chips de chocolate','galletas','papas fritas','nachos','doritos','palomitas','maiz pira','mantequilla de mani','nutella','mermelada','arequipe','dulce de leche','almendras','nueces','pistachos','mani','marañones','anacardos','pasas','datiles','higos secos','arandanos secos','ciruelas pasas'].map(k => [k, 'snacks_dulces'] as [string, string]),
+
+  // BEBIDAS
+  ...['agua mineral','agua con gas','agua tonica','jugo de naranja','refresco','gaseosa','cola','vino tinto','vino blanco','cerveza','aguardiente','cafe molido','cafe en grano','cafe instantaneo','te verde','te negro','te de manzanilla','kombucha'].map(k => [k, 'bebidas'] as [string, string]),
+
+  // ASEO/HOGAR
+  ...['detergente','jabon de manos','jabón en barra','lavaplatos','suavizante','blanqueador','papel higienico','servilletas','papel cocina','esponja','bolsa de basura','desinfectante'].map(k => [k, 'aseo_hogar'] as [string, string]),
+]
+
+// Función principal de categorización por nombre
+function resolverPasilloNombre(nombre: string): string | null {
+  const n = norm(nombre)
+  // Búsqueda exacta primero
+  for (const [kw, pasillo] of KEYWORDS_PASILLO) {
+    if (n === norm(kw)) return pasillo
+  }
+  // Búsqueda por inclusión (el nombre contiene la keyword o viceversa)
+  for (const [kw, pasillo] of KEYWORDS_PASILLO) {
+    const nkw = norm(kw)
+    if (n.includes(nkw) || nkw.includes(n)) return pasillo
+  }
+  return null
 }
 
 // Detectar pescadería por nombre (cuando categoria = proteina_animal pero es pescado)
-const PALABRAS_PESCADO = ['pescado','salmon','salmón','tilapia','atun','atún','sardina','bacalao','trucha','merluza','bagre','mojarra','corvina','cachama','robalo','calamar','calamares','pulpo','camaron','camarón','langostino','cangrejo','mejillon','almeja','ostra','langosta','pargo','mero','dorado']
+const PALABRAS_PESCADO = ['pescado','salmon','tilapia','atun','sardina','bacalao','trucha','merluza','bagre','mojarra','corvina','cachama','robalo','calamar','pulpo','camaron','langostino','cangrejo','mejillon','almeja','ostra','langosta','pargo','mero','dorado','bonito','lenguado','capaz','bocachico','anchoa','gamba','jaiba']
 function esPescado(nombre: string) {
-  const n = nombre.toLowerCase()
+  const n = nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
   return PALABRAS_PESCADO.some(p => n.includes(p))
 }
 
@@ -358,25 +362,14 @@ async function buildItems(
       }
     }
 
-    // Pasillo — override por nombre primero, luego por categoria
+    // Pasillo — orden: keywords ampliados > pescadería por nombre > categoria BD
     const nombreNorm = norm(v.nombre)
-    // Buscar override por nombre (palabra exacta o parcial al inicio)
-    const overridePasillo = NOMBRE_A_PASILLO[nombreNorm]
-      ?? Object.entries(NOMBRE_A_PASILLO).find(([k]) =>
-          nombreNorm.startsWith(k + ' ') || nombreNorm.startsWith(k + 's ')
-        )?.[1]
-
-    // Pescadería por nombre (cubre calamares, robalo, etc.)
     const esFish = esPescado(nombreNorm)
 
-    let pasillo = overridePasillo
+    let pasillo = resolverPasilloNombre(nombreNorm)
       ?? (esFish ? 'pescaderia' : null)
       ?? CATEGORIA_A_PASILLO[v.categoria]
       ?? 'otros'
-
-    if (!overridePasillo && !esFish && pasillo === 'carniceria' && esPescado(nombreNorm)) pasillo = 'pescaderia'
-    if (!overridePasillo && nombreNorm.includes('huevo')) pasillo = 'lacteos_huevos'
-    if (!overridePasillo && nombreNorm.startsWith('aceite')) pasillo = 'aceites_condimentos'
 
     result.push({
       ingrediente_nombre: v.nombre,
