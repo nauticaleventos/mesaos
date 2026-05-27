@@ -667,8 +667,13 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
             : tipo === 'desayuno'
               ? (r.tipo_comida.includes('desayuno') || r.tipo_comida.includes('brunch'))
               : r.tipo_comida.includes(tipo)
+        // Tipos de componente que NO son platos principales:
+        // una salsa/ensalada/guarnición nunca va sola en desayuno o merienda
+        const TC_NO_PLATO = new Set(['salsa', 'vinagreta', 'ensalada', 'guarnicion'])
+
         const pool = poolBase.filter(r => {
           if (!tipoMatch(r)) return false
+          if (TC_NO_PLATO.has(r.tipo_componente ?? '')) return false  // nunca como plato principal
           if (usedToday.has(r.id)) return false
           if (guestRestrictions.includes('vegetariana') && !r.perfiles?.vegetariana) return false
           if (guestRestrictions.includes('sin_gluten')  && !r.filtros_nutricionales?.sin_gluten)  return false
