@@ -454,7 +454,8 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       )
     }
 
-    return candidates.sort(() => Math.random() - 0.5).slice(0, 5)
+    // Devolver todos los candidatos mezclados — CambiarSheet pagina de 5 en 5
+    return candidates.sort(() => Math.random() - 0.5)
   },
 
   // ── Simplificar las próximas N comidas (modo día difícil) ──────────────────

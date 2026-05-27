@@ -17,16 +17,21 @@ interface Props {
 export default function CambiarSheet({ entry, onClose }: Props) {
   const { buscarAlternativas, cambiarReceta } = useMenuStore()
   const [razon,        setRazon]        = useState<SwapReason | null>(null)
-  const [alternativas, setAlternativas] = useState<RecipeForMenu[]>([])
+  const [todasAlts,    setTodasAlts]    = useState<RecipeForMenu[]>([])
+  const [visibles,     setVisibles]     = useState(5)
   const [loading,      setLoading]      = useState(false)
   const [swapping,     setSwapping]     = useState<string | null>(null)
 
+  const alternativas = todasAlts.slice(0, visibles)
+  const hayMas       = visibles < todasAlts.length
+
   const selectRazon = async (r: SwapReason) => {
     setRazon(r)
-    setAlternativas([])
+    setTodasAlts([])
+    setVisibles(5)
     setLoading(true)
     const alts = await buscarAlternativas(entry.id, r)
-    setAlternativas(alts)
+    setTodasAlts(alts)
     setLoading(false)
   }
 
@@ -117,7 +122,21 @@ export default function CambiarSheet({ entry, onClose }: Props) {
             </div>
           )}
 
-          {!loading && razon && alternativas.length === 0 && (
+          {!loading && hayMas && (
+            <button
+              onClick={() => setVisibles(v => v + 5)}
+              className="w-full py-2.5 rounded-xl border border-border text-sm text-muted hover:border-accent hover:text-accent transition-all">
+              Ver más opciones
+            </button>
+          )}
+
+          {!loading && !hayMas && todasAlts.length > 0 && (
+            <p className="text-center text-xs text-muted py-2">
+              Ya viste todas las opciones disponibles
+            </p>
+          )}
+
+          {!loading && razon && todasAlts.length === 0 && (
             <div className="text-center py-4 flex flex-col gap-1">
               <p className="text-sm text-muted">No encontré alternativas para este criterio.</p>
               <p className="text-xs text-muted">Agregá más recetas al recetario para tener más opciones.</p>
