@@ -447,8 +447,8 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
               <div className="relative inline-block pt-1">
                 <button
                   onClick={e => { e.stopPropagation(); setShowOpciones(v => !v) }}
-                  className="flex items-center justify-center w-7 h-7 rounded-full border border-accent/30 text-accent/60 hover:text-accent hover:border-accent hover:bg-accent/5 transition-all active:scale-95">
-                  <Plus size={14}/>
+                  className="flex items-center gap-1 text-xs text-accent/60 hover:text-accent font-medium transition-colors active:scale-95">
+                  <Plus size={11}/> Agrega más
                 </button>
                 {showOpciones && opciones.length > 0 && (
                   <div className="absolute left-0 bottom-full mb-1 z-20 bg-white rounded-xl shadow-lg border border-border py-1 min-w-[160px]"
@@ -667,8 +667,8 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
               <div className="relative inline-block">
                 <button
                   onClick={e => { e.stopPropagation(); setShowOpciones(v => !v) }}
-                  className="flex items-center justify-center w-7 h-7 rounded-full border border-accent/30 text-accent/60 hover:text-accent hover:border-accent hover:bg-accent/5 transition-all active:scale-95">
-                  <Plus size={14}/>
+                  className="flex items-center gap-1 text-xs text-accent/60 hover:text-accent font-medium transition-colors active:scale-95">
+                  <Plus size={11}/> Agrega más
                 </button>
                 {showOpciones && opciones.length > 0 && (
                   <div className="absolute left-0 bottom-full mb-1 z-20 bg-white rounded-xl shadow-lg border border-border py-1 min-w-[160px]"
