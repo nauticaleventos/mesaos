@@ -46,7 +46,7 @@ const CATEGORIA_A_PASILLO: Record<string, string> = {
 // Organizado por categoría. Cubre >95% de ingredientes comunes colombianos.
 const KEYWORDS_PASILLO: [string, string][] = [
   // FRUTAS Y VERDURAS
-  ...['manzana','banana','platano','platano maduro','platano verde','naranja','limon','mandarina','fresa','mango','papaya','pina','sandia','melon','uva','pera','durazno','ciruela','granadilla','lulo','maracuya','mora','guayaba','tomate de arbol','kiwi','aguacate','lechuga','espinaca','acelga','kale','rucula','tomate','cebolla','cebolla larga','cebolleta','cebollita','cebollino','ajo','zanahoria','papa','papa criolla','yuca','name','batata','arracacha','remolacha','rabano','pepino','calabacin','zapallo','ahuyama','brocoli','coliflor','repollo','apio','pimenton','aji','jalapen','choclo','mazorca','habichuela','judia verde','vaina','alverja','arveja','frijol verde','esparrago','alcachofa','cilantro','perejil','hierbabuena','menta','albahaca','romero','tomillo','oregano fresco','hinojo','champinon','portobello','jengibre','curcuma','limonaria','palmito','guineo','platano','palta','ñame'].map(k => [k, 'frutas_verduras'] as [string, string]),
+  ...['manzana','banana','platano','platano maduro','platano verde','naranja','limon','mandarina','fresa','mango','papaya','pina','sandia','melon','uva','pera','durazno','ciruela','granadilla','lulo','maracuya','mora','guayaba','tomate de arbol','kiwi','aguacate','lechuga','espinaca','acelga','kale','rucula','tomate','cebolla','cebolla larga','cebolleta','cebollita','cebollino','ajo','zanahoria','papa','papa criolla','yuca','name','batata','arracacha','remolacha','rabano','pepino','calabacin','zapallo','ahuyama','brocoli','coliflor','repollo','apio','pimenton','aji','jalapen','choclo','mazorca','habichuela','judia verde','vaina','alverja','arveja','frijol verde','esparrago','alcachofa','cilantro','perejil','hierbabuena','menta','albahaca fresca','champinon','portobello','jengibre','curcuma','limonaria','palmito','guineo','platano','palta','ñame'].map(k => [k, 'frutas_verduras'] as [string, string]),
 
   // CARNICERÍA
   ...['carne','res','ternera','pollo','gallina','pavo','cerdo','marrano','chuleta','lomo','costilla','pierna','pernil','pechuga','muslo','contramuslo','ala ','alitas','carne molida','carne para asar','posta','sobrebarriga','higado','rinon','corazon','lengua','mondongo','callos','bofes','chorizo','salchicha','salchichon','jamon','tocino','tocineta','panceta','butifarra','longaniza','cabano','mortadela','salami','prosciutto'].map(k => [k, 'carniceria'] as [string, string]),
@@ -67,7 +67,7 @@ const KEYWORDS_PASILLO: [string, string][] = [
   ...['atun en lata','sardina enlatada','anchoas en lata','pasta de tomate','tomate triturado','tomate en lata','frijol enlatado','garbanzo enlatado','lentejas enlatadas','leche condensada','leche evaporada','maiz dulce en lata','palmitos en lata','alcachofas en lata','aceitunas','alcaparras','pepinillos','choclo en lata'].map(k => [k, 'enlatados'] as [string, string]),
 
   // ACEITES, CONDIMENTOS Y ESPECIAS
-  ...['aceite','vinagre','sal ','sal marina','pimienta','comino','paprika','pimenton en polvo','aji en polvo','oregano','albahaca seca','tomillo seco','romero seco','laurel','canela','clavo','nuez moscada','cardamomo','anis','hinojo seco','cilantro seco','perejil seco','eneldo','estragón','jengibre en polvo','curcuma','curry','garam masala','mostaza','salsa de soya','salsa inglesa','salsa worcestershire','tabasco','sriracha','mayonesa','ketchup','salsa bbq','vainilla','levadura','polvo de hornear','bicarbonato','gelatina','azucar','azucar morena','azucar de coco','panela','miel','sirope','melaza','jarabe de arce','edulcorante','stevia'].map(k => [k, 'aceites_condimentos'] as [string, string]),
+  ...['aceite','vinagre','sal ','sal marina','pimienta','comino','paprika','pimenton en polvo','aji en polvo','oregano','albahaca','albahaca seca','romero','romero seco','tomillo','tomillo seco','laurel','canela','clavo','nuez moscada','cardamomo','anis','hinojo seco','cilantro seco','perejil seco','eneldo','estragón','jengibre en polvo','curcuma','curry','garam masala','mostaza','salsa de soya','salsa inglesa','salsa worcestershire','tabasco','sriracha','mayonesa','ketchup','salsa bbq','vainilla','levadura','polvo de hornear','bicarbonato','gelatina','azucar','azucar morena','azucar de coco','panela','miel','sirope','melaza','jarabe de arce','edulcorante','stevia'].map(k => [k, 'aceites_condimentos'] as [string, string]),
 
   // SNACKS Y DULCES
   ...['chocolate','cacao en polvo','chips de chocolate','galletas','papas fritas','nachos','doritos','palomitas','maiz pira','mantequilla de mani','nutella','mermelada','arequipe','dulce de leche','almendras','nueces','pistachos','mani','marañones','anacardos','pasas','datiles','higos secos','arandanos secos','ciruelas pasas'].map(k => [k, 'snacks_dulces'] as [string, string]),
@@ -147,6 +147,13 @@ const MANTENER_EXACTO = [
   'pan rallado','pan molido','azucar morena','azucar negra',
   'arroz integral','arroz blanco','arroz negro',
   'frijoles negros','frijoles rojos','lentejas verdes','lentejas rojas',
+  // Productos que parecen preparaciones pero se venden así
+  'ajo en polvo','cebolla en polvo','cebolla deshidratada',
+  'avena en hojuelas','avena instantanea',
+  'mantequilla sin sal','mantequilla con sal',
+  'yogurt griego','yogur griego',
+  'pan integral','pan de molde integral',
+  'linaza molida',  // se compra ya molida
 ]
 
 // Prefijos de procesamiento → el ingrediente base es lo que viene después
@@ -170,8 +177,11 @@ const PREFIJOS_PROC = [
 
 // Preparaciones que se hacen en CASA (no cambian lo que comprás en la tienda)
 const PREP_CASA = [
+  // Modificadores de receta (no cambian lo que comprás)
+  'muy','bien','recien',
   // Corte y procesamiento
   'picado','picada','picados','picadas',
+  'laminado','laminada','laminados','laminadas',
   'rallado','rallada','rallados','ralladas',
   'aplastado','aplastada','aplastados','aplastadas',
   'exprimido','exprimida','exprimidos','exprimidas',
@@ -188,7 +198,7 @@ const PREP_CASA = [
   // Forma
   'en rodajas','en cubos','en tiras','en juliana','en brunoise',
   'en trozos','en dados','en laminas','en rebanadas','en mitades',
-  'en pedazos','en lascas','en bastones',
+  'en pedazos','en lascas','en bastones','en hojuelas',
   // Cocción
   'cocido','cocida','cocidos','cocidas',
   'crudo','cruda','crudos','crudas',
