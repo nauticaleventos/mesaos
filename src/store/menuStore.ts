@@ -470,20 +470,37 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     const nowMinutes   = horaActual * 60 + minutoActual
 
     // Determina si una comida ya pasó.
-    // Usa meal_time si está disponible (ej: "16:00"), mucho más preciso.
-    // Fallback: HORA_CORTE por tipo.
-    const HORA_CORTE: Record<string, number> = {
-      desayuno: 10, almuerzo: 14, cena: 22, snack: 17, merienda: 17,
+    // Usa meal_time si está disponible (ej: "16:00") — es la hora que el usuario configuró.
+    // Fallback: ventanas típicas por tipo.
+    //
+    // Ventanas típicas:
+    //   Desayuno       06:00–08:00  → pasó a las 08:00
+    //   Merienda mañana 09:00–10:00 → pasó a las 10:30
+    //   Almuerzo       12:00–14:00  → pasó a las 14:00
+    //   Merienda tarde 15:00–16:00  → pasó a las 16:30
+    //   Cena           18:00–20:00  → pasó a las 20:00
+    //   Snack noche    20:00–21:00  → pasó a las 21:30
+    const HORA_CORTE_MIN: Record<string, number> = {
+      desayuno:           8  * 60,       // 08:00
+      'merienda mañana':  10 * 60 + 30,  // 10:30
+      almuerzo:           14 * 60,       // 14:00
+      'merienda tarde':   16 * 60 + 30,  // 16:30
+      cena:               20 * 60,       // 20:00
+      'snack noche':      21 * 60 + 30,  // 21:30
+      snack:              16 * 60 + 30,  // 16:30 (genérico)
+      merienda:           16 * 60 + 30,
     }
     const yaFuePara = (mealType: string, mealTime?: string): boolean => {
       if (mealTime) {
+        // Hora configurada por el usuario + 30 min de gracia
         const [h, m] = mealTime.split(':').map(Number)
-        return nowMinutes >= h * 60 + (m ?? 0)
+        return nowMinutes >= (h * 60 + (m ?? 0)) + 30
       }
+      // Fallback por tipo
       const key = mealType.toLowerCase()
-      if (HORA_CORTE[key] !== undefined) return horaActual >= HORA_CORTE[key]
-      for (const [k, v] of Object.entries(HORA_CORTE)) {
-        if (key.startsWith(k)) return horaActual >= v
+      if (HORA_CORTE_MIN[key] !== undefined) return nowMinutes >= HORA_CORTE_MIN[key]
+      for (const [k, v] of Object.entries(HORA_CORTE_MIN)) {
+        if (key.startsWith(k)) return nowMinutes >= v
       }
       return false
     }
