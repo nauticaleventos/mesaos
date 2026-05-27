@@ -44,10 +44,12 @@ export default function SobradosSheet({ onClose }: Props) {
   const handleAdd = async (name: string, qty?: string) => {
     if (!family?.id || !name.trim()) return
     setSaving(true)
-    await addLeftover(family.id, name.trim(), qty?.trim() || undefined)
+    const nuevo = await addLeftover(family.id, name.trim(), qty?.trim() || undefined)
     setNombre('')
     setCantidad('')
     setSaving(false)
+    // Abrir picker automáticamente para asignar al menú
+    if (nuevo?.id) setPickerId(nuevo.id)
   }
 
   // Devuelve hasta 4 slots futuros sacados directamente del menú actual

@@ -15,7 +15,7 @@ interface LeftoversState {
   leftovers: Leftover[]
   loading:   boolean
   loadLeftovers:  (familyId: string) => Promise<void>
-  addLeftover:    (familyId: string, name: string, quantity?: string) => Promise<void>
+  addLeftover:    (familyId: string, name: string, quantity?: string) => Promise<Leftover | null>
   removeLeftover: (id: string) => Promise<void>
 }
 
@@ -43,6 +43,7 @@ export const useLeftoversStore = create<LeftoversState>((set) => ({
       .select()
       .single()
     if (data) set(s => ({ leftovers: [data as Leftover, ...s.leftovers] }))
+    return data as Leftover | null
   },
 
   removeLeftover: async (id) => {
