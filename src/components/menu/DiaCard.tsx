@@ -299,7 +299,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
   const weekStart = getMondayOfWeek()
 
   const buscarReceta = async (q: string, tc: string) => {
-    let query = supabase.from('recipes').select('id, nombre').eq('is_active_for_menu', true).limit(12)
+    let query = supabase.from('recipes').select('id, nombre').eq('is_active_for_menu', true).limit(50)
     if (q.trim()) query = query.ilike('nombre', `%${q.trim()}%`)
     if (tc === 'libre') {
       // Sin filtro de tipo: cualquier receta
@@ -746,6 +746,13 @@ function AgregarPanel({ tipoLabel, busqueda, onBusqueda, resultados, onSeleccion
   onSeleccionar:(id:string, nombre:string) => void
   onCerrar:     () => void
 }) {
+  const [visibles, setVisibles] = useState(5)
+  // Resetear paginación cada vez que cambia la búsqueda
+  useEffect(() => setVisibles(5), [busqueda])
+
+  const visible = resultados.slice(0, visibles)
+  const hayMas  = visibles < resultados.length
+
   return (
     <div className="flex flex-col gap-1.5 bg-gray-50 rounded-xl p-2.5 border border-border mt-1">
       <div className="flex items-center justify-between">
@@ -759,12 +766,21 @@ function AgregarPanel({ tipoLabel, busqueda, onBusqueda, resultados, onSeleccion
         onChange={e => onBusqueda(e.target.value)}
         autoFocus
       />
-      {resultados.map(r => (
+      {visible.map(r => (
         <button key={r.id} onClick={() => onSeleccionar(r.id, r.nombre)}
           className="text-left text-xs px-2 py-1.5 rounded-lg hover:bg-accent/10 hover:text-accent transition-colors text-text">
           {r.nombre}
         </button>
       ))}
+      {hayMas && (
+        <button onClick={() => setVisibles(v => v + 5)}
+          className="text-xs text-muted hover:text-accent transition-colors text-center py-1 border-t border-border/50 mt-0.5">
+          Ver más opciones
+        </button>
+      )}
+      {!hayMas && resultados.length > 5 && (
+        <p className="text-[10px] text-muted text-center py-0.5">Ya viste todas las opciones</p>
+      )}
       {busqueda && resultados.length === 0 && (
         <p className="text-xs text-muted text-center py-1">Sin resultados</p>
       )}
