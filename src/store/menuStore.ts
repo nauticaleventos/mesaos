@@ -500,13 +500,13 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     let changed = 0
     const TC_EXCLUIR = new Set(['ensalada', 'salsa', 'vinagreta', 'guarnicion', 'carbohidrato'])
 
-    // Fetch único de todas las recetas fáciles (evita N queries)
-    const { data: todasFaciles, error: recipeError } = await supabase
+    // Fetch único de TODAS las recetas activas (sin filtro de dificultad)
+    // así siempre hay candidatos aunque ninguna tenga dificultad='facil'
+    const { data: todasRecetas, error: recipeError } = await supabase
       .from('recipes')
       .select(RECIPE_SELECT)
       .eq('is_active_for_menu', true)
-      .eq('dificultad', 'facil')
-      .limit(300)
+      .limit(500)
 
     if (recipeError) throw new Error(`recipes query: ${recipeError.message}`)
 
@@ -529,15 +529,27 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           ? ['desayuno', 'brunch']
           : [normalizedType]
 
-      const candidates = (todasFaciles ?? []).filter((r: RecipeForMenu) =>
+      const pool = (todasRecetas ?? []).filter((r: RecipeForMenu) =>
         r.id !== entry.recipe_id &&
         Array.isArray(r.tipo_comida) &&
         tiposValidos.some(t => r.tipo_comida.includes(t)) &&
         !TC_EXCLUIR.has(r.tipo_componente ?? '')
       )
-      if (candidates.length === 0) continue
+      if (pool.length === 0) continue
 
-      const chosen = candidates[Math.floor(Math.random() * Math.min(3, candidates.length))]
+      // Prioridad: etiqueta_practicidad='diario' → dificultad='facil' → menor tiempo
+      const score = (r: RecipeForMenu) => {
+        let s = 0
+        if (r.etiqueta_practicidad === 'diario') s += 100
+        if (r.dificultad === 'facil')             s += 50
+        if (r.tiempo_total_min)                   s -= Math.min(r.tiempo_total_min, 60)
+        return s
+      }
+      pool.sort((a, b) => score(b) - score(a))
+
+      // Elegir aleatoriamente entre los 3 mejores candidatos
+      const top     = pool.slice(0, Math.min(3, pool.length))
+      const chosen  = top[Math.floor(Math.random() * top.length)]
       const { error: updateError } = await supabase
         .from('weekly_menu')
         .update({ recipe_id: chosen.id, status: 'swapped', dia_dificil: true })
