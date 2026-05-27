@@ -123,10 +123,18 @@ const ALIASES: Record<string, string> = {
   // Champiñones
   'champinones': 'champinon', 'champiñones': 'champinon',
   'hongo': 'champinon', 'hongos': 'champinon',
-  // Otros comunes
+  // Tomates — unificar variantes de compra
   'tomates': 'tomate',
+  'tomate cherry': 'tomate', 'tomates cherry': 'tomate',
+  'tomate roma': 'tomate', 'tomate pera': 'tomate', 'tomates pera': 'tomate',
+  // Papas
+  'papa comun': 'papa', 'papa pastusa': 'papa', 'papa sabanera': 'papa',
+  // Ajos y limones
   'ajos': 'ajo',
   'limones': 'limon',
+  // Otros
+  'pimientos': 'pimenton', 'pimiento': 'pimenton',
+  'hierbabuena': 'menta',
 }
 
 // Productos que deben mantenerse tal cual (se compran así en la tienda)
@@ -144,8 +152,12 @@ const MANTENER_EXACTO = [
 // Prefijos de procesamiento → el ingrediente base es lo que viene después
 // "jugo de limón" → "limón", "pasta de ajo" → "ajo", "sopera de edulcorante" → "edulcorante"
 const PREFIJOS_PROC = [
+  // Partes del ingrediente → el ingrediente base
+  'ralladura de cascara de','ralladura de','cascara de',
   'jugo de','zumo de','extracto de','esencia de',
-  'pasta de','pure de','puro de','crema de','mantequilla de',
+  'pasta de','pure de','puro de','pulpa de',
+  'hojas de','semillas de',
+  'crema de','mantequilla de',
   'harina de','vinagre de','salsa de',
   // Unidades de medida usadas como nombre: "sopera de X" → X
   'cucharada sopera de','cucharadas soperas de',
@@ -156,34 +168,51 @@ const PREFIJOS_PROC = [
   'pizca de','pizcas de',
 ]
 
-// Preparaciones que se hacen en CASA (no cambian lo que comprás)
+// Preparaciones que se hacen en CASA (no cambian lo que comprás en la tienda)
 const PREP_CASA = [
+  // Corte y procesamiento
   'picado','picada','picados','picadas',
   'rallado','rallada','rallados','ralladas',
   'aplastado','aplastada','aplastados','aplastadas',
   'exprimido','exprimida','exprimidos','exprimidas',
   'triturado','triturada','triturados','trituradas',
   'machacado','machacada','machacados','machacadas',
-  'cocido','cocida','cocidos','cocidas',
-  'crudo','cruda','crudos','crudas',
-  'fresco','fresca','frescos','frescas',
-  'seco','seca','secos','secas',
+  'molido','molida','molidos','molidas',
   'troceado','troceada','troceados','troceadas',
   'cortado','cortada','cortados','cortadas',
   'rebanado','rebanada','rebanados','rebanadas',
   'fileteado','fileteada','fileteados','fileteadas',
-  'finamente','grueso','gruesa','gruesos','gruesas',
-  'mediano','mediana','medianos','medianas',
-  'grande','grandes','pequeno','pequena','pequenos','pequenas',
-  'maduro','madura','maduros','maduras',
-  'puro','pura','puros','puras',
-  'entero','entera','enteros','enteras',
-  'natural','naturales',
-  'finas','finos','fino','fina',
-  'cabezona','cabezonas',
-  'al gusto','al dente',
+  'deshuesado','deshuesada','deshuesados','deshuesadas',
+  'pelado','pelada','pelados','peladas',
+  'desmenuzado','desmenuzada',
+  // Forma
   'en rodajas','en cubos','en tiras','en juliana','en brunoise',
   'en trozos','en dados','en laminas','en rebanadas','en mitades',
+  'en pedazos','en lascas','en bastones',
+  // Cocción
+  'cocido','cocida','cocidos','cocidas',
+  'crudo','cruda','crudos','crudas',
+  'asado','asada','asados','asadas',
+  'horneado','horneada',
+  'frito','frita','fritos','fritas',
+  // Estado
+  'fresco','fresca','frescos','frescas',
+  'seco','seca','secos','secas',
+  'deshidratado','deshidratada',
+  'maduro','madura','maduros','maduras',
+  'entero','entera','enteros','enteras',
+  'natural','naturales',
+  'puro','pura','puros','puras',
+  // Tamaño
+  'mediano','mediana','medianos','medianas',
+  'grande','grandes',
+  'pequeno','pequena','pequenos','pequenas',
+  'chico','chica','chicos','chicas',
+  'cabezona','cabezonas','cabezon',
+  // Textura/presentación
+  'finamente','grueso','gruesa','gruesos','gruesas',
+  'fino','fina','finos','finas',
+  'al gusto','al dente',
 ]
 
 function normIngrediente(s: string): string {
