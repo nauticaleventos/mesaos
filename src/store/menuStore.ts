@@ -466,15 +466,24 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     const todayDow   = jsDay === 0 ? 7 : jsDay
 
     const horaActual = todayDate.getHours()
-    const MEAL_ORDER = ['desayuno', 'almuerzo', 'cena', 'snack']
-    // Hora aproximada a partir de la cual cada comida "ya pasó"
+    // Orden real del día incluyendo meriendas
+    const MEAL_ORDER = ['desayuno', 'merienda mañana', 'almuerzo', 'merienda tarde', 'cena', 'snack', 'merienda']
+    // Cutoff específico por tipo: a partir de qué hora "ya pasó"
     const HORA_CORTE: Record<string, number> = {
-      desayuno: 10, almuerzo: 14, cena: 22, snack: 17, merienda: 17,
+      desayuno:        10,
+      'merienda mañana': 12,   // snack matutino pasa al mediodía
+      almuerzo:        14,
+      'merienda tarde':  17,   // snack de tarde pasa a las 5pm
+      cena:            22,
+      snack:           17,
+      merienda:        17,
     }
     const yaFuePara = (mealType: string): boolean => {
       const key = mealType.toLowerCase()
+      // Buscar match exacto primero, luego prefijo
+      if (HORA_CORTE[key] !== undefined) return horaActual >= HORA_CORTE[key]
       for (const [k, v] of Object.entries(HORA_CORTE)) {
-        if (key === k || key.startsWith(k)) return horaActual >= v
+        if (key.startsWith(k)) return horaActual >= v
       }
       return false
     }
@@ -490,7 +499,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       )
       .sort((a, b) => {
         if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week
-        return MEAL_ORDER.indexOf(a.meal_type.toLowerCase()) - MEAL_ORDER.indexOf(b.meal_type.toLowerCase())
+        const iA = MEAL_ORDER.indexOf(a.meal_type.toLowerCase())
+        const iB = MEAL_ORDER.indexOf(b.meal_type.toLowerCase())
+        // -1 (no encontrado) va al final
+        return (iA === -1 ? 99 : iA) - (iB === -1 ? 99 : iB)
       })
       .slice(0, cuantas)
 
