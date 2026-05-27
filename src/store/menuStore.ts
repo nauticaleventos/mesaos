@@ -465,22 +465,22 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     const jsDay      = todayDate.getDay()
     const todayDow   = jsDay === 0 ? 7 : jsDay
 
-    const horaActual = todayDate.getHours()
-    // Orden real del día incluyendo meriendas
-    const MEAL_ORDER = ['desayuno', 'merienda mañana', 'almuerzo', 'merienda tarde', 'cena', 'snack', 'merienda']
-    // Cutoff específico por tipo: a partir de qué hora "ya pasó"
+    const horaActual   = todayDate.getHours()
+    const minutoActual = todayDate.getMinutes()
+    const nowMinutes   = horaActual * 60 + minutoActual
+
+    // Determina si una comida ya pasó.
+    // Usa meal_time si está disponible (ej: "16:00"), mucho más preciso.
+    // Fallback: HORA_CORTE por tipo.
     const HORA_CORTE: Record<string, number> = {
-      desayuno:        10,
-      'merienda mañana': 12,   // snack matutino pasa al mediodía
-      almuerzo:        14,
-      'merienda tarde':  17,   // snack de tarde pasa a las 5pm
-      cena:            22,
-      snack:           17,
-      merienda:        17,
+      desayuno: 10, almuerzo: 14, cena: 22, snack: 17, merienda: 17,
     }
-    const yaFuePara = (mealType: string): boolean => {
+    const yaFuePara = (mealType: string, mealTime?: string): boolean => {
+      if (mealTime) {
+        const [h, m] = mealTime.split(':').map(Number)
+        return nowMinutes >= h * 60 + (m ?? 0)
+      }
       const key = mealType.toLowerCase()
-      // Buscar match exacto primero, luego prefijo
       if (HORA_CORTE[key] !== undefined) return horaActual >= HORA_CORTE[key]
       for (const [k, v] of Object.entries(HORA_CORTE)) {
         if (key.startsWith(k)) return horaActual >= v
@@ -488,21 +488,22 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       return false
     }
 
-    // Próximos slots no cocinados a partir de ahora (excluye comidas ya pasadas hoy)
+    // Próximos slots no cocinados a partir de ahora
     const upcoming = get().menu
       .filter(e =>
         e.is_main_recipe &&
         e.status === 'planned' &&
         e.recipe_id !== null &&
         (e.day_of_week > todayDow ||
-          (e.day_of_week === todayDow && !yaFuePara(e.meal_type)))
+          (e.day_of_week === todayDow && !yaFuePara(e.meal_type, e.meal_time)))
       )
       .sort((a, b) => {
         if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week
-        const iA = MEAL_ORDER.indexOf(a.meal_type.toLowerCase())
-        const iB = MEAL_ORDER.indexOf(b.meal_type.toLowerCase())
-        // -1 (no encontrado) va al final
-        return (iA === -1 ? 99 : iA) - (iB === -1 ? 99 : iB)
+        // meal_time (ej: "16:00") es la fuente más precisa para ordenar
+        if (a.meal_time && b.meal_time) return a.meal_time.localeCompare(b.meal_time)
+        if (a.meal_time) return -1
+        if (b.meal_time) return 1
+        return 0
       })
       .slice(0, cuantas)
 
