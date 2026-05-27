@@ -442,10 +442,24 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     const { data, error } = await query.limit(400)
     if (error || !data) return []
 
-    // Filtrar por tipo en JS — funciona independientemente del tipo de columna en BD
+    const mealComp      = entry.meal_component   // 'proteina' | 'guarnicion' | 'ensalada' | 'salsa' | 'completo' | ...
+    const currentTipoC  = entry.recipe?.tipo_componente  // clasificación explícita en BD
+
+    // Filtrar por tipo de comida del slot
     let candidates = (data as RecipeForMenu[])
-      .filter(r => tiposValidos.some(t => (r.tipo_comida ?? []).includes(t)))
+      .filter(r => tiposValidos.some(t => (r.tipo_comida ?? []).includes(t)) ||
+                   // accesorios (salsa/ensalada/guarnicion) tienen tipo_comida=[] — incluir por tipo_componente
+                   (currentTipoC && r.tipo_componente === currentTipoC))
       .filter(r => r.id !== currentRecipeId)
+
+    // Para accesorios (guarnición, ensalada, salsa, etc.) filtrar por mismo tipo_componente
+    const ACCESORIOS = new Set(['guarnicion', 'ensalada', 'salsa', 'vinagreta', 'sopa'])
+    if (mealComp && ACCESORIOS.has(mealComp)) {
+      // Buscar por tipo_componente igual al de la receta actual
+      const byTC = candidates.filter(r => r.tipo_componente === currentTipoC)
+      // Si hay candidatos del mismo tipo_componente, usar solo esos
+      if (byTC.length > 0) candidates = byTC
+    }
 
     if (razon === 'no_apetece') {
       const currentName = (entry.recipe?.nombre ?? '').toLowerCase()
