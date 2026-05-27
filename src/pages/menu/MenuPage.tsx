@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore }   from '../../store/authStore'
 import { useFamilyStore } from '../../store/familyStore'
@@ -145,17 +145,19 @@ export default function MenuPage() {
 }
 
 function WidgetNevera({ fridgeItems, menu }: { fridgeItems: import('../../store/fridgeStore').FridgeItem[]; menu: import('../../store/menuStore').EnrichedMenuEntry[] }) {
+  const [expandido, setExpandido] = React.useState(false)
   const nivel = calcularNivelNevera(fridgeItems)
   const nv    = nivel.porcentaje
 
-  // Contar recetas del menú que no tienen 100% match (necesitan compras)
+  // Recetas del menú que no tienen match en la nevera (necesitan compras)
   const mainEntries = menu.filter(e => e.is_main_recipe && e.member_id === null)
-  const necesitanCompra = mainEntries.filter(e => {
+  const conFaltantes = mainEntries.filter(e => {
     const ings = e.recipe?.ingredientes ?? []
     return ings.length > 0 && !fridgeItems.some(f =>
       ings.some(i => f.name.toLowerCase().includes(i.nombre.toLowerCase().split(' ')[0]))
     )
-  }).length
+  })
+  const necesitanCompra = conFaltantes.length
 
   if (nv >= 60 && necesitanCompra === 0) {
     return (
@@ -167,9 +169,27 @@ function WidgetNevera({ fridgeItems, menu }: { fridgeItems: import('../../store/
   }
   if (nv >= 60 && necesitanCompra > 0) {
     return (
-      <div className="mb-4 px-4 py-3 rounded-2xl bg-advertencia/10 border border-advertencia/30 flex items-center gap-2">
-        <span className="text-base">⚠️</span>
-        <p className="text-xs text-advertencia font-medium">{necesitanCompra} receta{necesitanCompra > 1 ? 's requieren' : ' requiere'} mercar aunque tu nevera está llena. ¿Cambiamos esas recetas?</p>
+      <div className="mb-4 rounded-2xl bg-advertencia/10 border border-advertencia/30 overflow-hidden">
+        <button
+          className="w-full px-4 py-3 flex items-center gap-2 text-left"
+          onClick={() => setExpandido(v => !v)}
+        >
+          <span className="text-base flex-shrink-0">⚠️</span>
+          <p className="text-xs text-advertencia font-medium flex-1">
+            {necesitanCompra} receta{necesitanCompra > 1 ? 's requieren' : ' requiere'} mercar aunque tu nevera está llena
+          </p>
+          <span className={`text-advertencia text-xs transition-transform ${expandido ? 'rotate-180' : ''}`}>▾</span>
+        </button>
+        {expandido && (
+          <div className="px-4 pb-3 flex flex-col gap-1 border-t border-advertencia/20">
+            {conFaltantes.map(e => (
+              <p key={e.id} className="text-xs text-text py-1 border-b border-border/30 last:border-0">
+                · {e.recipe?.nombre ?? '—'}
+                <span className="text-muted ml-1">({e.meal_type})</span>
+              </p>
+            ))}
+          </div>
+        )}
       </div>
     )
   }
