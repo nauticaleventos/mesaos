@@ -536,11 +536,11 @@ function calcularScore(
     return tieneIngrediente(recipe, [lftNorm])
   }) ? 200 : 0
 
-  // Bonus escalonado por match de nevera — reduce compras al priorizar lo que ya hay
+  // Bonus escalonado por match de nevera — prioriza fuertemente recetas con ingredientes en casa
   const neveraBonus =
-    sInventario >= 95 ? 300 :
-    sInventario >= 75 ? 200 :
-    sInventario >= 50 ? 100 :
+    sInventario >= 95 ? 500 :
+    sInventario >= 75 ? 300 :
+    sInventario >= 50 ? 150 :
     sInventario >= 25 ? 50  : 0
 
   // Peso de inventario escala con nivel de nevera
