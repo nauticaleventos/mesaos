@@ -497,23 +497,41 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
     // Para cada slot, buscar la receta más fácil y rápida del mismo tipo
     let changed = 0
+    const TC_EXCLUIR = new Set(['ensalada', 'salsa', 'vinagreta', 'guarnicion', 'carbohidrato'])
+
+    // Fetch único de todas las recetas fáciles (evita N queries)
+    const { data: todasFaciles, error: recipeError } = await supabase
+      .from('recipes')
+      .select(RECIPE_SELECT)
+      .eq('is_active_for_menu', true)
+      .eq('dificultad', 'facil')
+      .limit(300)
+
+    if (recipeError) throw new Error(`recipes query: ${recipeError.message}`)
+
     for (const entry of upcoming) {
-      const { data, error: recipeError } = await supabase
-        .from('recipes')
-        .select(RECIPE_SELECT)
-        .eq('is_active_for_menu', true)
-        .eq('dificultad', 'facil')
-        .limit(100)
+      // Normalizar meal_type igual que buscarAlternativas
+      const raw = (entry.meal_type ?? '').toLowerCase()
+      const normalizedType = raw.includes('snack') || raw.includes('merienda') || raw.includes('onces')
+        ? 'snack'
+        : raw.includes('desayuno') || raw.includes('brunch')
+          ? 'desayuno'
+          : raw.includes('almuerzo')
+            ? 'almuerzo'
+            : raw.includes('cena')
+              ? 'cena'
+              : raw
 
-      if (recipeError) throw new Error(`recipes query: ${recipeError.message}`)
+      const tiposValidos = normalizedType === 'snack'
+        ? ['snack', 'merienda']
+        : normalizedType === 'desayuno'
+          ? ['desayuno', 'brunch']
+          : [normalizedType]
 
-      const mealTypeLower = entry.meal_type.toLowerCase()
-      // Componentes que NO pueden reemplazar una receta principal
-      const TC_EXCLUIR = new Set(['ensalada', 'salsa', 'vinagreta', 'guarnicion', 'carbohidrato'])
-      const candidates = (data ?? []).filter((r: RecipeForMenu) =>
+      const candidates = (todasFaciles ?? []).filter((r: RecipeForMenu) =>
         r.id !== entry.recipe_id &&
         Array.isArray(r.tipo_comida) &&
-        r.tipo_comida.some((t: string) => t.toLowerCase() === mealTypeLower) &&
+        tiposValidos.some(t => r.tipo_comida.includes(t)) &&
         !TC_EXCLUIR.has(r.tipo_componente ?? '')
       )
       if (candidates.length === 0) continue
