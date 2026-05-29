@@ -83,15 +83,31 @@ export default function MenuCompartido() {
   )
 
   // Agrupar por día
-  // meal_type en BD guarda el mealName real ("Merienda mañana", "Almuerzo", etc.)
-  // Normalizar al tipo base para que coincida con MEAL_ORDER
-  function normalizeMeal(mt: string): string {
-    const n = mt.toLowerCase().trim()
-    if (n.includes('desayuno') || n.includes('brunch'))                        return 'desayuno'
-    if (n.includes('almuerzo') || n.includes('comida') || n.includes('lunch')) return 'almuerzo'
-    if (n.includes('cena'))                                                     return 'cena'
-    if (n.includes('merienda') || n.includes('snack') || n.includes('onces'))  return 'snack'
-    return n
+  // Usa el meal_type original (lowercased) como key para preservar
+  // "merienda mañana" y "merienda tarde" como entradas separadas.
+  function mealKey(mt: string) { return mt.toLowerCase().trim() }
+
+  function mealDisplayLabel(key: string): { label: string; emoji: string } {
+    if (key.includes('desayuno') || key.includes('brunch'))  return { label: 'Desayuno',        emoji: '☀️'  }
+    if (key.includes('almuerzo') || key.includes('comida'))  return { label: 'Almuerzo',         emoji: '🍽️' }
+    if (key.includes('cena'))                                return { label: 'Cena',             emoji: '🌙'  }
+    if (key.includes('merienda') || key.includes('snack') || key.includes('onces')) {
+      const label = key.charAt(0).toUpperCase() + key.slice(1)
+      return { label, emoji: '🍿' }
+    }
+    return { label: key.charAt(0).toUpperCase() + key.slice(1), emoji: '🍴' }
+  }
+
+  // Orden canónico de comidas para ordenar en la vista
+  function mealSortOrder(key: string): number {
+    if (key.includes('desayuno') || key.includes('brunch'))  return 0
+    if (key.includes('merienda') && key.includes('ma'))      return 1   // mañana
+    if (key.includes('almuerzo') || key.includes('comida'))  return 2
+    if (key.includes('merienda') && key.includes('tard'))    return 3   // tarde
+    if (key.includes('snack') || key.includes('merienda'))   return 3
+    if (key.includes('onces'))                               return 3
+    if (key.includes('cena'))                                return 4
+    return 5
   }
 
   const byDay: Record<number, Entry[]> = {}
@@ -111,11 +127,12 @@ export default function MenuCompartido() {
   const dayEntries = selectedDay ? (byDay[selectedDay] ?? []) : []
   const byMeal: Record<string, Entry[]> = {}
   for (const e of dayEntries) {
-    const key = normalizeMeal(e.meal_type)
+    const key = mealKey(e.meal_type)
     if (!byMeal[key]) byMeal[key] = []
     byMeal[key].push(e)
   }
-  const mealTypes = MEAL_ORDER.filter(m => byMeal[m])
+  // Ordenar comidas del día por hora del día
+  const mealTypes = Object.keys(byMeal).sort((a, b) => mealSortOrder(a) - mealSortOrder(b))
 
   return (
     <div className="min-h-screen bg-[#FBF5E5] pb-12">
@@ -154,72 +171,71 @@ export default function MenuCompartido() {
         )}
 
         {mealTypes.map(mt => {
-          const mains = byMeal[mt].filter(e => e.is_main_recipe)
-          const main  = mains[0]
-          if (!main) return null
-          const ml = MEAL_LABEL[mt] ?? { label: mt, emoji: '🍴' }
+          const slotEntries = byMeal[mt].filter(e => e.recipe || e.nombre_custom)
+          if (!slotEntries.length) return null
+          const ml = mealDisplayLabel(mt)
+          // Foto: usar la primera receta que tenga imagen
+          const coverImg = slotEntries.find(e => e.recipe?.imagen_url)?.recipe?.imagen_url
           return (
             <div key={mt} className="card overflow-hidden p-0">
               {/* Foto */}
-              {main.recipe?.imagen_url && (
+              {coverImg && (
                 <div className="w-full h-36 overflow-hidden">
-                  <img src={main.recipe.imagen_url} alt={main.recipe?.nombre}
-                    className="w-full h-full object-cover" />
+                  <img src={coverImg} alt={ml.label} className="w-full h-full object-cover" />
                 </div>
               )}
               <div className="p-4 flex flex-col gap-3">
                 {/* Label comida */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-accent uppercase tracking-wider">
-                    {ml.emoji} {ml.label}
-                  </span>
-                  {main.recipe?.tiempo_total_min && (
-                    <span className="text-xs text-muted flex items-center gap-1">
-                      <Clock size={11} /> {main.recipe.tiempo_total_min} min
-                    </span>
-                  )}
-                </div>
+                <span className="text-xs font-bold text-accent uppercase tracking-wider">
+                  {ml.emoji} {ml.label}
+                </span>
 
-                <p className="font-bold text-text text-base leading-tight">
-                  {main.recipe?.nombre ?? main.nombre_custom ?? '—'}
-                </p>
-
-                {/* Ingredientes */}
-                {main.recipe?.ingredientes && main.recipe.ingredientes.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Ingredientes</p>
-                    <div className="flex flex-col gap-1">
-                      {main.recipe.ingredientes.filter(i => i.esencial).map((ing, i) => (
-                        <div key={i} className="flex items-baseline gap-1.5 text-sm">
-                          <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 mt-1.5" />
-                          <span className="text-text">{ing.nombre}</span>
-                          {ing.cantidad && (
-                            <span className="text-muted text-xs">
-                              {ing.cantidad} {ing.unidad ?? ''}
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Pasos */}
-                {main.recipe?.pasos && main.recipe.pasos.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Preparación</p>
-                    <div className="flex flex-col gap-2">
-                      {main.recipe.pasos.map((paso, i) => (
-                        <div key={i} className="flex gap-2.5 text-sm">
-                          <span className="w-5 h-5 rounded-full bg-accent/15 text-accent font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
-                            {i + 1}
+                {/* Lista de todas las preparaciones del slot */}
+                {slotEntries.map((e, idx) => {
+                  const nombre = e.recipe?.nombre ?? e.nombre_custom ?? '—'
+                  const tiempo = e.recipe?.tiempo_total_min
+                  return (
+                    <div key={idx} className={idx > 0 ? 'pt-3 border-t border-border/50' : ''}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-bold text-text text-sm leading-tight">{nombre}</p>
+                        {tiempo && (
+                          <span className="text-xs text-muted flex items-center gap-1 flex-shrink-0">
+                            <Clock size={11} /> {tiempo} min
                           </span>
-                          <p className="text-text leading-snug">{paso}</p>
+                        )}
+                      </div>
+
+                      {/* Ingredientes esenciales */}
+                      {e.recipe?.ingredientes && e.recipe.ingredientes.filter(i => i.esencial).length > 0 && (
+                        <div className="mt-2 flex flex-col gap-1">
+                          {e.recipe.ingredientes.filter(i => i.esencial).map((ing, i) => (
+                            <div key={i} className="flex items-baseline gap-1.5 text-sm">
+                              <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 mt-1.5" />
+                              <span className="text-text">{ing.nombre}</span>
+                              {ing.cantidad && (
+                                <span className="text-muted text-xs">{ing.cantidad} {ing.unidad ?? ''}</span>
+                              )}
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+
+                      {/* Pasos */}
+                      {e.recipe?.pasos && e.recipe.pasos.length > 0 && (
+                        <div className="mt-2 flex flex-col gap-2">
+                          {e.recipe.pasos.map((paso, i) => (
+                            <div key={i} className="flex gap-2.5 text-sm">
+                              <span className="w-5 h-5 rounded-full bg-accent/15 text-accent font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
+                                {i + 1}
+                              </span>
+                              <p className="text-text leading-snug">{paso}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  )
+                })}
 
                 {/* Miembros */}
                 {members.length > 0 && (
