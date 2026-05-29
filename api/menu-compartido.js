@@ -73,4 +73,3 @@ async function _handler(req, res) {
     members:    members ?? [],
   })
 }
-}
