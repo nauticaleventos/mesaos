@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { ChefHat, Clock, Calendar, Printer } from 'lucide-react'
+import { ChefHat, Clock, Calendar, Printer, ChevronDown } from 'lucide-react'
 
 const DAY_NAMES_FULL = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
@@ -37,7 +37,15 @@ export default function MenuCompartido() {
   const [weekStart,  setWeekStart]  = useState('')
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
-  const [selectedDay, setSelectedDay] = useState<number | null>(null)
+  const [selectedDay,    setSelectedDay]    = useState<number | null>(null)
+  const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set())
+
+  const toggleRecipe = (key: string) =>
+    setExpandedRecipes(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
 
   useEffect(() => {
     if (!token) return
@@ -167,79 +175,87 @@ export default function MenuCompartido() {
           const slotEntries = byMeal[mt].filter(e => e.recipe || e.nombre_custom)
           if (!slotEntries.length) return null
           const ml = mealDisplayLabel(mt)
-          // Foto: usar la primera receta que tenga imagen
-          const coverImg = slotEntries.find(e => e.recipe?.imagen_url)?.recipe?.imagen_url
           return (
             <div key={mt} className="card overflow-hidden p-0">
-              {/* Foto */}
-              {coverImg && (
-                <div className="w-full h-36 overflow-hidden">
-                  <img src={coverImg} alt={ml.label} className="w-full h-full object-cover" />
-                </div>
-              )}
-              <div className="p-4 flex flex-col gap-3">
-                {/* Label comida */}
-                <span className="text-xs font-bold text-accent uppercase tracking-wider">
-                  {ml.emoji} {ml.label}
-                </span>
+              {/* Header del slot */}
+              <div className="px-4 py-3 bg-accent/5 border-b border-border flex items-center gap-2">
+                <span className="text-base">{ml.emoji}</span>
+                <span className="text-sm font-bold text-accent uppercase tracking-wider flex-1">{ml.label}</span>
+                <span className="text-xs text-muted">{slotEntries.length} preparación{slotEntries.length > 1 ? 'es' : ''}</span>
+              </div>
 
-                {/* Lista de todas las preparaciones del slot */}
+              {/* Lista de recetas — accordion */}
+              <div className="flex flex-col divide-y divide-border/50">
                 {slotEntries.map((e, idx) => {
-                  const nombre = e.recipe?.nombre ?? e.nombre_custom ?? '—'
-                  const tiempo = e.recipe?.tiempo_total_min
+                  const nombre  = e.recipe?.nombre ?? e.nombre_custom ?? '—'
+                  const tiempo  = e.recipe?.tiempo_total_min
+                  const recKey  = `${mt}-${idx}`
+                  const abierta = expandedRecipes.has(recKey)
+                  const tieneDetalle = (e.recipe?.ingredientes?.length ?? 0) > 0 || (e.recipe?.pasos?.length ?? 0) > 0
+
                   return (
-                    <div key={idx} className={idx > 0 ? 'pt-3 border-t border-border/50' : ''}>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-bold text-text text-sm leading-tight">{nombre}</p>
+                    <div key={idx}>
+                      {/* Fila nombre — siempre visible, tap abre/cierra */}
+                      <button
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-accent/5 transition-colors"
+                        onClick={() => tieneDetalle && toggleRecipe(recKey)}
+                      >
+                        <span className="flex-1 text-sm font-medium text-text leading-tight">{nombre}</span>
                         {tiempo && (
                           <span className="text-xs text-muted flex items-center gap-1 flex-shrink-0">
                             <Clock size={11} /> {tiempo} min
                           </span>
                         )}
-                      </div>
+                        {tieneDetalle && (
+                          <ChevronDown
+                            size={15}
+                            className={`text-muted flex-shrink-0 transition-transform duration-200 ${abierta ? 'rotate-180' : ''}`}
+                          />
+                        )}
+                      </button>
 
-                      {/* Ingredientes esenciales */}
-                      {e.recipe?.ingredientes && e.recipe.ingredientes.filter(i => i.esencial).length > 0 && (
-                        <div className="mt-2 flex flex-col gap-1">
-                          {e.recipe.ingredientes.filter(i => i.esencial).map((ing, i) => (
-                            <div key={i} className="flex items-baseline gap-1.5 text-sm">
-                              <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 mt-1.5" />
-                              <span className="text-text">{ing.nombre}</span>
-                              {ing.cantidad && (
-                                <span className="text-muted text-xs">{ing.cantidad} {ing.unidad ?? ''}</span>
-                              )}
+                      {/* Detalle expandible */}
+                      {abierta && tieneDetalle && (
+                        <div className="px-4 pb-4 flex flex-col gap-3 bg-gray-50/60">
+                          {/* Ingredientes */}
+                          {e.recipe?.ingredientes && e.recipe.ingredientes.filter(i => i.esencial).length > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 pt-3">Ingredientes</p>
+                              <div className="flex flex-col gap-1">
+                                {e.recipe.ingredientes.filter(i => i.esencial).map((ing, i) => (
+                                  <div key={i} className="flex items-baseline gap-1.5 text-sm">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 mt-1.5" />
+                                    <span className="text-text">{ing.nombre}</span>
+                                    {ing.cantidad && (
+                                      <span className="text-muted text-xs">{ing.cantidad} {ing.unidad ?? ''}</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          ))}
-                        </div>
-                      )}
+                          )}
 
-                      {/* Pasos */}
-                      {e.recipe?.pasos && e.recipe.pasos.length > 0 && (
-                        <div className="mt-2 flex flex-col gap-2">
-                          {e.recipe.pasos.map((paso, i) => (
-                            <div key={i} className="flex gap-2.5 text-sm">
-                              <span className="w-5 h-5 rounded-full bg-accent/15 text-accent font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
-                                {i + 1}
-                              </span>
-                              <p className="text-text leading-snug">{paso}</p>
+                          {/* Pasos */}
+                          {e.recipe?.pasos && e.recipe.pasos.length > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Preparación</p>
+                              <div className="flex flex-col gap-2">
+                                {e.recipe.pasos.map((paso, i) => (
+                                  <div key={i} className="flex gap-2.5 text-sm">
+                                    <span className="w-5 h-5 rounded-full bg-accent/15 text-accent font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
+                                      {i + 1}
+                                    </span>
+                                    <p className="text-text leading-snug">{paso}</p>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          ))}
+                          )}
                         </div>
                       )}
                     </div>
                   )
                 })}
-
-                {/* Miembros */}
-                {members.length > 0 && (
-                  <div className="flex gap-1.5 flex-wrap pt-1 border-t border-border">
-                    {members.map(m => (
-                      <span key={m.id} className="text-xs text-muted bg-gray-50 px-2 py-0.5 rounded-full">
-                        {m.emoji} {m.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           )
