@@ -24,11 +24,13 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
   const [showDiaDificil, setShowDiaDificil] = useState(false)
   const [sharing,        setSharing]        = useState(false)
   const [shareUrl,       setShareUrl]       = useState<string | null>(null)
+  const [shareError,     setShareError]     = useState<string | null>(null)
   const [copied,         setCopied]         = useState(false)
 
   const compartirMenu = async () => {
     if (!family?.id) return
     setSharing(true)
+    setShareError(null)
     try {
       const ws = getMondayOfWeek()
       const token = crypto.randomUUID().replace(/-/g, '')
@@ -36,8 +38,14 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
       const { error } = await supabase.from('shared_menus').insert({
         family_id: family.id, week_start: ws, token, expires_at: expires,
       })
-      if (!error) setShareUrl(`${window.location.origin}/menu/compartido/${token}`)
-    } catch { /* ignorar */ }
+      if (error) {
+        setShareError('No se pudo generar el link. Intentá de nuevo.')
+      } else {
+        setShareUrl(`${window.location.origin}/menu/compartido/${token}`)
+      }
+    } catch {
+      setShareError('Error al generar el link.')
+    }
     setSharing(false)
   }
 
@@ -170,6 +178,14 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
       {showSobrados   && createPortal(
         <SobradosSheet onClose={() => setShowSobrados(false)} />,
         document.body
+      )}
+
+      {/* Error compartir */}
+      {shareError && (
+        <div className="fixed bottom-24 left-4 right-4 max-w-sm mx-auto bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-center gap-2 z-50">
+          <span className="text-sm text-red-700">{shareError}</span>
+          <button onClick={() => setShareError(null)} className="ml-auto text-red-400 hover:text-red-600">✕</button>
+        </div>
       )}
 
       {/* Modal compartir */}

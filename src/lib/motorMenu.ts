@@ -758,18 +758,24 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           if (combined > baseScore) { baseScore = combined; baseRecipe = r }
         }
 
-        // Fallback A: pool universal existe pero todas recientes — relajar gap progresivamente
+        // Fallback A: pool universal existe pero todas recientes — relajar gap progresivamente.
+        // gap=0 usa el historial semanal del miembro en lugar de Set vacío para que
+        // calcularScore pueda comparar la "menos mala" en vez de tratar todas igual.
         if (!baseRecipe && poolUniversal.length > 0) {
           for (const gap of [2, 1, 0]) {
             if (baseRecipe) break
             for (const r of poolUniversal) {
               let sumScore = 0; let compatCount = 0
               for (const m of slotMembers) {
-                const excl = gap === 0 ? new Set<string>() : memberExcl(m.id!, day, gap)
+                const excl = gap === 0
+                  ? new Set(usedPerMember.get(m.id!) ? [...usedPerMember.get(m.id!)!.keys()] : [])
+                  : memberExcl(m.id!, day, gap)
                 if (usedToday.has(r.id)) continue
                 if (gap > 0 && excl.has(r.id)) continue
                 const s = calcularScore(r, input, excl, 0, new Set([m.id!]), isDayFinde, tipo)
-                sumScore += Math.max(s, 0); compatCount++
+                // gap=0: permitir scores negativos para poder elegir la menos mala
+                sumScore += gap === 0 ? s + 50 : Math.max(s, 0)
+                compatCount++
               }
               if (compatCount > 0 && sumScore > baseScore) { baseScore = sumScore; baseRecipe = r }
             }
@@ -784,10 +790,12 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
               let sumScore = 0; let compatCount = 0
               for (const m of slotMembers) {
                 if (!esCompatibleConMiembro(r, m)) continue
-                const excl = gap === 0 ? new Set<string>() : memberExcl(m.id!, day, gap)
+                const excl = gap === 0
+                  ? new Set(usedPerMember.get(m.id!) ? [...usedPerMember.get(m.id!)!.keys()] : [])
+                  : memberExcl(m.id!, day, gap)
                 if (usedToday.has(r.id) || (gap > 0 && excl.has(r.id))) continue
                 const s = calcularScore(r, input, excl, 0, new Set([m.id!]), isDayFinde, tipo)
-                if (s >= 0) { sumScore += s; compatCount++ }
+                if (s >= 0 || gap === 0) { sumScore += gap === 0 ? s + 50 : s; compatCount++ }
               }
               if (compatCount === 0) continue
               if (sumScore + compatCount * 50 > baseScore) {
@@ -973,13 +981,19 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           if (bestRecipe) break
           trySelect(compatibleConTodos, gap)
         }
-        // Último recurso: aceptar cualquier universal aunque se repita
+        // Último recurso: aceptar cualquier universal aunque se repita,
+        // pero ordenar por "la menos usada recientemente" — pasar Set con
+        // todas las usadas esta semana para que calcularScore les dé score bajo,
+        // no un Set vacío que las pondría en igualdad de condiciones.
         if (!bestRecipe) {
-          const excl = new Set<string>()
+          const exclSemana = new Set(usedByDay.keys())
           for (const r of compatibleConTodos) {
             if (usedToday.has(r.id)) continue
-            const score = calcularScore(r, input, excl, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
-            if (score > bestScore) { bestScore = score; bestRecipe = r }
+            const score = calcularScore(r, input, exclSemana, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
+            // calcularScore retorna -1 si está en exclSemana, pero aun así registramos
+            // para poder comparar y elegir la "menos mala"
+            const scoreAjustado = score < 0 ? score + 50 : score  // penalizar sin excluir
+            if (scoreAjustado > bestScore) { bestScore = scoreAjustado; bestRecipe = r }
           }
         }
       }
@@ -990,11 +1004,12 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         if (!bestRecipe) trySelect(compatibleConAlguno, 2)
         if (!bestRecipe) trySelect(compatibleConAlguno, 1)
         if (!bestRecipe) {
-          const excl = new Set<string>()
+          const exclSemana = new Set(usedByDay.keys())
           for (const r of compatibleConAlguno) {
             if (usedToday.has(r.id)) continue
-            const score = calcularScore(r, input, excl, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
-            if (score > bestScore) { bestScore = score; bestRecipe = r }
+            const score = calcularScore(r, input, exclSemana, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
+            const scoreAjustado = score < 0 ? score + 50 : score
+            if (scoreAjustado > bestScore) { bestScore = scoreAjustado; bestRecipe = r }
           }
         }
       }

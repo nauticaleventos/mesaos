@@ -30,8 +30,7 @@ export default async function handler(req, res) {
   if (new Date(shared.expires_at) < new Date())
     return res.status(410).json({ error: 'Este link expiró' })
 
-  // 2. Incrementar vistas
-  await sb.from('shared_menus').update({ views_count: sb.rpc('', {}) }).eq('id', shared.id)
+  // 2. Incrementar vistas (usa la función definida en la migración 021)
   await sb.rpc('increment_shared_menu_views', { menu_id: shared.id }).catch(() => {})
 
   // 3. Cargar menú
