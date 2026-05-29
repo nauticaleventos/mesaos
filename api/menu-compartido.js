@@ -36,7 +36,7 @@ async function _handler(req, res) {
     return res.status(410).json({ error: 'Este link expiró' })
 
   // 2. Incrementar vistas (usa la función definida en la migración 021)
-  await sb.rpc('increment_shared_menu_views', { menu_id: shared.id }).catch(() => {})
+  try { await sb.rpc('increment_shared_menu_views', { menu_id: shared.id }) } catch {}
 
   // 3. Cargar menú
   const { data: entries } = await sb
