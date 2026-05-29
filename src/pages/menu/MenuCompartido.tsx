@@ -83,6 +83,17 @@ export default function MenuCompartido() {
   )
 
   // Agrupar por día
+  // meal_type en BD guarda el mealName real ("Merienda mañana", "Almuerzo", etc.)
+  // Normalizar al tipo base para que coincida con MEAL_ORDER
+  function normalizeMeal(mt: string): string {
+    const n = mt.toLowerCase().trim()
+    if (n.includes('desayuno') || n.includes('brunch'))                        return 'desayuno'
+    if (n.includes('almuerzo') || n.includes('comida') || n.includes('lunch')) return 'almuerzo'
+    if (n.includes('cena'))                                                     return 'cena'
+    if (n.includes('merienda') || n.includes('snack') || n.includes('onces'))  return 'snack'
+    return n
+  }
+
   const byDay: Record<number, Entry[]> = {}
   for (const e of entries) {
     if (!byDay[e.day_of_week]) byDay[e.day_of_week] = []
@@ -100,8 +111,9 @@ export default function MenuCompartido() {
   const dayEntries = selectedDay ? (byDay[selectedDay] ?? []) : []
   const byMeal: Record<string, Entry[]> = {}
   for (const e of dayEntries) {
-    if (!byMeal[e.meal_type]) byMeal[e.meal_type] = []
-    byMeal[e.meal_type].push(e)
+    const key = normalizeMeal(e.meal_type)
+    if (!byMeal[key]) byMeal[key] = []
+    byMeal[key].push(e)
   }
   const mealTypes = MEAL_ORDER.filter(m => byMeal[m])
 
