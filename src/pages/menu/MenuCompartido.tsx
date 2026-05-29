@@ -10,13 +10,6 @@ import { useParams } from 'react-router-dom'
 import { ChefHat, Clock, Calendar, Printer } from 'lucide-react'
 
 const DAY_NAMES_FULL = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-const MEAL_LABEL: Record<string, { label: string; emoji: string }> = {
-  desayuno: { label: 'Desayuno',  emoji: '☀️' },
-  almuerzo: { label: 'Almuerzo',  emoji: '🍽️' },
-  cena:     { label: 'Cena',      emoji: '🌙' },
-  snack:    { label: 'Merienda',  emoji: '🍿' },
-}
-const MEAL_ORDER = ['desayuno', 'almuerzo', 'snack', 'cena']
 
 interface Entry {
   day_of_week:    number
