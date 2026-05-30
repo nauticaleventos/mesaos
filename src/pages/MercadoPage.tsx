@@ -77,11 +77,18 @@ export default function MercadoPage() {
   const [nComidas, setNComidasState] = useState<number>(
     () => parseInt(localStorage.getItem('mesa_mercado_n_comidas') ?? '7', 10)
   )
+  const [nComidasStr, setNComidasStr] = useState(
+    () => localStorage.getItem('mesa_mercado_n_comidas') ?? '7'
+  )
   const [recetaModo, setRecetaModo] = useState<string>('')
   const [busqueda, setBusqueda]     = useState('')
 
   const setModo    = (m: Modo) => { setModoState(m); localStorage.setItem('mesa_mercado_modo', m) }
-  const setNComidas = (n: number) => { setNComidasState(n); localStorage.setItem('mesa_mercado_n_comidas', String(n)) }
+  const setNComidas = (n: number) => {
+    setNComidasState(n)
+    setNComidasStr(String(n))
+    localStorage.setItem('mesa_mercado_n_comidas', String(n))
+  }
 
   const recetaFiltro = searchParams.get('receta') ? decodeURIComponent(searchParams.get('receta')!) : null
 
@@ -119,7 +126,7 @@ export default function MercadoPage() {
           if (e.day_of_week === isoDow) return nowMin < corteMeal(e.meal_type)
           return false
         })
-        .filter(e => e.status === 'planned')
+        .filter(e => e.status !== 'skipped' && e.status !== 'cooked')
         .sort((a, b) =>
           a.day_of_week !== b.day_of_week
             ? a.day_of_week - b.day_of_week
@@ -388,10 +395,16 @@ export default function MercadoPage() {
                 <label className="text-xs text-muted font-medium flex-shrink-0">¿Cuántas comidas?</label>
                 <input
                   type="number" min={1} max={35}
-                  value={nComidas}
+                  value={nComidasStr}
                   onChange={e => {
-                    const v = Math.min(35, Math.max(1, parseInt(e.target.value, 10) || 1))
-                    setNComidas(v)
+                    setNComidasStr(e.target.value)
+                    const n = parseInt(e.target.value, 10)
+                    if (!isNaN(n) && n >= 1 && n <= 35) setNComidas(n)
+                  }}
+                  onBlur={e => {
+                    const n = parseInt(e.target.value, 10)
+                    const clamped = isNaN(n) ? 7 : Math.min(35, Math.max(1, n))
+                    setNComidas(clamped)
                   }}
                   className="w-16 px-2 py-1.5 rounded-xl border border-border bg-white text-sm text-center focus:outline-none focus:border-accent"
                 />
