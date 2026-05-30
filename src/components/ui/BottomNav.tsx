@@ -1,11 +1,12 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Home, BookOpen, UtensilsCrossed, ShoppingCart } from 'lucide-react'
+import { Home, BookOpen, UtensilsCrossed, ShoppingCart, Apple } from 'lucide-react'
 
 const TABS = [
-  { path: '/',        icon: Home,            label: 'Inicio'    },
-  { path: '/recetas', icon: BookOpen,         label: 'Recetas'   },
-  { path: '/menu',    icon: UtensilsCrossed,  label: 'Menú'      },
-  { path: '/mercado', icon: ShoppingCart,     label: 'Mercado'   },
+  { path: '/',         icon: Home,            label: 'Inicio'    },
+  { path: '/recetas',  icon: BookOpen,         label: 'Recetas'   },
+  { path: '/menu',     icon: UtensilsCrossed,  label: 'Menú'      },
+  { path: '/mercado',  icon: ShoppingCart,     label: 'Mercado'   },
+  { path: '/lonchera', icon: Apple,            label: 'Lonchera'  },
 ]
 
 const DISABLED: string[] = []

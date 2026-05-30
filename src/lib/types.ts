@@ -79,6 +79,10 @@ export interface FamilyMember {
   guarniciones_por_comida: number    // 0-3, usado cuando plantilla = 'personalizado'
   quiere_ensalada:         boolean
   quiere_salsa:            boolean
+  // Lonchera escolar (migración 022)
+  lleva_lonchera?: boolean
+  lonchera_hora?:  string | null    // "08:00"
+  lonchera_dias?:  string[] | null  // ['lun','mar','mie','jue','vie']
   created_at: string
   updated_at: string
 }

@@ -21,6 +21,7 @@ import RecetasAutoPage      from './pages/admin/RecetasAutoPage'
 import ImportarRecetaPage   from './pages/ImportarRecetaPage'
 import MercadoPage          from './pages/MercadoPage'
 import MercadoImprimir      from './pages/MercadoImprimir'
+import LoncheraPage         from './pages/LoncheraPage'
 
 // Para usuarios sin familia: mostrar bienvenida la primera vez, onboarding luego
 function sinFamiliaDestino(userId: string | undefined): '/bienvenida' | '/onboarding' {
@@ -86,6 +87,9 @@ function AppRoutes() {
       {/* Pública — link de invitación */}
       <Route path="/unirse/:token" element={<UnirsePage />} />
 
+      <Route path="/lonchera" element={
+        !session ? <Navigate to="/login" replace /> : <LoncheraPage />
+      } />
       <Route path="/mercado" element={
         !session ? <Navigate to="/login" replace /> : <MercadoPage />
       } />
