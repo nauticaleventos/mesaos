@@ -178,14 +178,31 @@ export default function MercadoPage() {
   )
 
   // ── Filtro de items ──────────────────────────────────────────────────────
-  const itemsFiltrados = useMemo(() => items.filter(i => {
-    if (!i.faltante) return false
-    if (busqueda && !i.ingrediente_nombre.toLowerCase().includes(busqueda.toLowerCase())) return false
-    if (recetaFiltro)         return i.recetas_origen.includes(recetaFiltro)
-    if (modo === 'proximas')  return proximasRecetas.some(r => i.recetas_origen.includes(r))
-    if (modo === 'receta')    return recetaModo ? i.recetas_origen.includes(recetaModo) : true
-    return true
-  }), [items, busqueda, recetaFiltro, modo, proximasRecetas, recetaModo])
+  const itemsFiltrados = useMemo(() => {
+    // Para modos con scope de recetas específicas, re-evaluar faltante desde el
+    // fridge ACTUAL (el precalculado puede ser stale si la nevera o el menú cambió)
+    const enFridgeActual = (nom: string) => !inventarioTiene(fridgeItems, nom).tiene
+
+    return items.filter(i => {
+      if (busqueda && !i.ingrediente_nombre.toLowerCase().includes(busqueda.toLowerCase())) return false
+
+      if (recetaFiltro) {
+        if (!i.recetas_origen.includes(recetaFiltro)) return false
+        return i.faltante || enFridgeActual(i.ingrediente_nombre)
+      }
+      if (modo === 'proximas') {
+        if (!proximasRecetas.some(r => i.recetas_origen.includes(r))) return false
+        return i.faltante || enFridgeActual(i.ingrediente_nombre)
+      }
+      if (modo === 'receta') {
+        if (!recetaModo || !i.recetas_origen.includes(recetaModo)) return false
+        return i.faltante || enFridgeActual(i.ingrediente_nombre)
+      }
+
+      // Pasillos / Alfabético: usar el faltante precalculado (lista completa)
+      return i.faltante
+    })
+  }, [items, busqueda, recetaFiltro, modo, proximasRecetas, recetaModo, fridgeItems])
 
   // ── Secciones por comida/día (modos proximas, receta, recetaFiltro) ──────
   const usarSecciones = modo === 'proximas' || modo === 'receta' || recetaFiltro !== null
@@ -199,7 +216,10 @@ export default function MercadoPage() {
         key:        `${meal.dayOfWeek}::${meal.mealType}::${meal.recipeName}`,
         header:     `${meal.mealLabel} · ${meal.dayLabel}`,
         recipeName: meal.recipeName,
-        rows:       items.filter(i => i.faltante && i.recetas_origen.includes(meal.recipeName)),
+        rows:       items.filter(i =>
+        i.recetas_origen.includes(meal.recipeName) &&
+        (i.faltante || !inventarioTiene(fridgeItems, i.ingrediente_nombre).tiene)
+      ),
       }))
       .filter(s => s.rows.length > 0)
   }, [usarSecciones, activeMeals, items])
