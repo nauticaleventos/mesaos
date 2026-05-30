@@ -239,6 +239,18 @@ export default function RecetaImprimir() {
         .nut-unit { font-size: 8pt; color: #aaa; }
         .nut-label { font-size: 8pt; color: #888; margin-top: 2px; }
 
+        /* ── Atribución ── */
+        .attribution {
+          margin-top: 16px;
+          padding: 10px 12px;
+          background: #FFF5F2;
+          border: 1px solid #FFCDB2;
+          border-radius: 8px;
+        }
+        .attribution-title { font-size: 9pt; font-weight: 600; color: #E76F51; margin-bottom: 3px; }
+        .attribution-url { font-size: 8pt; color: #999; word-break: break-all; }
+        .attribution-note { font-size: 8pt; color: #bbb; margin-top: 4px; }
+
         /* ── Footer ── */
         .footer {
           margin-top: 20px;
@@ -381,10 +393,64 @@ export default function RecetaImprimir() {
           </div>
         )}
 
+        {/* ── Atribución ── */}
+        {(recipe as Recipe & { source_url?: string }).source_url && (() => {
+          const r = recipe as Recipe & { source_url: string; source_platform?: string }
+          const autor = extraerAutorImprimir(r.source_url, r.source_platform)
+          const plataforma = nombrePlataformaImprimir(r.source_platform)
+          return (
+            <div className="attribution">
+              <div className="attribution-title">
+                {iconoPlataformaImprimir(r.source_platform)} Receta de {autor}{plataforma ? ` · ${plataforma}` : ''}
+              </div>
+              <div className="attribution-url">{r.source_url}</div>
+              <div className="attribution-note">Apoya al creador original con un like ❤️</div>
+            </div>
+          )
+        })()}
+
         <div className="footer">
           Generado con mesa.os · {new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
       </div>
     </>
   )
+}
+
+function extraerAutorImprimir(url: string, platform?: string | null): string {
+  try {
+    const { hostname, pathname } = new URL(url)
+    if (platform === 'instagram' || hostname.includes('instagram')) {
+      const parts = pathname.split('/').filter(Boolean)
+      if (parts[0] && parts[0] !== 'p' && parts[0] !== 'reel' && parts[0] !== 'tv')
+        return `@${parts[0]}`
+    }
+    if (platform === 'tiktok' || hostname.includes('tiktok')) {
+      const match = pathname.match(/@([^/]+)/)
+      if (match) return `@${match[1]}`
+    }
+    if (platform === 'youtube' || hostname.includes('youtube') || hostname.includes('youtu.be')) {
+      const match = pathname.match(/\/@?([^/]+)/)
+      if (match) return match[1]
+    }
+    return hostname.replace('www.', '')
+  } catch {
+    return 'el autor original'
+  }
+}
+
+function nombrePlataformaImprimir(platform?: string | null): string {
+  const map: Record<string, string> = {
+    instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube',
+    facebook: 'Facebook', web: '', texto: '', foto: '', manual: '',
+  }
+  return map[platform ?? ''] ?? ''
+}
+
+function iconoPlataformaImprimir(platform?: string | null): string {
+  const map: Record<string, string> = {
+    instagram: '📸', tiktok: '🎵', youtube: '▶️',
+    facebook: '👥', web: '🌐',
+  }
+  return map[platform ?? ''] ?? '🔗'
 }

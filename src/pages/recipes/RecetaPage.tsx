@@ -132,11 +132,10 @@ export default function RecetaPage() {
     showToast(newState ? '🔖 Guardada' : 'Eliminada de guardadas')
   }
 
-  const handleShare = async () => {
+  const handleShareTexto = async () => {
     if (!recipe) return
     const url = window.location.href
 
-    // Armar texto formateado para WhatsApp / notas
     const ingredientesTexto = (recipe.ingredientes ?? [])
       .map((i: { nombre: string; cantidad?: number | null; unidad?: string | null }) =>
         `• ${i.cantidad ? `${i.cantidad}${i.unidad ? ' ' + i.unidad : ''} ` : ''}${i.nombre}`)
@@ -144,6 +143,11 @@ export default function RecetaPage() {
     const pasosTexto = (recipe.pasos ?? [])
       .map((p: string, idx: number) => `${idx + 1}. ${p}`)
       .join('\n')
+
+    const r = recipe as Recipe & { source_url?: string; source_platform?: string }
+    const atribucion = r.source_url
+      ? `\n📎 Fuente: ${extraerAutor(r.source_url, r.source_platform)}${nombrePlataforma(r.source_platform) ? ` (${nombrePlataforma(r.source_platform)})` : ''}\n${r.source_url}`
+      : ''
 
     const texto = [
       `🍽️ *${recipe.nombre}*`,
@@ -154,6 +158,7 @@ export default function RecetaPage() {
       '',
       '👨‍🍳 *Preparación:*',
       pasosTexto,
+      atribucion,
       '',
       `Ver receta completa: ${url}`,
     ].filter(l => l !== undefined).join('\n')
@@ -164,6 +169,11 @@ export default function RecetaPage() {
       await navigator.clipboard.writeText(texto)
       showToast('📋 Receta copiada')
     }
+  }
+
+  const handleShare = () => {
+    if (!id) return
+    window.open(`/receta/${id}/imprimir`, '_blank')
   }
 
   const handleRating = async (rating: number) => {
@@ -372,11 +382,11 @@ export default function RecetaPage() {
             </button>
             <button onClick={() => { window.open(`/receta/${id}/imprimir`, '_blank'); setShowMenu(false) }}
               className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors border-b border-border">
-              📄 Exportar PDF
+              📄 Compartir PDF
             </button>
-            <button onClick={handleShare}
+            <button onClick={() => { handleShareTexto(); setShowMenu(false) }}
               className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors">
-              📤 Compartir
+              💬 Texto (WhatsApp)
             </button>
           </div>
         </>
