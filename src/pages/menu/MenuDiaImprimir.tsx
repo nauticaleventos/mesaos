@@ -71,12 +71,24 @@ export default function MenuDiaImprimir() {
     return d.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
   })() : ''
 
+  function mealKey(mt: string): string { return mt.toLowerCase().trim() }
+  function mealSortOrder(k: string): number {
+    if (k.includes('desayuno') || k.includes('brunch')) return 0
+    if (k.includes('merienda') && k.includes('ma'))     return 1
+    if (k.includes('almuerzo') || k.includes('comida')) return 2
+    if (k.includes('merienda') && k.includes('tard'))   return 3
+    if (k.includes('snack') || k.includes('merienda') || k.includes('onces')) return 3
+    if (k.includes('cena'))                             return 4
+    return 5
+  }
+
   const byMeal: Record<string, Entry[]> = {}
   for (const e of entries) {
-    if (!byMeal[e.meal_type]) byMeal[e.meal_type] = []
-    byMeal[e.meal_type].push(e)
+    const key = mealKey(e.meal_type)
+    if (!byMeal[key]) byMeal[key] = []
+    byMeal[key].push(e)
   }
-  const mealTypes = MEAL_ORDER.filter(m => byMeal[m])
+  const mealTypes = Object.keys(byMeal).sort((a, b) => mealSortOrder(a) - mealSortOrder(b))
 
   if (!loaded) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>

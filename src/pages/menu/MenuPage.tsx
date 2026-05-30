@@ -149,13 +149,17 @@ function WidgetNevera({ fridgeItems, menu }: { fridgeItems: import('../../store/
   const nivel = calcularNivelNevera(fridgeItems)
   const nv    = nivel.porcentaje
 
-  // Recetas del menú que no tienen match en la nevera (necesitan compras)
+  // Recetas del menú que tienen al menos 1 ingrediente esencial faltante en nevera
   const mainEntries = menu.filter(e => e.is_main_recipe && e.member_id === null)
   const conFaltantes = mainEntries.filter(e => {
     const ings = e.recipe?.ingredientes ?? []
-    return ings.length > 0 && !fridgeItems.some(f =>
-      ings.some(i => f.name.toLowerCase().includes(i.nombre.toLowerCase().split(' ')[0]))
-    )
+    if (!ings.length) return false
+    const esenciales = ings.filter(i => i.esencial)
+    const aVerificar = esenciales.length > 0 ? esenciales : ings.slice(0, 3)
+    return aVerificar.some(i => {
+      const primeraPalabra = i.nombre.toLowerCase().split(' ')[0]
+      return !fridgeItems.some(f => f.name.toLowerCase().includes(primeraPalabra))
+    })
   })
   const necesitanCompra = conFaltantes.length
 

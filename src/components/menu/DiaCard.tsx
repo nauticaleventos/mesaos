@@ -11,7 +11,7 @@ import { DAY_NAMES_FULL, getMondayOfWeek, calcularMultiplicadorPorcion } from '.
 import { calcularMatch, matchBadge } from '../../lib/matchReceta'
 import CambiarSheet from './CambiarSheet'
 import RatingPostCoccionModal from './RatingPostCoccionModal'
-import { inferirEmojisReceta, multToFraccion } from '../../lib/porcionEmoji'
+import { inferirEmojisReceta, multToFraccion, formatPorcionMiembro } from '../../lib/porcionEmoji'
 
 interface Props {
   dayOfWeek:      number
@@ -414,11 +414,10 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
                             const { protein: pE, carb: cE } = inferirEmojisReceta(r.ingredientes ?? [])
                             return eMembers.map(m => {
                               const mult = calcularMultiplicadorPorcion(m)
-                              if (mult === 1.0) return null
                               const frac = multToFraccion(mult)
                               return (
                                 <span key={m.id} className="text-[10px] text-muted">
-                                  {m.emoji} {m.name}: {pE} {frac} palma {cE} {frac} puño
+                                  {formatPorcionMiembro(m.emoji ?? '', m.name ?? '', mult, pE, cE, r.tipo_componente)}
                                 </span>
                               )
                             })
@@ -614,11 +613,9 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
                           const { protein: pE, carb: cE } = inferirEmojisReceta(r.ingredientes ?? [])
                           return displayMembers.map(m => {
                             const mult = calcularMultiplicadorPorcion(m)
-                            if (mult === 1.0) return null
-                            const frac = multToFraccion(mult)
                             return (
                               <span key={m.id} className="text-[10px] text-muted">
-                                {m.emoji} {m.name}: {pE} {frac} palma {cE} {frac} puño
+                                {formatPorcionMiembro(m.emoji ?? '', m.name ?? '', mult, pE, cE, r.tipo_componente)}
                               </span>
                             )
                           })

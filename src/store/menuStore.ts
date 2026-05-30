@@ -535,6 +535,16 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       return false
     }
 
+    // Convierte meal_type a minutos para ordenar cuando no hay meal_time
+    const mealTypeToMinutes = (mt: string): number => {
+      const key = mt.toLowerCase()
+      if (HORA_CORTE_MIN[key] !== undefined) return HORA_CORTE_MIN[key]
+      for (const [k, v] of Object.entries(HORA_CORTE_MIN)) {
+        if (key.startsWith(k)) return v
+      }
+      return 13 * 60  // fallback al mediodía
+    }
+
     // Próximos slots no cocinados a partir de ahora
     const upcoming = get().menu
       .filter(e =>
@@ -546,11 +556,12 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       )
       .sort((a, b) => {
         if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week
-        // meal_time (ej: "16:00") es la fuente más precisa para ordenar
+        // meal_time explícito primero
         if (a.meal_time && b.meal_time) return a.meal_time.localeCompare(b.meal_time)
         if (a.meal_time) return -1
         if (b.meal_time) return 1
-        return 0
+        // Fallback: ordenar por hora de corte del tipo de comida
+        return mealTypeToMinutes(a.meal_type) - mealTypeToMinutes(b.meal_type)
       })
       .slice(0, cuantas)
 
