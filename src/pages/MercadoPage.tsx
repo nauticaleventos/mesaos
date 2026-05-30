@@ -121,8 +121,27 @@ export default function MercadoPage() {
 
     const base = menu.filter(e => e.is_main_recipe && e.recipe_id !== null && e.recipe?.nombre)
 
+    // Dedup helper — un slot = (day_of_week × meal_type), independiente de member_id
+    const dedup = (arr: typeof base) => {
+      const seen = new Set<string>()
+      return arr.filter(e => {
+        const k = `${e.day_of_week}::${e.meal_type}`
+        if (seen.has(k)) return false
+        seen.add(k)
+        return true
+      })
+    }
+
+    const toMealEntry = (e: typeof base[0]) => ({
+      dayOfWeek:  e.day_of_week,
+      dayLabel:   DAY_FULL[e.day_of_week] ?? '',
+      mealType:   e.meal_type,
+      mealLabel:  mealLabel(e.meal_type),
+      recipeName: e.recipe!.nombre,
+    })
+
     if (modo === 'proximas') {
-      return base
+      const sorted = base
         .filter(e => {
           if (e.day_of_week > isoDow) return true
           if (e.day_of_week === isoDow) return nowMin < corteMeal(e.meal_type)
@@ -134,32 +153,19 @@ export default function MercadoPage() {
             ? a.day_of_week - b.day_of_week
             : corteMeal(a.meal_type) - corteMeal(b.meal_type)
         )
-        .slice(0, nComidas)
-        .map(e => ({
-          dayOfWeek:  e.day_of_week,
-          dayLabel:   DAY_FULL[e.day_of_week] ?? '',
-          mealType:   e.meal_type,
-          mealLabel:  mealLabel(e.meal_type),
-          recipeName: e.recipe!.nombre,
-        }))
+      return dedup(sorted).slice(0, nComidas).map(toMealEntry)
     }
 
     const targetRecipe = modo === 'receta' ? recetaModo : recetaFiltro
     if (targetRecipe) {
-      return base
+      const sorted = base
         .filter(e => e.recipe!.nombre === targetRecipe)
         .sort((a, b) =>
           a.day_of_week !== b.day_of_week
             ? a.day_of_week - b.day_of_week
             : corteMeal(a.meal_type) - corteMeal(b.meal_type)
         )
-        .map(e => ({
-          dayOfWeek:  e.day_of_week,
-          dayLabel:   DAY_FULL[e.day_of_week] ?? '',
-          mealType:   e.meal_type,
-          mealLabel:  mealLabel(e.meal_type),
-          recipeName: e.recipe!.nombre,
-        }))
+      return dedup(sorted).map(toMealEntry)
     }
 
     return []
