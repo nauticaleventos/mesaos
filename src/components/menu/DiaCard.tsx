@@ -11,7 +11,7 @@ import { DAY_NAMES_FULL, getMondayOfWeek, calcularMultiplicadorPorcion } from '.
 import { calcularMatch, matchBadge } from '../../lib/matchReceta'
 import CambiarSheet from './CambiarSheet'
 import RatingPostCoccionModal from './RatingPostCoccionModal'
-import { inferirEmojisReceta, multToFraccion, formatPorcionMiembro } from '../../lib/porcionEmoji'
+import { inferirEmojisReceta, formatPorcionMiembro } from '../../lib/porcionEmoji'
 
 interface Props {
   dayOfWeek:      number
@@ -414,7 +414,6 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
                             const { protein: pE, carb: cE } = inferirEmojisReceta(r.ingredientes ?? [])
                             return eMembers.map(m => {
                               const mult = calcularMultiplicadorPorcion(m)
-                              const frac = multToFraccion(mult)
                               return (
                                 <span key={m.id} className="text-[10px] text-muted">
                                   {formatPorcionMiembro(m.emoji ?? '', m.name ?? '', mult, pE, cE, r.tipo_componente)}

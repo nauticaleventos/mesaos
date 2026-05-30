@@ -14,7 +14,6 @@ const MEAL_LABEL: Record<string, string> = {
   cena:     '🌙 Cena',
   snack:    '🍿 Merienda',
 }
-const MEAL_ORDER = ['desayuno', 'almuerzo', 'snack', 'cena']
 
 interface Recipe {
   nombre:           string
