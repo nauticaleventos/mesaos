@@ -177,32 +177,56 @@ export default function MercadoPage() {
     [activeMeals]
   )
 
+  // Map: recipeName → ingredient names (raw, para fallback con nombre de ingrediente)
+  const recipeIngMap = useMemo(() => {
+    const map = new Map<string, string[]>()
+    for (const e of menu) {
+      if (!e.is_main_recipe || !e.recipe?.nombre) continue
+      const ings = (e.recipe.ingredientes ?? []).filter(i => i.esencial).map(i => i.nombre)
+      const existing = map.get(e.recipe.nombre) ?? []
+      map.set(e.recipe.nombre, [...new Set([...existing, ...ings])])
+    }
+    return map
+  }, [menu])
+
+  // ── Helpers de matching ───────────────────────────────────────────────────
+  // Verifica si un item de lista corresponde a algún ingrediente de una receta
+  // Fallback para listas stale donde recetas_origen no matchea el nombre actual
+  const itemMatchesRecipe = (itemNom: string, recipeName: string): boolean => {
+    const ings = recipeIngMap.get(recipeName) ?? []
+    return ings.some(ing => inventarioTiene([{ name: itemNom }], ing).tiene)
+  }
+
+  const enFridgeActual = (nom: string) => !inventarioTiene(fridgeItems, nom).tiene
+
   // ── Filtro de items ──────────────────────────────────────────────────────
   const itemsFiltrados = useMemo(() => {
-    // Para modos con scope de recetas específicas, re-evaluar faltante desde el
-    // fridge ACTUAL (el precalculado puede ser stale si la nevera o el menú cambió)
-    const enFridgeActual = (nom: string) => !inventarioTiene(fridgeItems, nom).tiene
-
     return items.filter(i => {
       if (busqueda && !i.ingrediente_nombre.toLowerCase().includes(busqueda.toLowerCase())) return false
 
       if (recetaFiltro) {
-        if (!i.recetas_origen.includes(recetaFiltro)) return false
+        const match = i.recetas_origen.includes(recetaFiltro) || itemMatchesRecipe(i.ingrediente_nombre, recetaFiltro)
+        if (!match) return false
         return i.faltante || enFridgeActual(i.ingrediente_nombre)
       }
       if (modo === 'proximas') {
-        if (!proximasRecetas.some(r => i.recetas_origen.includes(r))) return false
+        const byReceta = proximasRecetas.some(r => i.recetas_origen.includes(r))
+        const byIng    = !byReceta && proximasRecetas.some(r => itemMatchesRecipe(i.ingrediente_nombre, r))
+        if (!byReceta && !byIng) return false
         return i.faltante || enFridgeActual(i.ingrediente_nombre)
       }
       if (modo === 'receta') {
-        if (!recetaModo || !i.recetas_origen.includes(recetaModo)) return false
+        if (!recetaModo) return false
+        const match = i.recetas_origen.includes(recetaModo) || itemMatchesRecipe(i.ingrediente_nombre, recetaModo)
+        if (!match) return false
         return i.faltante || enFridgeActual(i.ingrediente_nombre)
       }
 
-      // Pasillos / Alfabético: usar el faltante precalculado (lista completa)
+      // Pasillos / Alfabético: usar el faltante precalculado
       return i.faltante
     })
-  }, [items, busqueda, recetaFiltro, modo, proximasRecetas, recetaModo, fridgeItems])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, busqueda, recetaFiltro, modo, proximasRecetas, recetaModo, fridgeItems, recipeIngMap])
 
   // ── Secciones por comida/día (modos proximas, receta, recetaFiltro) ──────
   const usarSecciones = modo === 'proximas' || modo === 'receta' || recetaFiltro !== null
@@ -216,13 +240,16 @@ export default function MercadoPage() {
         key:        `${meal.dayOfWeek}::${meal.mealType}::${meal.recipeName}`,
         header:     `${meal.mealLabel} · ${meal.dayLabel}`,
         recipeName: meal.recipeName,
-        rows:       items.filter(i =>
-        i.recetas_origen.includes(meal.recipeName) &&
-        (i.faltante || !inventarioTiene(fridgeItems, i.ingrediente_nombre).tiene)
-      ),
+        rows: items.filter(i => {
+          const match = i.recetas_origen.includes(meal.recipeName) ||
+                        itemMatchesRecipe(i.ingrediente_nombre, meal.recipeName)
+          if (!match) return false
+          return i.faltante || !inventarioTiene(fridgeItems, i.ingrediente_nombre).tiene
+        }),
       }))
       .filter(s => s.rows.length > 0)
-  }, [usarSecciones, activeMeals, items])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usarSecciones, activeMeals, items, fridgeItems, recipeIngMap])
 
   // ── Contexto inline para modo alfabético ─────────────────────────────────
   const recipeContextMap = useMemo(() => {
@@ -533,14 +560,16 @@ export default function MercadoPage() {
                 {/* ✅ Tienes */}
                 {fridgeUsados.length > 0 && (
                   <div className="px-4 py-3 border-b border-border/60">
-                    <p className="text-[11px] font-semibold text-oliva uppercase tracking-wider mb-1.5">
+                    <p className="text-[11px] font-semibold text-oliva uppercase tracking-wider mb-2">
                       ✅ Tenés ({fridgeUsados.length})
                     </p>
-                    <p className="text-xs text-muted leading-relaxed">
-                      {fridgeUsados.map(f => f.name).join(' · ')}
-                    </p>
+                    <div className="flex flex-col gap-0.5">
+                      {fridgeUsados.map(f => (
+                        <p key={f.id} className="text-xs text-muted/70 line-through">{f.name}</p>
+                      ))}
+                    </div>
                     {fridgeNoUsados.length === 0 && (
-                      <p className="text-xs text-oliva font-medium mt-1.5">¡Toda tu nevera se está usando! 🎉</p>
+                      <p className="text-xs text-oliva font-medium mt-2">¡Toda tu nevera se está usando! 🎉</p>
                     )}
                   </div>
                 )}
@@ -558,10 +587,11 @@ export default function MercadoPage() {
                       <span className="ml-auto text-muted text-xs">{noUsanExpandido ? '▲' : '▼'}</span>
                     </button>
                     {noUsanExpandido && (
-                      <p className="text-xs text-muted leading-relaxed mt-1.5">
-                        {fridgeNoUsados.slice(0, 8).map(f => f.name).join(' · ')}
-                        {fridgeNoUsados.length > 8 && ` · +${fridgeNoUsados.length - 8} más`}
-                      </p>
+                      <div className="flex flex-col gap-0.5 mt-2">
+                        {fridgeNoUsados.map(f => (
+                          <p key={f.id} className="text-xs text-muted">• {f.name}</p>
+                        ))}
+                      </div>
                     )}
                   </div>
                 )}
