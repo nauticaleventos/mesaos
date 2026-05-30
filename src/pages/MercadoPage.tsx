@@ -99,12 +99,19 @@ export default function MercadoPage() {
   const comprados      = items.filter(i => i.comprado).length
 
   const handleShare = async () => {
-    const texto = items
-      .filter(i => i.faltante && !i.comprado)
+    const itemsACompartir = items.filter(i =>
+      i.faltante && !i.comprado &&
+      (!recetaFiltro || i.recetas_origen.includes(recetaFiltro))
+    )
+    const encabezado = recetaFiltro
+      ? `🍽️ Ingredientes para ${recetaFiltro}:\n`
+      : '🛒 Lista de mercado:\n'
+    const texto = encabezado + itemsACompartir
       .map(i => `• ${i.ingrediente_nombre} ${formatCantidad(i.cantidad_total, i.unidad)}`)
       .join('\n')
+    const titulo = recetaFiltro ? `Ingredientes para ${recetaFiltro}` : 'Lista de mercado mesa.os'
     if (navigator.share) {
-      await navigator.share({ title: 'Lista de mercado mesa.os', text: texto })
+      await navigator.share({ title: titulo, text: texto })
     } else {
       await navigator.clipboard.writeText(texto)
     }
@@ -131,7 +138,12 @@ export default function MercadoPage() {
                   className="p-2 rounded-xl border border-border text-muted hover:text-accent hover:border-accent transition-colors">
                   <Share2 size={16} />
                 </button>
-                <button onClick={() => window.open('/mercado/imprimir', '_blank')}
+                <button onClick={() => {
+                  const url = recetaFiltro
+                    ? `/mercado/imprimir?receta=${encodeURIComponent(recetaFiltro)}`
+                    : '/mercado/imprimir'
+                  window.open(url, '_blank')
+                }}
                   className="p-2 rounded-xl border border-border text-muted hover:text-accent hover:border-accent transition-colors">
                   <Printer size={16} />
                 </button>

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useFamilyStore }       from '../store/familyStore'
 import { useShoppingListStore } from '../store/shoppingListStore'
 
@@ -19,6 +20,9 @@ const PASILLOS: Record<string, { emoji: string; label: string }> = {
 }
 
 export default function MercadoImprimir() {
+  const [searchParams] = useSearchParams()
+  const recetaFiltro   = searchParams.get('receta') ? decodeURIComponent(searchParams.get('receta')!) : null
+
   const { family } = useFamilyStore()
   const { items, loadList } = useShoppingListStore()
 
@@ -26,7 +30,9 @@ export default function MercadoImprimir() {
     if (family?.id) loadList(family.id).then(() => setTimeout(() => window.print(), 800))
   }, [family?.id])
 
-  const faltantes = items.filter(i => i.faltante)
+  const faltantes = items.filter(i =>
+    i.faltante && (!recetaFiltro || i.recetas_origen.includes(recetaFiltro))
+  )
   const porPasillo = new Map<string, typeof faltantes>()
   for (const item of faltantes) {
     if (!porPasillo.has(item.categoria_pasillo)) porPasillo.set(item.categoria_pasillo, [])
@@ -45,12 +51,28 @@ export default function MercadoImprimir() {
         .checkbox { width: 12px; height: 12px; border: 1.5px solid #999; border-radius: 3px; flex-shrink: 0; margin-top: 1px; }
         .item-name { flex: 1; }
         .item-qty { color: #666; white-space: nowrap; }
-        h1 { font-size: 16px; margin: 0 0 2px; }
-        .subtitle { color: #666; font-size: 10px; margin-bottom: 12px; }
+        .brand { display: flex; justify-content: space-between; align-items: center;
+          padding-bottom: 7px; margin-bottom: 10px; border-bottom: 2px solid #E76F51; }
+        .brand-left { display: flex; align-items: center; gap: 6px; }
+        .brand-name { font-size: 16px; font-weight: 800; color: #E76F51; letter-spacing: -0.3px; }
+        .brand-sub { font-size: 8px; color: #999; font-style: italic; }
+        .brand-right { text-align: right; font-size: 10px; color: #555; }
+        .brand-doc { font-size: 13px; font-weight: 700; color: #1a1a1a; }
       `}</style>
 
-      <h1>🛒 Lista de mercado</h1>
-      <p className="subtitle">{family?.name} · {fecha} · {faltantes.length} items</p>
+      <div className="brand">
+        <div className="brand-left">
+          <span style={{ fontSize: 18 }}>🍽️</span>
+          <div>
+            <div className="brand-name">mesa.os</div>
+            <div className="brand-sub">Coach de cocina para tu familia</div>
+          </div>
+        </div>
+        <div className="brand-right">
+          <div className="brand-doc">{recetaFiltro ? `🍽️ Lista para: ${recetaFiltro}` : '🛒 Lista de mercado'}</div>
+          <div>{family?.name} · {fecha} · {faltantes.length} items</div>
+        </div>
+      </div>
 
       {[...porPasillo.entries()].map(([pasillo, pasilloItems]) => {
         const cfg = PASILLOS[pasillo] ?? { emoji: '📦', label: pasillo }
