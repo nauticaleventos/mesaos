@@ -297,10 +297,56 @@ export default function MercadoPage() {
           </div>
         )}
 
-        {/* Lista */}
+        {/* Selector de modo — visible en cuanto hay menú, sin importar si hay lista */}
+        {tieneMenu && !loading && !generating && !recetaFiltro && (
+          <div className="flex flex-col gap-2 mb-3">
+            <select
+              value={modo}
+              onChange={e => setModo(e.target.value as Modo)}
+              className="w-full px-3 py-2 rounded-xl border border-border bg-white text-sm text-text focus:outline-none focus:border-accent"
+            >
+              {modoOpciones.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            {modo === 'proximas' && (
+              <select
+                value={nComidas}
+                onChange={e => setNComidas(Number(e.target.value))}
+                className="w-full px-3 py-2 rounded-xl border border-border bg-white text-sm text-text focus:outline-none focus:border-accent"
+              >
+                <option value={3}>3 comidas</option>
+                <option value={5}>5 comidas</option>
+                <option value={7}>7 comidas</option>
+                <option value={14}>14 comidas</option>
+              </select>
+            )}
+            {modo === 'receta' && (
+              recetasMenu.length > 0 ? (
+                <select
+                  value={recetaModo}
+                  onChange={e => setRecetaModo(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-white text-sm text-text focus:outline-none focus:border-accent"
+                >
+                  {recetasMenu.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              ) : (
+                <p className="text-xs text-muted px-1">No hay recetas en el menú activo.</p>
+              )
+            )}
+            {modo === 'proximas' && proximasRecetas.length === 0 && (
+              <p className="text-xs text-muted px-1">No hay comidas planeadas próximamente.</p>
+            )}
+            {modo === 'proximas' && proximasRecetas.length > 0 && (
+              <p className="text-[11px] text-muted px-1 truncate">Recetas: {proximasRecetas.join(', ')}</p>
+            )}
+          </div>
+        )}
+
+        {/* Lista de items */}
         {!loading && !generating && listId && items.length > 0 && (
           <>
-            {/* Banner filtro por receta (URL param desde RecetaPage) */}
+            {/* Banner filtro URL (?receta=X desde RecetaPage) */}
             {recetaFiltro && (
               <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-accent/10 border border-accent/30">
                 <span className="text-sm">🍽️</span>
@@ -310,62 +356,6 @@ export default function MercadoPage() {
                 <button onClick={() => setSearchParams({})} className="text-xs text-accent/70 hover:text-accent transition-colors flex-shrink-0">
                   Ver todo ×
                 </button>
-              </div>
-            )}
-
-            {/* Selector de modo (oculto cuando hay filtro URL activo) */}
-            {!recetaFiltro && (
-              <div className="flex flex-col gap-2 mb-3">
-                <select
-                  value={modo}
-                  onChange={e => setModo(e.target.value as Modo)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-white text-sm text-text focus:outline-none focus:border-accent"
-                >
-                  {modoOpciones.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-
-                {/* Sub-selector: próximas N comidas */}
-                {modo === 'proximas' && (
-                  <select
-                    value={nComidas}
-                    onChange={e => setNComidas(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-white text-sm text-text focus:outline-none focus:border-accent"
-                  >
-                    <option value={3}>3 comidas</option>
-                    <option value={5}>5 comidas</option>
-                    <option value={7}>7 comidas</option>
-                    <option value={14}>14 comidas</option>
-                  </select>
-                )}
-
-                {/* Sub-selector: una receta del menú */}
-                {modo === 'receta' && (
-                  recetasMenu.length > 0 ? (
-                    <select
-                      value={recetaModo}
-                      onChange={e => setRecetaModo(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-border bg-white text-sm text-text focus:outline-none focus:border-accent"
-                    >
-                      {recetasMenu.map(r => (
-                        <option key={r} value={r}>{r}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <p className="text-xs text-muted px-1">No hay recetas en el menú activo.</p>
-                  )
-                )}
-
-                {/* Info modo próximas */}
-                {modo === 'proximas' && proximasRecetas.length === 0 && (
-                  <p className="text-xs text-muted px-1">No hay comidas planeadas próximamente.</p>
-                )}
-                {modo === 'proximas' && proximasRecetas.length > 0 && (
-                  <p className="text-[11px] text-muted px-1 truncate">
-                    Recetas: {proximasRecetas.join(', ')}
-                  </p>
-                )}
               </div>
             )}
 
@@ -392,7 +382,6 @@ export default function MercadoPage() {
               </div>
             )}
 
-            {/* Sin items para el filtro activo */}
             {itemsFiltrados.length === 0 && (
               <p className="text-center text-sm text-muted py-8">
                 {modo === 'proximas' ? 'No hay ingredientes faltantes para las próximas comidas.' :
@@ -412,7 +401,6 @@ export default function MercadoPage() {
                 const antes = acumulados
                 acumulados += pasilloItems.length
                 const mostrarAd = Math.floor(acumulados / 10) > Math.floor(antes / 10)
-
                 return (
                   <div key={pasillo}>
                     <div className={`mb-4 card p-0 overflow-hidden ${todoComprado ? 'opacity-50' : ''}`}>
