@@ -22,7 +22,6 @@ const DAY_CODES = ['lun','mar','mie','jue','vie','sab','dom']
 const DAY_FULL: Record<string, string> = {
   lun:'Lunes', mar:'Martes', mie:'Miércoles', jue:'Jueves', vie:'Viernes', sab:'Sábado', dom:'Domingo'
 }
-const DOW_TO_DIA = ['','lun','mar','mie','jue','vie','sab','dom']
 
 const PAISES = [
   { code: 'CO', label: 'Colombia'  },
@@ -265,7 +264,6 @@ export default function LoncheraPage() {
   const entriasDia = entries.filter(e => e.day_of_week === dowActivo)
 
   // Verificar festivo
-  const weekMonday = new Date(new Date().toISOString().split('T')[0].substring(0,8) + '01')
   const getDateForDow = (dow: number) => {
     const mon = new Date()
     const offset = (dow - 1) - ((mon.getDay() + 6) % 7)
@@ -296,11 +294,7 @@ export default function LoncheraPage() {
 
   const handleMercado = () => navigate('/mercado')
 
-  const handleCambiarSaved = async (recipeId: string, nombre: string) => {
-    if (!changingEntry) return
-    await cambiarComponente(changingEntry.id, recipeId, nombre)
-    setChangingEntry(null)
-  }
+
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center"><p className="text-muted text-sm">Cargando lonchera…</p></div>
@@ -550,9 +544,9 @@ export default function LoncheraPage() {
           onClose={() => setChangingEntry(null)}
           onSaved={async (recipeId, nombre) => {
             if (changingEntry.id) {
-              await handleCambiarSaved(recipeId, nombre)
+              await cambiarComponente(changingEntry.id, recipeId, nombre)
+              setChangingEntry(null)
             } else if (family?.id) {
-              // Agregar extra
               await agregarExtra(family.id, dowActivo, null, recipeId, nombre)
               setChangingEntry(null)
             }
@@ -569,9 +563,4 @@ export default function LoncheraPage() {
     </div>
   )
 
-  async function handleCambiarSaved(recipeId: string, nombre: string) {
-    if (!changingEntry?.id) return
-    await cambiarComponente(changingEntry.id, recipeId, nombre)
-    setChangingEntry(null)
-  }
 }
