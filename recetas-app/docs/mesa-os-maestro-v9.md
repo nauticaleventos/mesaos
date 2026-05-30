@@ -100,7 +100,7 @@ La IA de mesa.os se llama **Tita**:
 ### Lonchera escolar ✅ NUEVO
 
 - ✅ Ruta `/lonchera` con tab 🍎 en BottomNav
-- ✅ Tier gate: Free ve pantalla 🔒 con CTA "Solo Plus/Pro" — `IS_FREE = true`
+- ✅ Tier gate: desactivado en Beta — `IS_FREE = false` → acceso completo para todos. Reactivar al lanzar Plus/Pro.
 - ✅ Configuración por miembro: lleva_lonchera, hora de envío, días de cole, país festivos
 - ✅ Modo "Una para todos" / "Personalizada" con tabs por miembro
 - ✅ Generación automática semanal: Principal + Fruta + Snack + Bebida
