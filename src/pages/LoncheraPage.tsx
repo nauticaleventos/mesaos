@@ -15,7 +15,8 @@ import { supabase }        from '../lib/supabase'
 import BottomNav           from '../components/ui/BottomNav'
 
 // ── Tier gate ────────────────────────────────────────────────────────────────
-const IS_FREE = true   // reemplazar por hook real cuando haya sistema de planes
+// Beta: acceso completo. Activar cuando se lance Plus/Pro.
+const IS_FREE = false
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const DAY_CODES = ['lun','mar','mie','jue','vie','sab','dom']
