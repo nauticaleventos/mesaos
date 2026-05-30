@@ -49,19 +49,34 @@ export default function MenuCompartido() {
 
   useEffect(() => {
     if (!token) return
-    fetch(`/api/menu-compartido?token=${encodeURIComponent(token)}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) { setError(data.error); return }
-        setEntries(data.entries ?? [])
-        setMembers(data.members ?? [])
-        setWeekStart(data.week_start ?? '')
-        if (data.entries?.length) {
-          setSelectedDay(data.entries[0].day_of_week)
-        }
-      })
-      .catch(() => setError('Error al cargar el menú'))
-      .finally(() => setLoading(false))
+
+    const fetchMenu = (isFirst = false) => {
+      fetch(`/api/menu-compartido?token=${encodeURIComponent(token)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) { if (isFirst) setError(data.error); return }
+          setEntries(data.entries ?? [])
+          setMembers(data.members ?? [])
+          setWeekStart(data.week_start ?? '')
+          if (isFirst && data.entries?.length) setSelectedDay(data.entries[0].day_of_week)
+        })
+        .catch(() => { if (isFirst) setError('Error al cargar el menú') })
+        .finally(() => { if (isFirst) setLoading(false) })
+    }
+
+    fetchMenu(true)
+
+    // Auto-refresh cada 2 minutos
+    const interval = setInterval(() => fetchMenu(), 2 * 60 * 1000)
+
+    // Refresh al recuperar foco de la pestaña
+    const onVisibility = () => { if (document.visibilityState === 'visible') fetchMenu() }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [token])
 
   if (loading) return (
