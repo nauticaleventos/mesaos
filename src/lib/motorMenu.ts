@@ -586,10 +586,10 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
 
   /**
    * Retorna un Set de IDs excluidos por estar demasiado cerca (< minGapDays días).
-   * Si minGapDays=1 → excluir recetas usadas hoy.
-   * Si minGapDays=3 → excluir recetas usadas en los últimos 2 días.
+   * minGapDays=4 → excluir recetas usadas en los últimos 3 días (3 días libres entre usos).
+   * Ejemplo: usada día 1, disponible a partir del día 5 (4-1=4, no es < 4).
    */
-  const recentlyUsed = (map: Map<string, number>, currentDay: number, minGapDays = 3): Set<string> => {
+  const recentlyUsed = (map: Map<string, number>, currentDay: number, minGapDays = 4): Set<string> => {
     const excl = new Set<string>()
     for (const [id, day] of map) {
       if (currentDay - day < minGapDays) excl.add(id)
@@ -605,7 +605,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
   const _esElegible = (id: string, currentDay: number, usedToday: Set<string>): boolean => {
     if (usedToday.has(id)) return false
     const lastDay = usedByDay.get(id)
-    if (lastDay !== undefined && currentDay - lastDay < 3) return false
+    if (lastDay !== undefined && currentDay - lastDay < 4) return false
     return true
   }
   void _esElegible  // usado via trySelect
@@ -614,12 +614,12 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
     if (usedToday.has(id)) return false
     const memberMap = usedPerMember.get(memberId)
     const lastDay = memberMap?.get(id)
-    if (lastDay !== undefined && currentDay - lastDay < 3) return false
+    if (lastDay !== undefined && currentDay - lastDay < 4) return false
     return true
   }
 
   // Set de recetas excluidas para un miembro según gap de días
-  const memberExcl = (memberId: string, currentDay: number, gap = 3): Set<string> => {
+  const memberExcl = (memberId: string, currentDay: number, gap = 4): Set<string> => {
     const memberMap = usedPerMember.get(memberId)
     if (!memberMap) return new Set()
     const excl = new Set<string>()
@@ -748,7 +748,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           let sumScore = 0; let compatCount = 0
           for (const m of slotMembers) {
             if (!esElegibleMiembro(r.id, m.id!, day, usedToday)) continue
-            const excl = memberExcl(m.id!, day, 3)
+            const excl = memberExcl(m.id!, day, 4)
             const s = calcularScore(r, input, excl, 0, new Set([m.id!]), isDayFinde, tipo)
             if (s >= 0) { sumScore += s; compatCount++ }
           }
@@ -762,7 +762,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         // gap=0 usa el historial semanal del miembro en lugar de Set vacío para que
         // calcularScore pueda comparar la "menos mala" en vez de tratar todas igual.
         if (!baseRecipe && poolUniversal.length > 0) {
-          for (const gap of [2, 1, 0]) {
+          for (const gap of [3, 2, 1, 0]) {
             if (baseRecipe) break
             for (const r of poolUniversal) {
               let sumScore = 0; let compatCount = 0
@@ -784,7 +784,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
 
         // Fallback B: no hay universal — pool general con elegibilidad relajada progresivamente
         if (!baseRecipe && poolUniversal.length === 0) {
-          for (const gap of [3, 2, 1, 0]) {
+          for (const gap of [4, 3, 2, 1, 0]) {
             if (baseRecipe) break
             for (const r of pool) {
               let sumScore = 0; let compatCount = 0
@@ -972,12 +972,12 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         }
       }
 
-      // Paso 1: universal elegible (gap ≥ 3 días)
-      trySelect(compatibleConTodos, 3)
+      // Paso 1: universal elegible (gap ≥ 4 días = 3 días libres entre usos)
+      trySelect(compatibleConTodos, 4)
 
       // Paso 2: relajar gap progresivamente si no hay universal fresca
       if (!bestRecipe && compatibleConTodos.length > 0) {
-        for (const gap of [2, 1]) {
+        for (const gap of [3, 2, 1]) {
           if (bestRecipe) break
           trySelect(compatibleConTodos, gap)
         }
@@ -1000,7 +1000,8 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
 
       // Paso 3: no hay universal → per-miembro con mismo esquema
       if (!bestRecipe) {
-        trySelect(compatibleConAlguno, 3)
+        trySelect(compatibleConAlguno, 4)
+        if (!bestRecipe) trySelect(compatibleConAlguno, 3)
         if (!bestRecipe) trySelect(compatibleConAlguno, 2)
         if (!bestRecipe) trySelect(compatibleConAlguno, 1)
         if (!bestRecipe) {
