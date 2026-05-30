@@ -54,6 +54,19 @@ function formatCantidad(cantidad: number, unidad: string): string {
   return `${n} ${unidad}`
 }
 
+const DAY_SHORT: Record<number, string> = {
+  1: 'lun', 2: 'mar', 3: 'mié', 4: 'jue', 5: 'vie', 6: 'sáb', 7: 'dom',
+}
+
+function mealLabel(mealType: string): string {
+  const k = mealType.toLowerCase()
+  if (k.includes('desayuno') || k.includes('brunch')) return 'Desayuno'
+  if (k.includes('almuerzo') || k.includes('comida')) return 'Almuerzo'
+  if (k.includes('cena'))                              return 'Cena'
+  if (k.includes('merienda') || k.includes('snack') || k.includes('onces')) return 'Merienda'
+  return mealType.charAt(0).toUpperCase() + mealType.slice(1)
+}
+
 export default function MercadoPage() {
   const navigate                  = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -135,6 +148,35 @@ export default function MercadoPage() {
       return true
     })
   }, [items, busqueda, recetaFiltro, modo, proximasRecetas, recetaModo])
+
+  // ── Contexto receta→comida (para sub-texto en modos no-pasillos) ─────────
+  const recipeContextMap = useMemo(() => {
+    const map = new Map<string, { dayOfWeek: number; mealType: string }[]>()
+    for (const e of menu) {
+      if (!e.is_main_recipe || !e.recipe?.nombre) continue
+      const nombre = e.recipe.nombre
+      if (!map.has(nombre)) map.set(nombre, [])
+      const list = map.get(nombre)!
+      if (!list.some(x => x.dayOfWeek === e.day_of_week && x.mealType === e.meal_type)) {
+        list.push({ dayOfWeek: e.day_of_week, mealType: e.meal_type })
+      }
+    }
+    return map
+  }, [menu])
+
+  const getItemContext = (item: ShoppingListItem): string => {
+    const parts: string[] = []
+    for (const recipeName of item.recetas_origen) {
+      const occasions = recipeContextMap.get(recipeName)
+      if (!occasions?.length) continue
+      for (const { dayOfWeek, mealType } of occasions) {
+        parts.push(`${recipeName} · ${mealLabel(mealType)} ${DAY_SHORT[dayOfWeek] ?? ''}`)
+      }
+    }
+    return parts.join(', ')
+  }
+
+  const mostrarContexto = modo !== 'pasillos' || recetaFiltro !== null
 
   // ── Agrupación por pasillo ────────────────────────────────────────────────
   const usarPasillos = modo === 'pasillos' || modo === 'proximas' || modo === 'receta'
@@ -442,12 +484,21 @@ export default function MercadoPage() {
                                     {formatCantidad(item.cantidad_total, item.unidad)}
                                   </span>
                                 )}
-                                {item.recetas_origen.length > 0 && (
+                                {!mostrarContexto && item.recetas_origen.length > 0 && (
                                   <span className="text-[10px] text-muted truncate max-w-[200px]">
                                     para: {item.recetas_origen.slice(0, 2).join(', ')}{item.recetas_origen.length > 2 ? '…' : ''}
                                   </span>
                                 )}
                               </div>
+                              {mostrarContexto && (() => {
+                                const ctx = getItemContext(item)
+                                if (!ctx) return null
+                                return (
+                                  <p className="text-[11px] text-muted mt-0.5 leading-snug">
+                                    📌 {ctx}
+                                  </p>
+                                )
+                              })()}
                             </div>
                           </button>
                         ))}
