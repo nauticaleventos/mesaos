@@ -154,12 +154,14 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
         </button>
       )}
 
-      {/* Acceso rápido si hay sobrantes fuera de mid-week */}
-      {!showSobradosBanner && leftovers.length > 0 && (
+      {/* Acceso a sobras — siempre visible cuando hay menú activo */}
+      {!showSobradosBanner && planeadas > 0 && (
         <button
           onClick={() => setShowSobrados(true)}
           className="flex items-center gap-2 px-3 py-2 rounded-xl border border-oliva/30 bg-oliva-claro/30 text-sm text-oliva font-medium hover:border-oliva/60 transition-colors print:hidden self-start">
-          🍗 {leftovers.length} sobrante{leftovers.length > 1 ? 's' : ''} esta semana
+          🍗 {leftovers.length > 0
+            ? `${leftovers.length} sobrante${leftovers.length > 1 ? 's' : ''} esta semana`
+            : 'Registrar sobras'}
         </button>
       )}
 
