@@ -21,7 +21,16 @@ const PASILLOS: Record<string, { emoji: string; label: string }> = {
 
 export default function MercadoImprimir() {
   const [searchParams] = useSearchParams()
-  const recetaFiltro   = searchParams.get('receta') ? decodeURIComponent(searchParams.get('receta')!) : null
+
+  // ?receta=X  → una receta (desde RecetaPage o modo receta)
+  const recetaFiltro = searchParams.get('receta') ? decodeURIComponent(searchParams.get('receta')!) : null
+  // ?recetas=A,B,C → próximas N comidas
+  const recetasParam = searchParams.get('recetas')
+    ? decodeURIComponent(searchParams.get('recetas')!).split(',').filter(Boolean)
+    : null
+  const nParam   = searchParams.get('n') ?? null
+  // ?modo=alfabetico → solo cambia título
+  const modoParam = searchParams.get('modo') ?? null
 
   const { family } = useFamilyStore()
   const { items, loadList } = useShoppingListStore()
@@ -30,14 +39,23 @@ export default function MercadoImprimir() {
     if (family?.id) loadList(family.id).then(() => setTimeout(() => window.print(), 800))
   }, [family?.id])
 
-  const faltantes = items.filter(i =>
-    i.faltante && (!recetaFiltro || i.recetas_origen.includes(recetaFiltro))
-  )
+  const faltantes = items.filter(i => {
+    if (!i.faltante) return false
+    if (recetaFiltro)  return i.recetas_origen.includes(recetaFiltro)
+    if (recetasParam)  return recetasParam.some(r => i.recetas_origen.includes(r))
+    return true
+  })
+
   const porPasillo = new Map<string, typeof faltantes>()
   for (const item of faltantes) {
     if (!porPasillo.has(item.categoria_pasillo)) porPasillo.set(item.categoria_pasillo, [])
     porPasillo.get(item.categoria_pasillo)!.push(item)
   }
+
+  const tituloDoc = recetaFiltro  ? `🍽️ Lista para: ${recetaFiltro}`
+    : recetasParam                ? `⏰ Próximas ${nParam ?? recetasParam.length} comidas`
+    : modoParam === 'alfabetico'  ? '🛒 Lista de mercado (A–Z)'
+    : '🛒 Lista de mercado'
 
   const fecha = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
 
@@ -69,7 +87,7 @@ export default function MercadoImprimir() {
           </div>
         </div>
         <div className="brand-right">
-          <div className="brand-doc">{recetaFiltro ? `🍽️ Lista para: ${recetaFiltro}` : '🛒 Lista de mercado'}</div>
+          <div className="brand-doc">{tituloDoc}</div>
           <div>{family?.name} · {fecha} · {faltantes.length} items</div>
         </div>
       </div>
