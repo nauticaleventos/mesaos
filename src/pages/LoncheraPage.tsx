@@ -6,7 +6,8 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Settings, ShoppingCart, Sparkles, ChevronDown, RefreshCcw, X, Check } from 'lucide-react'
+import { RefreshCw, Settings, ShoppingCart, Sparkles, RefreshCcw, X, Check } from 'lucide-react'
+import Holidays from 'date-holidays'
 import { useFamilyStore }  from '../store/familyStore'
 import { useFridgeStore }  from '../store/fridgeStore'
 import { useLoncheraStore, COMPONENTES_CONFIG, type LoncheraComponente, type LoncheraMemberConfig } from '../store/loncheraStore'
@@ -16,41 +17,6 @@ import BottomNav           from '../components/ui/BottomNav'
 // ── Tier gate ────────────────────────────────────────────────────────────────
 const IS_FREE = true   // reemplazar por hook real cuando haya sistema de planes
 
-// ── Festivos ─────────────────────────────────────────────────────────────────
-// TODO: reemplazar con npm install date-holidays cuando se integre monetización
-type HolidayMap = Map<string, string>  // 'YYYY-MM-DD' → nombre festivo
-
-function buildHolidays(year: number, country: string): HolidayMap {
-  const map = new HolidayMap()
-  const fmt = (m: number, d: number) => `${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-
-  if (country === 'CO') {
-    // Fijos Colombia
-    ;[[1,1,'Año Nuevo'],[1,6,'Reyes Magos'],[3,19,'San José'],[5,1,'Día del Trabajo'],
-      [6,29,'San Pedro y San Pablo'],[7,20,'Independencia'],[8,7,'Batalla de Boyacá'],
-      [8,15,'Asunción'],[10,12,'Día de la Raza'],[11,1,'Todos los Santos'],
-      [11,11,'Independencia de Cartagena'],[12,8,'Inmaculada Concepción'],[12,25,'Navidad'],
-    ].forEach(([m,d,n]) => map.set(fmt(m as number, d as number), n as string))
-  }
-  if (country === 'MX') {
-    ;[[1,1,'Año Nuevo'],[2,5,'Día de la Constitución'],[3,21,'Natalicio de Juárez'],
-      [5,1,'Día del Trabajo'],[9,16,'Independencia'],[11,20,'Revolución Mexicana'],
-      [12,25,'Navidad'],
-    ].forEach(([m,d,n]) => map.set(fmt(m as number, d as number), n as string))
-  }
-  if (country === 'AR') {
-    ;[[1,1,'Año Nuevo'],[5,1,'Día del Trabajo'],[5,25,'Revolución de Mayo'],
-      [7,9,'Día de la Independencia'],[12,25,'Navidad'],
-    ].forEach(([m,d,n]) => map.set(fmt(m as number, d as number), n as string))
-  }
-  if (country === 'PE') {
-    ;[[1,1,'Año Nuevo'],[5,1,'Día del Trabajo'],[7,28,'Independencia'],
-      [7,29,'Gran Bretaña'],[12,8,'Inmaculada Concepción'],[12,25,'Navidad'],
-    ].forEach(([m,d,n]) => map.set(fmt(m as number, d as number), n as string))
-  }
-  return map
-}
-
 // ── Constantes ────────────────────────────────────────────────────────────────
 const DAY_CODES = ['lun','mar','mie','jue','vie','sab','dom']
 const DAY_FULL: Record<string, string> = {
@@ -59,11 +25,31 @@ const DAY_FULL: Record<string, string> = {
 const DOW_TO_DIA = ['','lun','mar','mie','jue','vie','sab','dom']
 
 const PAISES = [
-  { code: 'CO', label: 'Colombia' },
-  { code: 'MX', label: 'México'   },
-  { code: 'AR', label: 'Argentina'},
-  { code: 'PE', label: 'Perú'     },
+  { code: 'CO', label: 'Colombia'  },
+  { code: 'US', label: 'EE.UU.'    },
+  { code: 'MX', label: 'México'    },
+  { code: 'PE', label: 'Perú'      },
+  { code: 'PA', label: 'Panamá'    },
+  { code: 'EC', label: 'Ecuador'   },
+  { code: 'BR', label: 'Brasil'    },
+  { code: 'ES', label: 'España'    },
+  { code: 'PT', label: 'Portugal'  },
+  { code: 'TH', label: 'Tailandia' },
 ]
+
+// Obtiene el nombre del festivo para una fecha dado el país.
+// Solo considera festivos 'public' (días oficiales sin colegio).
+function getFestivo(dateStr: string, hd: Holidays | null): string | null {
+  if (!hd) return null
+  try {
+    const result = hd.isHoliday(new Date(dateStr + 'T12:00:00'))
+    if (!result || result.length === 0) return null
+    const pub = result.find(h => h.type === 'public')
+    return pub?.name ?? null
+  } catch {
+    return null
+  }
+}
 
 // ── Hora de lonchera → meal_type reemplazado ──────────────────────────────────
 function mealTypeReemplazado(hora: string | null): string {
@@ -253,7 +239,10 @@ export default function LoncheraPage() {
   useEffect(() => { setLocalModo(familyLoncheraModo); setLocalPais(paisFestivos) }, [familyLoncheraModo, paisFestivos])
 
   // Festivos para el año actual
-  const holidays = useMemo(() => buildHolidays(new Date().getFullYear(), localPais), [localPais])
+  // Instancia de date-holidays para el país seleccionado
+  const hd = useMemo(() => {
+    try { return new Holidays(localPais) } catch { return null }
+  }, [localPais])
 
   // Días activos (unión de lonchera_dias de todos los miembros con lleva_lonchera)
   const diasActivos = useMemo(() => {
@@ -284,7 +273,7 @@ export default function LoncheraPage() {
     return mon.toISOString().split('T')[0]
   }
   const fechaDia = getDateForDow(dowActivo)
-  const festivoNombre = holidays.get(fechaDia) ?? null
+  const festivoNombre = getFestivo(fechaDia, hd)
 
   const saveConfig = async () => {
     if (!family?.id) return

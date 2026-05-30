@@ -16,4 +16,7 @@ function removeCrossorigin(): Plugin {
 
 export default defineConfig({
   plugins: [react(), removeCrossorigin()],
+  optimizeDeps: {
+    include: ['date-holidays'],
+  },
 })
