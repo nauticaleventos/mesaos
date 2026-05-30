@@ -266,16 +266,31 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         : { data: [] }
       set({ progress: 55 })
 
-      // 6. Recetas usadas en últimas 2 semanas + semana actual
-      // Incluir semana actual: al regenerar el motor penaliza las recetas que ya estaban
-      // en el menú anterior, produciendo resultados diferentes en cada regeneración.
+      // 6a. Recetas usadas en últimas 2 semanas (penalización suave en score)
       const { data: recentMenus } = await supabase
         .from('weekly_menu')
         .select('recipe_id')
         .eq('family_id', familyId)
         .gte('week_start', getMondayNWeeksAgo(2))
+        .lt('week_start', weekStart)
 
       const recentRecipeIds = new Set((recentMenus ?? []).map((m: { recipe_id: string }) => m.recipe_id))
+
+      // 6b. Recetas del menú actual — excluir del pool al regenerar.
+      // Garantiza resultados distintos: el fridge bonus (500) domina la penalización suave.
+      const { data: currentWeekData } = await supabase
+        .from('weekly_menu')
+        .select('recipe_id')
+        .eq('family_id', familyId)
+        .eq('week_start', weekStart)
+
+      const currentWeekIds = new Set((currentWeekData ?? []).map((m: { recipe_id: string }) => m.recipe_id))
+      // Si hay menú previo esta semana, filtrar esas recetas del pool (regeneración)
+      // Si no hay (primera generación), usar el pool completo
+      const allRecipesForAlgo = currentWeekIds.size > 0
+        ? allRecipes.filter(r => !currentWeekIds.has(r.id))
+        : allRecipes
+
       set({ progress: 65 })
 
       // 7. Validación: suficientes recetas
@@ -303,7 +318,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         allMembers,
         slotAttendance,
         fridgeItems:    fridgeItems.map(f => ({ name: f.name })),
-        allRecipes,
+        allRecipes:     allRecipesForAlgo,
         suggestions:    suggestions ?? [],
         reactions:      reactions ?? [],
         recentRecipeIds,
