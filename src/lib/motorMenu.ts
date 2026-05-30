@@ -548,8 +548,9 @@ function calcularScore(
   const pesoInventario = nv2 >= 60 ? 0.60 : nv2 >= 40 ? 0.50 : 0.40
   const pesoOtros      = 1 - pesoInventario
 
-  // Ruido aleatorio ±8 para romper empates y generar variedad en cada regeneración
-  const sRandom = (Math.random() - 0.5) * 16
+  // Ruido aleatorio ±25 — suficiente para diferenciar entre recetas de score similar
+  // sin desplazar recetas con grandes ventajas (fridge 500, sobras 200)
+  const sRandom = (Math.random() - 0.5) * 50
 
   return (
     sInventario  * pesoInventario +

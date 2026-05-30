@@ -266,13 +266,14 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         : { data: [] }
       set({ progress: 55 })
 
-      // 6. Recetas usadas en últimas 2 semanas
+      // 6. Recetas usadas en últimas 2 semanas + semana actual
+      // Incluir semana actual: al regenerar el motor penaliza las recetas que ya estaban
+      // en el menú anterior, produciendo resultados diferentes en cada regeneración.
       const { data: recentMenus } = await supabase
         .from('weekly_menu')
         .select('recipe_id')
         .eq('family_id', familyId)
         .gte('week_start', getMondayNWeeksAgo(2))
-        .lt('week_start', weekStart)
 
       const recentRecipeIds = new Set((recentMenus ?? []).map((m: { recipe_id: string }) => m.recipe_id))
       set({ progress: 65 })
