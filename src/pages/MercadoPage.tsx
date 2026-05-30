@@ -2,10 +2,11 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { RefreshCw, Printer, Share2, Search } from 'lucide-react'
 import { useFamilyStore } from '../store/familyStore'
-import { useFridgeStore } from '../store/fridgeStore'
+import { useFridgeStore, type FridgeItem } from '../store/fridgeStore'
 import { useMenuStore }   from '../store/menuStore'
 import { useShoppingListStore, type ShoppingListItem } from '../store/shoppingListStore'
 import { getMondayOfWeek } from '../lib/motorMenu'
+import { inventarioTiene } from '../lib/matchReceta'
 import BottomNav from '../components/ui/BottomNav'
 import { AdNativeCard } from '../components/ads/AdPlaceholders'
 
@@ -80,8 +81,9 @@ export default function MercadoPage() {
   const [nComidasStr, setNComidasStr] = useState(
     () => localStorage.getItem('mesa_mercado_n_comidas') ?? '7'
   )
-  const [recetaModo, setRecetaModo] = useState<string>('')
-  const [busqueda, setBusqueda]     = useState('')
+  const [recetaModo, setRecetaModo]     = useState<string>('')
+  const [busqueda, setBusqueda]         = useState('')
+  const [noUsanExpandido, setNoUsanExpandido] = useState(false)
 
   const setModo    = (m: Modo) => { setModoState(m); localStorage.setItem('mesa_mercado_modo', m) }
   const setNComidas = (n: number) => {
@@ -220,6 +222,34 @@ export default function MercadoPage() {
     }
     return parts.join(', ')
   }
+
+  // ── Widget nevera: ingredientes del scope vs nevera ──────────────────────
+  const scopeIngredientes = useMemo(() => {
+    const scopeRecipes = new Set<string>()
+    if (usarSecciones) {
+      activeMeals.forEach(m => scopeRecipes.add(m.recipeName))
+    } else {
+      menu.filter(e => e.is_main_recipe && e.recipe?.nombre).forEach(e => scopeRecipes.add(e.recipe!.nombre))
+    }
+    const noms = new Set<string>()
+    for (const e of menu) {
+      if (!e.is_main_recipe || !e.recipe?.nombre || !scopeRecipes.has(e.recipe.nombre)) continue
+      for (const ing of (e.recipe.ingredientes ?? [])) noms.add(ing.nombre)
+    }
+    return [...noms]
+  }, [menu, usarSecciones, activeMeals])
+
+  const { fridgeUsados, fridgeNoUsados } = useMemo(() => {
+    if (fridgeItems.length === 0) return { fridgeUsados: [] as FridgeItem[], fridgeNoUsados: [] as FridgeItem[] }
+    const usados: FridgeItem[] = []
+    const noUsados: FridgeItem[] = []
+    for (const fi of fridgeItems) {
+      const seUsa = scopeIngredientes.some(ingNom => inventarioTiene([{ name: fi.name }], ingNom).tiene)
+      if (seUsa) usados.push(fi)
+      else noUsados.push(fi)
+    }
+    return { fridgeUsados: usados, fridgeNoUsados: noUsados }
+  }, [fridgeItems, scopeIngredientes])
 
   // ── Agrupación por pasillo (modo pasillos y fallback) ────────────────────
   const porPasillo = useMemo(() => {
@@ -461,6 +491,56 @@ export default function MercadoPage() {
                 className="w-full pl-8 pr-3 py-2 rounded-xl border border-border bg-white text-sm focus:outline-none focus:border-accent"
               />
             </div>
+
+            {/* Widget nevera vs filtro */}
+            {fridgeItems.length > 0 && (
+              <div className="mb-4 rounded-2xl border border-border overflow-hidden">
+                {/* Header */}
+                <div className="px-4 py-2.5 bg-gray-50 border-b border-border flex items-center gap-2">
+                  <span className="text-base">🧊</span>
+                  <p className="text-xs font-semibold text-muted uppercase tracking-wider">Tu nevera</p>
+                  <span className="ml-auto text-[10px] text-muted">
+                    {fridgeUsados.length} en uso · {fridgeNoUsados.length} libre{fridgeNoUsados.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                {/* ✅ Tienes */}
+                {fridgeUsados.length > 0 && (
+                  <div className="px-4 py-3 border-b border-border/60">
+                    <p className="text-[11px] font-semibold text-oliva uppercase tracking-wider mb-1.5">
+                      ✅ Tenés ({fridgeUsados.length})
+                    </p>
+                    <p className="text-xs text-muted leading-relaxed">
+                      {fridgeUsados.map(f => f.name).join(' · ')}
+                    </p>
+                    {fridgeNoUsados.length === 0 && (
+                      <p className="text-xs text-oliva font-medium mt-1.5">¡Toda tu nevera se está usando! 🎉</p>
+                    )}
+                  </div>
+                )}
+
+                {/* ⏸️ No se usan */}
+                {fridgeNoUsados.length > 0 && (
+                  <div className="px-4 py-3">
+                    <button
+                      onClick={() => setNoUsanExpandido(v => !v)}
+                      className="flex items-center gap-2 w-full text-left"
+                    >
+                      <p className="text-[11px] font-semibold text-muted uppercase tracking-wider">
+                        ⏸️ No se usan ({fridgeNoUsados.length})
+                      </p>
+                      <span className="ml-auto text-muted text-xs">{noUsanExpandido ? '▲' : '▼'}</span>
+                    </button>
+                    {noUsanExpandido && (
+                      <p className="text-xs text-muted leading-relaxed mt-1.5">
+                        {fridgeNoUsados.slice(0, 8).map(f => f.name).join(' · ')}
+                        {fridgeNoUsados.length > 8 && ` · +${fridgeNoUsados.length - 8} más`}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Progreso */}
             {comprados > 0 && (
