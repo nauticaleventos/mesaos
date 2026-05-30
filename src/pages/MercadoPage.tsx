@@ -7,6 +7,7 @@ import { useMenuStore }   from '../store/menuStore'
 import { useShoppingListStore, type ShoppingListItem } from '../store/shoppingListStore'
 import { getMondayOfWeek } from '../lib/motorMenu'
 import BottomNav from '../components/ui/BottomNav'
+import { AdNativeCard } from '../components/ads/AdPlaceholders'
 
 // ── Config de pasillos ────────────────────────────────────────────────────────
 const PASILLOS: Record<string, { emoji: string; label: string }> = {
@@ -212,15 +213,21 @@ export default function MercadoPage() {
               </div>
             )}
 
-            {/* Secciones por pasillo */}
-            {pasillosConItems.map(pasillo => {
-              const cfg = PASILLOS[pasillo] ?? { emoji: '🔤', label: 'Todos' }
-              const pasilloItems = porPasillo.get(pasillo) ?? []
-              const todoComprado = pasilloItems.every(i => i.comprado)
-              const esAlpha = pasillo === '_alpha'
+            {/* Secciones por pasillo — ad nativo cada 10 ítems */}
+            {(() => {
+              let acumulados = 0
+              return pasillosConItems.map(pasillo => {
+                const cfg = PASILLOS[pasillo] ?? { emoji: '🔤', label: 'Todos' }
+                const pasilloItems = porPasillo.get(pasillo) ?? []
+                const todoComprado = pasilloItems.every(i => i.comprado)
+                const esAlpha = pasillo === '_alpha'
+                const antes = acumulados
+                acumulados += pasilloItems.length
+                const mostrarAd = Math.floor(acumulados / 10) > Math.floor(antes / 10)
 
-              return (
-                <div key={pasillo} className={`mb-4 card p-0 overflow-hidden ${todoComprado ? 'opacity-50' : ''}`}>
+                return (
+                  <div key={pasillo}>
+                <div className={`mb-4 card p-0 overflow-hidden ${todoComprado ? 'opacity-50' : ''}`}>
                   {!esAlpha && (
                   <div className="px-4 py-2.5 bg-gray-50 border-b border-border flex items-center gap-2">
                     <span className="text-base">{cfg.emoji}</span>
@@ -270,8 +277,11 @@ export default function MercadoPage() {
                     ))}
                   </div>
                 </div>
-              )
-            })}
+                {mostrarAd && <AdNativeCard />}
+              </div>
+                )
+              })
+            })()}
 
             {/* Items ya en nevera sin faltar */}
             {items.filter(i => !i.faltante && i.en_nevera).length > 0 && (

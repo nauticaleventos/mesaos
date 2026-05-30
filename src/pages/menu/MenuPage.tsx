@@ -9,6 +9,7 @@ import { calcularNivelNevera } from '../../lib/nivelNevera'
 import ConfigMenu from '../../components/menu/ConfigMenu'
 import VistaMenu  from '../../components/menu/VistaMenu'
 import BottomNav  from '../../components/ui/BottomNav'
+import { AdBanner, AdInterstitial, AdRewarded } from '../../components/ads/AdPlaceholders'
 
 export default function MenuPage() {
   const navigate = useNavigate()
@@ -19,6 +20,7 @@ export default function MenuPage() {
 
   const [error, setError]       = useState<string | null>(null)
   const [confirmar, setConfirmar] = useState(false)
+  const [showAd, setShowAd]     = useState(false)
 
   const healthyMode = family?.healthy_mode_active ?? false
   const weekStart   = getMondayOfWeek()
@@ -37,6 +39,7 @@ export default function MenuPage() {
     setError(null)
     const err = await generarMenu(family.id, fridgeItems, healthyMode)
     if (err) setError(err)
+    else setShowAd(true)
   }
 
   if (!session || !family) return null
@@ -44,6 +47,7 @@ export default function MenuPage() {
   return (
     <div className="min-h-screen pb-28 max-w-lg mx-auto overflow-x-hidden">
       <BottomNav />
+      {showAd && <AdInterstitial onClose={() => setShowAd(false)} />}
 
       {/* Header */}
       <div className="sticky top-0 bg-bg/95 backdrop-blur z-10 px-4 pt-6 pb-4 border-b border-border">
@@ -96,13 +100,23 @@ export default function MenuPage() {
 
         {members.length > 0 && (
           <>
+            {/* Banner publicitario footer */}
+            <div className="mb-4">
+              <AdBanner />
+            </div>
+
             {/* Si no hay menú generado: mostrar config */}
             {!tieneMenu && !loading && (
-              <ConfigMenu
-                familyId={family.id}
-                healthyMode={healthyMode}
-                onGenerar={handleGenerar}
-              />
+              <>
+                <ConfigMenu
+                  familyId={family.id}
+                  healthyMode={healthyMode}
+                  onGenerar={handleGenerar}
+                />
+                <div className="mt-3">
+                  <AdRewarded onWatch={() => {/* TODO: conectar SDK */}} />
+                </div>
+              </>
             )}
 
             {/* Loading inicial */}
