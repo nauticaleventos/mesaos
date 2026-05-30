@@ -328,7 +328,15 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       })
       set({ progress: 85 })
 
-      // 9. Borrar menú previo de esta semana y guardar el nuevo
+      // 9. Preservar sobras antes del borrado — recipe_id IS NULL = entradas manuales
+      const { data: sobrasPrevias } = await supabase
+        .from('weekly_menu')
+        .select('day_of_week, meal_type, meal_component, nombre_custom, member_id, servings, status')
+        .eq('family_id', familyId)
+        .eq('week_start', weekStart)
+        .is('recipe_id', null)
+
+      // Borrar menú previo de esta semana y guardar el nuevo
       await supabase.from('weekly_menu').delete()
         .eq('family_id', familyId).eq('week_start', weekStart)
 
@@ -367,6 +375,14 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       )
 
       await supabase.from('weekly_menu').insert(rows)
+
+      // Re-insertar sobras preservadas
+      if (sobrasPrevias && sobrasPrevias.length > 0) {
+        await supabase.from('weekly_menu').insert(
+          sobrasPrevias.map(r => ({ ...r, family_id: familyId, week_start: weekStart }))
+        )
+      }
+
       set({ progress: 100 })
 
       // 10. Recargar el menú
