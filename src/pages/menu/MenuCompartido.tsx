@@ -33,7 +33,7 @@ interface Member { id: string; name: string; emoji: string }
 export default function MenuCompartido() {
   const { token } = useParams<{ token: string }>()
   const [entries,    setEntries]    = useState<Entry[]>([])
-  const [members,    setMembers]    = useState<Member[]>([])
+  const [_members,   setMembers]    = useState<Member[]>([])
   const [weekStart,  setWeekStart]  = useState('')
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
