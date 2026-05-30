@@ -8,6 +8,7 @@ import SwipeRecetas from '../../components/recipes/SwipeRecetas'
 import ShareMemberModal from '../../components/recipes/ShareMemberModal'
 import BottomNav from '../../components/ui/BottomNav'
 import ImportModal from '../../components/recipes/import/ImportModal'
+import { AdBanner } from '../../components/ads/AdPlaceholders'
 
 type Tab      = 'mis' | 'guardadas' | 'descubrir'
 type Vista    = 'tabs' | 'importar'
@@ -304,6 +305,8 @@ export default function RecetasPage() {
           </>
         )}
       </div>
+
+      {tab !== 'descubrir' && <div className="px-4 pt-3"><AdBanner /></div>}
 
       {/* Descubrir */}
       {tab === 'descubrir' && (

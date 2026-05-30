@@ -80,31 +80,35 @@ export function multToFraccion(mult: number): string {
 
 type TipoComp = string | null | undefined
 
+interface TipoSlot {
+  emoji1: string; medida1: string; etiqueta1: string; mano1: string | null
+  emoji2: string | null; medida2: string | null; etiqueta2: string | null; mano2: string | null
+}
+
 function emojiYMedidaPorTipo(
   tipoComponente: TipoComp,
   proteinEmoji:   string,
   carbEmoji:      string,
-): { emoji1: string; medida1: string; emoji2: string | null; medida2: string | null } {
+): TipoSlot {
   switch (tipoComponente) {
     case 'proteina_principal':
-      return { emoji1: proteinEmoji, medida1: 'palma', emoji2: null, medida2: null }
+      return { emoji1: proteinEmoji, medida1: 'palma', etiqueta1: 'Proteína', mano1: '✋', emoji2: null, medida2: null, etiqueta2: null, mano2: null }
     case 'guarnicion':
-      return { emoji1: carbEmoji, medida1: 'puño', emoji2: null, medida2: null }
+      return { emoji1: carbEmoji, medida1: 'puño', etiqueta1: 'Guarnición', mano1: '✊', emoji2: null, medida2: null, etiqueta2: null, mano2: null }
     case 'ensalada':
-      return { emoji1: '🥗', medida1: 'plato', emoji2: null, medida2: null }
+      return { emoji1: '🥗', medida1: 'plato', etiqueta1: 'Ensalada', mano1: null, emoji2: null, medida2: null, etiqueta2: null, mano2: null }
     case 'salsa':
     case 'vinagreta':
-      return { emoji1: '🫙', medida1: 'cdas', emoji2: null, medida2: null }
+      return { emoji1: '🫙', medida1: 'cdas', etiqueta1: 'Salsa', mano1: null, emoji2: null, medida2: null, etiqueta2: null, mano2: null }
     case 'postre':
-      return { emoji1: '🍮', medida1: 'porción', emoji2: null, medida2: null }
+      return { emoji1: '🍮', medida1: 'porción', etiqueta1: 'Postre', mano1: null, emoji2: null, medida2: null, etiqueta2: null, mano2: null }
     case 'bebida':
-      return { emoji1: '🥤', medida1: 'vaso', emoji2: null, medida2: null }
+      return { emoji1: '🥤', medida1: 'vaso', etiqueta1: 'Bebida', mano1: null, emoji2: null, medida2: null, etiqueta2: null, mano2: null }
     case 'merienda':
     case 'plato_unico':
     case 'completo':
     default:
-      // Plato completo: mostrar proteína + carb si los hay
-      return { emoji1: proteinEmoji, medida1: 'palma', emoji2: carbEmoji, medida2: 'puño' }
+      return { emoji1: proteinEmoji, medida1: 'palma', etiqueta1: 'Proteína', mano1: '✋', emoji2: carbEmoji, medida2: 'puño', etiqueta2: 'Guarnición', mano2: '✊' }
   }
 }
 
@@ -119,10 +123,12 @@ export function formatPorcionMiembro(
   tipoComponente?: TipoComp,
 ): string {
   const frac = multToFraccion(mult)
-  const { emoji1, medida1, emoji2, medida2 } = emojiYMedidaPorTipo(tipoComponente, proteinEmoji, carbEmoji)
+  const { emoji1, medida1, etiqueta1, mano1, emoji2, medida2, etiqueta2, mano2 } = emojiYMedidaPorTipo(tipoComponente, proteinEmoji, carbEmoji)
 
+  const b1 = `${emoji1} ${etiqueta1} ${frac} ${medida1}${mano1 ? ' ' + mano1 : ''}`
   if (emoji2) {
-    return `${memberEmoji} ${memberName}: ${emoji1} ${frac} ${medida1} ${emoji2} ${frac} ${medida2}`
+    const b2 = `${emoji2} ${etiqueta2} ${frac} ${medida2}${mano2 ? ' ' + mano2 : ''}`
+    return `${memberEmoji} ${memberName}: ${b1} · ${b2}`
   }
-  return `${memberEmoji} ${memberName}: ${emoji1} ${frac} ${medida1}`
+  return `${memberEmoji} ${memberName}: ${b1}`
 }

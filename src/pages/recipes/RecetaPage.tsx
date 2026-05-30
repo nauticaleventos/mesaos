@@ -14,6 +14,7 @@ import PhotosModal from '../../components/recipes/PhotosModal'
 import { useRecipePhotosStore } from '../../store/recipePhotosStore'
 import { calcularNutricion } from '../../lib/claudeImport'
 import { Minus, Plus, Check } from 'lucide-react'
+import { AdRewarded } from '../../components/ads/AdPlaceholders'
 
 const DIFICULTAD_COLOR: Record<string, string> = {
   facil:   'bg-green-50 text-green-700 border-green-200',
@@ -77,6 +78,7 @@ export default function RecetaPage() {
   // Pasos completados (modo cocina)
   const [pasosCheck, setPasosCheck]   = useState(new Set<number>())
   const [calculandoNut, setCalculandoNut] = useState(false)
+  const [showRewardedAd, setShowRewardedAd] = useState(false)
 
   // ── Cargar receta ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -181,6 +183,10 @@ export default function RecetaPage() {
     await supabase.from('recipe_reactions').upsert({ recipe_id: id, member_id: memberId, reaction: 'like', rating }, { onConflict: 'recipe_id,member_id' })
     setMemberRating(rating)
     showToast('⭐ Valoración guardada')
+    // Contador rewarded: cada 10 calificaciones en la sesión
+    const prev = parseInt(sessionStorage.getItem('mesa_ratings_session') ?? '0', 10) + 1
+    sessionStorage.setItem('mesa_ratings_session', String(prev))
+    if (prev % 10 === 0) setShowRewardedAd(true)
   }
 
   const handleWizardConfirm = async (tipoComida: string[], tipoComponente: string) => {
@@ -363,7 +369,7 @@ export default function RecetaPage() {
             {isOwner && (
               <button onClick={() => { toggleBookmark(); setShowMenu(false) }}
                 className="w-full text-left px-4 py-3 text-sm text-text hover:bg-gray-50 transition-colors border-b border-border">
-                {isBookmarked ? '🔖 Quitar bookmark' : '🔖 Guardar'}
+                {isBookmarked ? '🔖 Quitar favorita' : '🔖 Favorita'}
               </button>
             )}
             {isOwner && (
@@ -472,9 +478,9 @@ export default function RecetaPage() {
       <div className="px-4 py-3">
         <div className="flex gap-2">
           {[
-            { emoji: '📑', label: 'Guardar',    onClick: toggleBookmark },
+            { emoji: '🔖', label: isBookmarked ? 'Favorita ✓' : 'Favorita', onClick: toggleBookmark },
             { emoji: '📤', label: 'Compartir',  onClick: handleShare    },
-            { emoji: '🛒', label: 'Lista',      onClick: () => navigate('/mercado') },
+            { emoji: '🛒', label: 'Lista',      onClick: () => navigate(`/mercado?receta=${encodeURIComponent(recipe.nombre)}`) },
             { emoji: '⭐', label: esEstelar ? 'Estelar ✓' : 'Estelar',
               onClick: () => esEstelar ? toggleEstelar() : setConfirmEstelar(true) },
           ].map(btn => (
@@ -732,6 +738,19 @@ export default function RecetaPage() {
           {recipe.tags.map(t => (
             <span key={t} className="px-2.5 py-1 bg-accent-light text-accent text-xs rounded-full">{t}</span>
           ))}
+        </div>
+      )}
+
+      {/* Rewarded ad — aparece cada 10 calificaciones */}
+      {showRewardedAd && (
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-40 px-4 pb-8">
+          <div className="w-full max-w-sm flex flex-col gap-3">
+            <AdRewarded onWatch={() => setShowRewardedAd(false)} />
+            <button onClick={() => setShowRewardedAd(false)}
+              className="text-center text-sm text-white/70 hover:text-white transition-colors">
+              Ahora no
+            </button>
+          </div>
         </div>
       )}
 

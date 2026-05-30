@@ -12,6 +12,7 @@ import AsistenciaSemanalPanel from '../components/family/AsistenciaSemanalPanel'
 import BottomNav from '../components/ui/BottomNav'
 import SorprenderBanner from '../components/menu/SorprenderBanner'
 import NotificacionesModal from '../components/ui/NotificacionesModal'
+import { AdBanner } from '../components/ads/AdPlaceholders'
 
 export default function HomePage() {
   const navigate                          = useNavigate()
@@ -451,6 +452,8 @@ export default function HomePage() {
       {members.length > 0 && family?.id && (
         <SorprenderBanner familyId={family.id} />
       )}
+
+      {members.length > 0 && <AdBanner />}
 
       {/* Modal notificaciones */}
       {showNotifModal && session?.user?.id && family?.id && (

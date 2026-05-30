@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { getMondayOfWeek } from '../lib/motorMenu'
+import { inventarioTiene } from '../lib/matchReceta'
 import type { FridgeItem } from './fridgeStore'
 
 export interface ShoppingListItem {
@@ -379,25 +380,36 @@ async function buildItems(
   for (const [, v] of acum.entries()) {
     const { cantidad, unidad } = convertirDesdeBase(v.cantBase, v.unidadBase)
 
-    // Match contra nevera (nombre normalizado, coincidencia parcial)
-    const fridgeMatch = fridgeNorm.find(f =>
-      f.nombre.includes(norm(v.nombre)) || norm(v.nombre).includes(f.nombre)
-    )
-
     let enNevera = false
     let faltante = true
     let cantFaltante = cantidad
 
-    if (fridgeMatch) {
+    // Match con sustituciones (yogurt natural cubre yogurt griego, etc.)
+    const { tiene, porSubstituto } = inventarioTiene(fridgeItems, v.nombre)
+
+    if (tiene) {
       enNevera = true
-      const { cantidad: fridgeCantBase } = convertirABase(fridgeMatch.cantidad, fridgeMatch.unidad)
-      if (fridgeCantBase >= v.cantBase * 0.8) {
-        // Tiene suficiente (80% o más)
+      if (porSubstituto) {
+        // Sustituto disponible: marcar como disponible sin verificar cantidad
         faltante = false
         cantFaltante = 0
       } else {
-        // Tiene parcial
-        cantFaltante = Math.max(0, cantidad - fridgeMatch.cantidad)
+        // Match directo: verificar si hay suficiente cantidad
+        const fridgeMatch = fridgeNorm.find(f =>
+          f.nombre.includes(norm(v.nombre)) || norm(v.nombre).includes(f.nombre)
+        )
+        if (fridgeMatch) {
+          const { cantidad: fridgeCantBase } = convertirABase(fridgeMatch.cantidad, fridgeMatch.unidad)
+          if (fridgeCantBase >= v.cantBase * 0.8) {
+            faltante = false
+            cantFaltante = 0
+          } else {
+            cantFaltante = Math.max(0, cantidad - fridgeMatch.cantidad)
+          }
+        } else {
+          faltante = false
+          cantFaltante = 0
+        }
       }
     }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { RefreshCw, Printer, Share2, Search } from 'lucide-react'
 import { useFamilyStore } from '../store/familyStore'
 import { useFridgeStore } from '../store/fridgeStore'
@@ -36,6 +36,7 @@ function formatCantidad(cantidad: number, unidad: string): string {
 
 export default function MercadoPage() {
   const navigate                  = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { family }                = useFamilyStore()
   const { items: fridgeItems }    = useFridgeStore()
   const { menu }                  = useMenuStore()
@@ -43,6 +44,10 @@ export default function MercadoPage() {
 
   const [busqueda, setBusqueda] = useState('')
   const [orden, setOrden]       = useState<'pasillo' | 'alfabetico'>('pasillo')
+
+  // Filtro por receta (viene del botón "Lista" en RecetaPage: ?receta=NombreReceta)
+  const recetaFiltro = searchParams.get('receta') ? decodeURIComponent(searchParams.get('receta')!) : null
+  const filtroActivo = recetaFiltro !== null
 
   const weekStart = getMondayOfWeek()
   const tieneMenu = menu.some(e => e.is_main_recipe)
@@ -56,10 +61,11 @@ export default function MercadoPage() {
     await generateList(family.id, fridgeItems)
   }
 
-  // Filtrar por búsqueda
+  // Filtrar por búsqueda y/o receta activa
   const itemsFiltrados = items.filter(i =>
     i.faltante &&
-    (busqueda === '' || i.ingrediente_nombre.toLowerCase().includes(busqueda.toLowerCase()))
+    (busqueda === '' || i.ingrediente_nombre.toLowerCase().includes(busqueda.toLowerCase())) &&
+    (!recetaFiltro || i.recetas_origen.includes(recetaFiltro))
   )
 
   // Agrupar por pasillo o alfabético — siempre ordenar dentro de cada grupo
@@ -178,6 +184,19 @@ export default function MercadoPage() {
         {/* Lista */}
         {!loading && !generating && listId && items.length > 0 && (
           <>
+            {/* Banner filtro por receta */}
+            {filtroActivo && (
+              <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-accent/10 border border-accent/30">
+                <span className="text-sm">🍽️</span>
+                <p className="text-xs text-accent font-medium flex-1 truncate">
+                  Ingredientes de: <span className="font-semibold">{recetaFiltro}</span>
+                </p>
+                <button onClick={() => setSearchParams({})} className="text-xs text-accent/70 hover:text-accent transition-colors flex-shrink-0">
+                  Ver todo ×
+                </button>
+              </div>
+            )}
+
             {/* Búsqueda y orden */}
             <div className="flex gap-2 mb-3">
               <div className="relative flex-1">
@@ -257,7 +276,11 @@ export default function MercadoPage() {
                               <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full">✓ en nevera</span>
                             )}
                             {item.en_nevera && item.faltante && (
-                              <span className="text-[10px] bg-yellow-50 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded-full">parcial</span>
+                              <span className="text-[10px] bg-yellow-50 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded-full">
+                                {item.cantidad_total > 0
+                                  ? `Falta ${Math.round(item.cantidad_total * 10) / 10} ${item.unidad}`
+                                  : 'Tenés algo'}
+                              </span>
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
