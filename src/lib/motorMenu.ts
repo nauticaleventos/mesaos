@@ -751,7 +751,8 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         let baseRecipe: RecipeForMenu | null = null
         let baseScore  = -Infinity
 
-        // Intentar primero con poolUniversal (respeta historial semanal)
+        // Puntuar todos los candidatos universales
+        const candidatosUniversal: { recipe: RecipeForMenu; score: number }[] = []
         for (const r of poolUniversal) {
           let sumScore = 0; let compatCount = 0
           for (const m of slotMembers) {
@@ -762,8 +763,22 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           }
           if (compatCount === 0) continue
           const batchBonus = isBatch && (r.dificultad === 'facil' || (r.tiempo_total_min ?? 999) <= 20) ? 25 : 0
-          const combined = sumScore + batchBonus
-          if (combined > baseScore) { baseScore = combined; baseRecipe = r }
+          candidatosUniversal.push({ recipe: r, score: sumScore + batchBonus })
+        }
+
+        if (candidatosUniversal.length > 0) {
+          if (input.isRegeneracion) {
+            // Al regenerar: elegir aleatoriamente del top-3 para que el lunes no siempre
+            // tome la receta de mayor score y deje variedad real entre regeneraciones
+            const top = candidatosUniversal.sort((a, b) => b.score - a.score).slice(0, 3)
+            const chosen = top[Math.floor(Math.random() * top.length)]
+            baseRecipe = chosen.recipe
+            baseScore  = chosen.score
+          } else {
+            const best = candidatosUniversal.reduce((a, b) => b.score > a.score ? b : a)
+            baseRecipe = best.recipe
+            baseScore  = best.score
+          }
         }
 
         // Fallback A: pool universal existe pero todas recientes — relajar gap progresivamente.
