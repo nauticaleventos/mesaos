@@ -18,9 +18,10 @@ export default function MenuPage() {
   const { items: fridgeItems }  = useFridgeStore()
   const { menu, loading, generating, loadConfig, loadMenu, generarMenu } = useMenuStore()
 
-  const [error, setError]       = useState<string | null>(null)
-  const [confirmar, setConfirmar] = useState(false)
-  const [showAd, setShowAd]     = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+  const [confirmar, setConfirmar]   = useState(false)
+  const [showAd, setShowAd]         = useState(false)
+  const [toastRegen, setToastRegen] = useState<string | null>(null)
 
   const healthyMode = family?.healthy_mode_active ?? false
   const weekStart   = getMondayOfWeek()
@@ -35,11 +36,19 @@ export default function MenuPage() {
   const handleGenerar = async () => {
     if (!family?.id) return
     if (tieneMenu && !confirmar) { setConfirmar(true); return }
+    const eraRegeneracion = tieneMenu
     setConfirmar(false)
     setError(null)
     const err = await generarMenu(family.id, fridgeItems, healthyMode)
-    if (err) setError(err)
-    else setShowAd(true)
+    if (err) {
+      setError(err)
+    } else if (eraRegeneracion) {
+      // Toast de confirmación visible en lugar del intersticial (que confundía)
+      setToastRegen('✅ Menú regenerado con recetas nuevas')
+      setTimeout(() => setToastRegen(null), 3000)
+    } else {
+      setShowAd(true)  // Intersticial solo en primera generación
+    }
   }
 
   if (!session || !family) return null
@@ -154,6 +163,12 @@ export default function MenuPage() {
           </>
         )}
       </div>
+
+      {toastRegen && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-text text-bg text-sm px-4 py-2.5 rounded-xl shadow-lg z-30 whitespace-nowrap">
+          {toastRegen}
+        </div>
+      )}
     </div>
   )
 }

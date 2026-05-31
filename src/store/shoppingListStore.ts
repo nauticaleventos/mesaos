@@ -154,7 +154,8 @@ const MANTENER_EXACTO = [
   'mantequilla sin sal','mantequilla con sal',
   'yogurt griego','yogur griego',
   'pan integral','pan de molde integral',
-  'linaza molida',  // se compra ya molida
+  'linaza molida',
+  'polvo de hornear','polvo para hornear',  // evita que "para hornear" se corte
 ]
 
 // Prefijos de procesamiento → el ingrediente base es lo que viene después
