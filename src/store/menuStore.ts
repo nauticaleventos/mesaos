@@ -381,7 +381,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         }))
       )
 
-      await supabase.from('weekly_menu').insert(rows)
+      const { error: insertError } = await supabase.from('weekly_menu').insert(rows)
 
       // Re-insertar sobras preservadas
       if (sobrasPrevias && sobrasPrevias.length > 0) {
@@ -389,6 +389,20 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           sobrasPrevias.map(r => ({ ...r, family_id: familyId, week_start: weekStart }))
         )
       }
+
+      // DEBUG TEMPORAL — quitar una vez confirmado que regenera correctamente
+      const debugMsg = [
+        `🔧 DEBUG regeneración`,
+        `week_start: ${weekStart}`,
+        `pool: ${allRecipesForAlgo.length} recetas (excluidas: ${currentWeekIds.size})`,
+        `slots generados: ${slots.length}`,
+        `rows insertadas: ${rows.length}`,
+        `insert error: ${insertError?.message ?? 'ninguno'}`,
+        `isRegeneracion: ${isRegeneracion}`,
+      ].join('\n')
+      console.warn(debugMsg)
+      // Guardar en sessionStorage para que MenuPage pueda mostrarlo
+      sessionStorage.setItem('mesa_debug_regen', debugMsg)
 
       set({ progress: 100 })
 

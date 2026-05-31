@@ -43,9 +43,9 @@ export default function MenuPage() {
     if (err) {
       setError(err)
     } else if (eraRegeneracion) {
-      // Toast de confirmación visible en lugar del intersticial (que confundía)
-      setToastRegen('✅ Menú regenerado con recetas nuevas')
-      setTimeout(() => setToastRegen(null), 3000)
+      const debug = sessionStorage.getItem('mesa_debug_regen') ?? ''
+      setToastRegen('✅ Regenerado\n' + debug)
+      setTimeout(() => setToastRegen(null), 15000) // 15s para que Ale pueda leerlo
     } else {
       setShowAd(true)  // Intersticial solo en primera generación
     }
@@ -165,8 +165,9 @@ export default function MenuPage() {
       </div>
 
       {toastRegen && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-text text-bg text-sm px-4 py-2.5 rounded-xl shadow-lg z-30 whitespace-nowrap">
-          {toastRegen}
+        <div className="fixed bottom-24 left-4 right-4 max-w-sm mx-auto bg-gray-900 text-green-400 text-xs px-4 py-3 rounded-xl shadow-lg z-30 font-mono">
+          <pre className="whitespace-pre-wrap break-all">{toastRegen}</pre>
+          <button onClick={() => setToastRegen(null)} className="mt-2 text-gray-500 text-[10px]">cerrar ×</button>
         </div>
       )}
     </div>
