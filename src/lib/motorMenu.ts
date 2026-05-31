@@ -489,10 +489,13 @@ function calcularScore(
   const sInventario = scoreInventario(recipe, input.fridgeItems)
 
   // Threshold escalonado: nevera llena → excluir recetas sin match
+  // Desayuno/snack tienen un pool más pequeño (ingredientes distintos al almuerzo/cena)
+  // → umbral más permisivo para no dejar el pool vacío con nevera llena de ingredientes "de almuerzo"
   const nv = input.nivelNevera ?? 0
-  if (nv >= 60 && sInventario < 50) return -1   // nevera llena: excluir si <50% match
-  if (nv >= 40 && sInventario < 30) return -1   // nevera media: excluir si <30% match
-  if (nv >= 20 && sInventario < 15) return -1   // nevera baja: excluir si <15% match
+  const umbral = (tipo === 'desayuno' || tipo === 'snack') ? 30 : 50
+  if (nv >= 60 && sInventario < umbral)      return -1
+  if (nv >= 40 && sInventario < umbral - 20) return -1
+  if (nv >= 20 && sInventario < 10)          return -1
 
   // Score de sugerencias (20%)
   const hasSuggestion = input.suggestions.some(s =>

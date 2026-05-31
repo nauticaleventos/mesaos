@@ -21,7 +21,7 @@ export default function MenuPage() {
   const [error, setError]           = useState<string | null>(null)
   const [confirmar, setConfirmar]   = useState(false)
   const [showAd, setShowAd]         = useState(false)
-  const [toastRegen, setToastRegen] = useState<string | null>(null)
+  const [toastRegen, setToastRegen] = useState(false)
 
   const healthyMode = family?.healthy_mode_active ?? false
   const weekStart   = getMondayOfWeek()
@@ -43,9 +43,8 @@ export default function MenuPage() {
     if (err) {
       setError(err)
     } else if (eraRegeneracion) {
-      const debug = sessionStorage.getItem('mesa_debug_regen') ?? ''
-      setToastRegen('✅ Regenerado\n' + debug)
-      setTimeout(() => setToastRegen(null), 15000) // 15s para que Ale pueda leerlo
+      setToastRegen(true)
+      setTimeout(() => setToastRegen(false), 3000)
     } else {
       setShowAd(true)  // Intersticial solo en primera generación
     }
@@ -165,9 +164,8 @@ export default function MenuPage() {
       </div>
 
       {toastRegen && (
-        <div className="fixed bottom-24 left-4 right-4 max-w-sm mx-auto bg-gray-900 text-green-400 text-xs px-4 py-3 rounded-xl shadow-lg z-30 font-mono">
-          <pre className="whitespace-pre-wrap break-all">{toastRegen}</pre>
-          <button onClick={() => setToastRegen(null)} className="mt-2 text-gray-500 text-[10px]">cerrar ×</button>
+        <div className="fixed bottom-24 left-4 right-4 max-w-sm mx-auto bg-gray-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg z-30 text-center">
+          ✅ Menú regenerado
         </div>
       )}
     </div>
