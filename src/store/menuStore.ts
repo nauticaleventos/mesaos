@@ -285,11 +285,17 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         .eq('week_start', weekStart)
 
       const currentWeekIds = new Set((currentWeekData ?? []).map((m: { recipe_id: string }) => m.recipe_id))
+      const isRegeneracion = currentWeekIds.size > 0
       // Si hay menú previo esta semana, filtrar esas recetas del pool (regeneración)
       // Si no hay (primera generación), usar el pool completo
-      const allRecipesForAlgo = currentWeekIds.size > 0
+      const poolBase = isRegeneracion
         ? allRecipes.filter(r => !currentWeekIds.has(r.id))
         : allRecipes
+      // Al regenerar: mezclar el pool aleatoriamente para que el orden no favorezca
+      // siempre a las mismas recetas cuando el fridge bonus está reducido
+      const allRecipesForAlgo = isRegeneracion
+        ? [...poolBase].sort(() => Math.random() - 0.5)
+        : poolBase
 
       set({ progress: 65 })
 
@@ -322,6 +328,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         suggestions:    suggestions ?? [],
         reactions:      reactions ?? [],
         recentRecipeIds,
+        isRegeneracion,
         healthyMode,
         nivelNevera,
         leftovers,

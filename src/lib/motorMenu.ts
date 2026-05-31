@@ -172,6 +172,7 @@ export interface AlgorithmInput {
   healthyMode:     boolean
   nivelNevera:     number   // 0-100: % de llenado de la nevera
   leftovers:       LeftoverItem[]  // sobras pendientes de usar
+  isRegeneracion?: boolean  // true → reduce peso fridge bonus para priorizar variedad
 }
 
 export interface MenuComponent {
@@ -537,20 +538,23 @@ function calcularScore(
   }) ? 200 : 0
 
   // Bonus escalonado por match de nevera — prioriza fuertemente recetas con ingredientes en casa
-  const neveraBonus =
+  // Al regenerar se reduce a la mitad para que la variedad compita con el fridge bonus
+  const neveraMultiplier = input.isRegeneracion ? 0.5 : 1
+  const neveraBonus = (
     sInventario >= 95 ? 500 :
     sInventario >= 75 ? 300 :
     sInventario >= 50 ? 150 :
     sInventario >= 25 ? 50  : 0
+  ) * neveraMultiplier
 
   // Peso de inventario escala con nivel de nevera
   const nv2 = input.nivelNevera ?? 0
   const pesoInventario = nv2 >= 60 ? 0.60 : nv2 >= 40 ? 0.50 : 0.40
   const pesoOtros      = 1 - pesoInventario
 
-  // Ruido aleatorio ±25 — suficiente para diferenciar entre recetas de score similar
-  // sin desplazar recetas con grandes ventajas (fridge 500, sobras 200)
-  const sRandom = (Math.random() - 0.5) * 50
+  // Ruido aleatorio: ±25 normal, ±100 al regenerar para garantizar variedad real
+  const ruido = input.isRegeneracion ? 200 : 50
+  const sRandom = (Math.random() - 0.5) * ruido
 
   return (
     sInventario  * pesoInventario +
