@@ -35,12 +35,14 @@ const LOCATION_ICONS: Record<string, string> = {
 export default function FridgePage() {
   const navigate           = useNavigate()
   const { family }         = useFamilyStore()
-  const { items, loading, loadItems, addItem, updateItem, deleteItem } = useFridgeStore()
+  const { items, loading, loadItems, addItem, updateItem, deleteItem, clearAll } = useFridgeStore()
   const [modal, setModal]           = useState<Modal>(null)
   const [editingItem, setEditingItem] = useState<FridgeItem | null>(null)
   const [filter, setFilter]           = useState<Filter>('todos')
   const [busqueda, setBusqueda]       = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [confirmClear, setConfirmClear]   = useState(false)
+  const [clearing, setClearing]           = useState(false)
 
   useEffect(() => {
     if (family?.id) loadItems(family.id)
@@ -119,6 +121,12 @@ export default function FridgePage() {
             <span className="text-muted text-sm">({items.length})</span>
           </div>
           <div className="flex gap-2">
+            {items.length > 0 && (
+              <button onClick={() => setConfirmClear(true)} title="Limpiar nevera"
+                className="px-2.5 py-1.5 rounded-xl bg-white border border-border text-muted text-sm font-medium hover:border-error hover:text-error transition-all">
+                🗑️
+              </button>
+            )}
             <button onClick={() => setModal('quick')}
               className="px-3 py-1.5 rounded-xl bg-accent-light text-accent text-sm font-medium hover:bg-accent hover:text-white transition-all">
               ✍️ Dictar
@@ -237,6 +245,31 @@ export default function FridgePage() {
                 onClick={async () => { await deleteItem(confirmDelete); setConfirmDelete(null) }}
                 className="flex-1 py-3 rounded-xl bg-error text-white font-semibold text-sm">
                 Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar limpiar TODA la nevera */}
+      {confirmClear && (
+        <div className="fixed inset-0 bg-black/30 flex items-end justify-center z-50 px-4 pb-8">
+          <div className="card w-full max-w-sm flex flex-col gap-4">
+            <p className="text-text font-semibold text-center">¿Borrar todos los ingredientes de tu nevera?</p>
+            <p className="text-muted text-sm text-center -mt-2">Se eliminarán los {items.length} alimentos. No se puede deshacer.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmClear(false)} className="btn-ghost flex-1" disabled={clearing}>Cancelar</button>
+              <button
+                onClick={async () => {
+                  if (!family?.id) return
+                  setClearing(true)
+                  await clearAll(family.id)
+                  setClearing(false)
+                  setConfirmClear(false)
+                }}
+                disabled={clearing}
+                className="flex-1 py-3 rounded-xl bg-error text-white font-semibold text-sm disabled:opacity-60">
+                {clearing ? 'Borrando…' : 'Sí, limpiar todo'}
               </button>
             </div>
           </div>

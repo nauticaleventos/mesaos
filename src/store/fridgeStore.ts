@@ -31,6 +31,7 @@ interface FridgeState {
   addItem:     (item: NewFridgeItem, familyId: string) => Promise<string | null>
   updateItem:  (id: string, data: Partial<FridgeItem>) => Promise<void>
   deleteItem:  (id: string) => Promise<void>
+  clearAll:    (familyId: string) => Promise<void>
 }
 
 export const useFridgeStore = create<FridgeState>((set, get) => ({
@@ -100,6 +101,11 @@ export const useFridgeStore = create<FridgeState>((set, get) => ({
   deleteItem: async (id) => {
     await supabase.from('fridge_items').delete().eq('id', id)
     set(s => ({ items: s.items.filter(i => i.id !== id) }))
+  },
+
+  clearAll: async (familyId) => {
+    await supabase.from('fridge_items').delete().eq('family_id', familyId)
+    set({ items: [] })
   },
 }))
 

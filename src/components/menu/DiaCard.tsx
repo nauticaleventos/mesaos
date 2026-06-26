@@ -45,14 +45,6 @@ function getMealLabel(tipo: string, hora?: string): string {
   return label
 }
 
-const ACCION_BADGE: Record<string, { icon: string; label: string; color: string }> = {
-  cocinar:        { icon: '🔪', label: 'Cocinar hoy',    color: 'text-accent' },
-  calentar:       { icon: '🔥', label: 'Calentar',       color: 'text-orange-500' },
-  descongelar:    { icon: '❄️', label: 'Descongelar',    color: 'text-blue-500' },
-  ensamblar:      { icon: '🥗', label: 'Ensamblar',      color: 'text-oliva' },
-  preparar_fresco:{ icon: '⚡', label: 'Rápida',         color: 'text-muted' },
-}
-
 const COMPONENT_EMOJI: Record<string, string> = {
   proteina:     '🍖',
   guarnicion:   '🍚',
@@ -589,13 +581,6 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
                     {r.tiempo_total_min && <span className="flex items-center gap-0.5 text-xs text-muted"><Clock size={10}/>{r.tiempo_total_min}min</span>}
                     {r.dificultad && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DIFICULTAD_COLOR[r.dificultad]}`}>{r.dificultad}</span>}
                     {!isCooked && !isSkipped && <span className={`text-[10px] font-medium ${badge.color}`}>{badge.icon}</span>}
-                    {(() => {
-                      const accion = e.accion_preparacion
-                      const ab = accion ? ACCION_BADGE[accion] : null
-                      return ab && !isCooked && accion !== 'cocinar' ? (
-                        <span className={`text-[10px] font-medium ${ab.color}`}>{ab.icon} {ab.label}</span>
-                      ) : null
-                    })()}
                   </div>
                 )}
                 {displayMembers.length > 0 && (
