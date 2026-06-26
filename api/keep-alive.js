@@ -28,6 +28,17 @@ export default async function handler(req, res) {
     if (error) {
       return res.status(500).json({ ok: false, error: error.message })
     }
+    // Modo diagnóstico temporal (?diag=1): conteo real saltando RLS (service key).
+    if (req.query && req.query.diag) {
+      const total = await sb.from('recipes').select('id', { count: 'exact', head: true })
+      const activas = await sb.from('recipes').select('id', { count: 'exact', head: true })
+        .eq('is_active_for_menu', true).not('tipo_comida', 'is', null)
+      return res.status(200).json({
+        ok: true, ts: new Date().toISOString(),
+        usandoServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
+        recipes_total: total.count, recipes_activas_para_menu: activas.count,
+      })
+    }
     return res.status(200).json({ ok: true, ts: new Date().toISOString(), msg: 'Supabase activo' })
   } catch (err) {
     return res.status(500).json({ ok: false, error: String(err) })
