@@ -155,14 +155,20 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   generarMenu: async (familyId, fridgeItems, healthyMode) => {
     set({ generating: true, progress: 0 })
     const weekStart = getMondayOfWeek()
+    let stage = 'inicio'
+    const t0 = Date.now()
+    const mark = (s: string) => { stage = s; console.log(`[generarMenu] ${s} +${Date.now() - t0}ms`) }
 
+    const work = (async (): Promise<string | null> => {
     try {
       // 1. Config
+      mark('config')
       const config = get().config
       if (!config) return 'Configuración no cargada'
       set({ progress: 5 })
 
       // 2. Todos los miembros + asistencia granular + invitados
+      mark('cargando miembros / asistencia / invitados')
       const [{ data: allMembersRaw }, { data: absences }, { data: guestRows }] = await Promise.all([
         supabase.from('family_members').select('*').eq('family_id', familyId),
         supabase.from('weekly_attendance').select('member_id, day_of_week, meal_type')
@@ -242,13 +248,16 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       set({ progress: 15 })
 
       // 3. Recetas disponibles (campos mínimos para el algoritmo)
-      const { data: recipes } = await supabase
+      mark('cargando recetas')
+      const { data: recipes, error: recErr } = await supabase
         .from('recipes')
         .select(RECIPE_SELECT)
         .eq('is_active_for_menu', true)
         .not('tipo_comida', 'is', null)
 
+      if (recErr) console.error('[generarMenu] error al leer recetas (¿RLS?):', recErr)
       const allRecipes = (recipes ?? []) as RecipeForMenu[]
+      mark(`recetas visibles para el usuario = ${allRecipes.length}`)
       set({ progress: 35 })
 
       // 4. Sugerencias pendientes
@@ -319,6 +328,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       const leftovers = (leftoversData ?? []) as import('../lib/motorMenu').LeftoverItem[]
 
+      mark('corriendo motor generarMenuSemanal')
       const slots: MenuSlot[] = generarMenuSemanal({
         config,
         allMembers,
@@ -333,6 +343,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         nivelNevera,
         leftovers,
       })
+      mark(`motor ok — slots=${slots.length}`)
       set({ progress: 85 })
 
       // 9. Preservar sobras antes del borrado — recipe_id IS NULL = entradas manuales
@@ -344,8 +355,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         .is('recipe_id', null)
 
       // Borrar menú previo de esta semana y guardar el nuevo
-      await supabase.from('weekly_menu').delete()
+      mark('guardando menú (borrar previo)')
+      const { error: delErr } = await supabase.from('weekly_menu').delete()
         .eq('family_id', familyId).eq('week_start', weekStart)
+      if (delErr) { console.error('[generarMenu] error al borrar menú previo (¿RLS?):', delErr); throw new Error(`borrar menú: ${delErr.message}`) }
 
       // Calcular acción de preparación según días de cocción configurados
       const diasCoccion = new Set(config.dias_coccion ?? [])
@@ -381,7 +394,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         }))
       )
 
-      await supabase.from('weekly_menu').insert(rows)
+      mark(`guardando menú (insertar ${rows.length} filas)`)
+      const { error: insErr } = await supabase.from('weekly_menu').insert(rows)
+      if (insErr) { console.error('[generarMenu] error al insertar menú (¿RLS?):', insErr); throw new Error(`guardar menú: ${insErr.message}`) }
 
       // Re-insertar sobras preservadas
       if (sobrasPrevias && sobrasPrevias.length > 0) {
@@ -393,14 +408,32 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       set({ progress: 100 })
 
       // 10. Recargar el menú
+      mark('recargando menú')
       await get().loadMenu(familyId, weekStart)
       set({ generating: false, progress: 0 })
+      mark('listo')
       return null
 
     } catch (e) {
       set({ generating: false, progress: 0 })
+      console.error(`[generarMenu] EXCEPCIÓN en etapa "${stage}":`, e)
       return String(e)
     }
+    })()
+
+    // Timeout de seguridad: si algún await se cuelga (típico: bloqueo RLS), no dejar
+    // el spinner girando para siempre — cancelar y reportar la etapa donde se atascó.
+    const TIMEOUT_MS = 25000
+    const result = await Promise.race([
+      work,
+      new Promise<string>(res => setTimeout(() => res('__TIMEOUT__'), TIMEOUT_MS)),
+    ])
+    if (result === '__TIMEOUT__') {
+      console.error(`[generarMenu] TIMEOUT (>${TIMEOUT_MS}ms) — atascado en etapa: ${stage}`)
+      set({ generating: false, progress: 0 })
+      return `La generación tardó demasiado y se canceló (se quedó en: "${stage}"). Suele ser un bloqueo de permisos (RLS) en la base de datos. Reintenta; si persiste, hay que ajustar las políticas RLS.`
+    }
+    return result
   },
 
   // ── Marcar cocinada + auto-registrar sobra de proteína ──────────────────────
