@@ -55,6 +55,30 @@ export default async function handler(req, res) {
         insert_test_error: ins.error ? ins.error.message : null,
       })
     }
+    // Modo diagnóstico temporal (?diag=auth): compara owner_user_id / family_users / auth uid de Ale.
+    if (req.query && req.query.diag === 'auth') {
+      const fam = req.query.fam || '40b2b23b-481d-4524-b9ae-dc6a5786d901'
+      const email = req.query.email || 'alesofiad@gmail.com'
+      const familyRow = await sb.from('families').select('id, name, owner_user_id').eq('id', fam).maybeSingle()
+      const famUsers = await sb.from('family_users').select('user_id, base_role, is_active, display_name').eq('family_id', fam)
+      // auth uid de Ale vía admin API (service role)
+      let aleUid = null, authErr = null
+      try {
+        const list = await sb.auth.admin.listUsers({ page: 1, perPage: 200 })
+        const u = (list.data && list.data.users || []).find(x => (x.email || '').toLowerCase() === email.toLowerCase())
+        aleUid = u ? u.id : null
+      } catch (e) { authErr = String(e) }
+      const owner = familyRow.data ? familyRow.data.owner_user_id : null
+      return res.status(200).json({
+        ok: true, ts: new Date().toISOString(),
+        email, ale_auth_uid: aleUid, auth_error: authErr,
+        families_owner_user_id: owner,
+        owner_coincide_con_ale: !!(aleUid && owner && aleUid === owner),
+        family_users: famUsers.data || [],
+        family_users_error: famUsers.error ? famUsers.error.message : null,
+        ale_en_family_users: !!(aleUid && (famUsers.data || []).some(f => f.user_id === aleUid && f.is_active)),
+      })
+    }
     // Modo diagnóstico temporal (?diag=1): conteo real saltando RLS (service key).
     if (req.query && req.query.diag) {
       const total = await sb.from('recipes').select('id', { count: 'exact', head: true })
