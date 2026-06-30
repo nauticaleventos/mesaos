@@ -30,7 +30,6 @@ export default function MenuPage() {
 
   const healthyMode    = family?.healthy_mode_active ?? false
   const semanaActual   = getMondayOfWeek()
-  const weekStart      = weekActiva
   const esSemanaPasada = weekActiva < semanaActual
   const tieneMenu      = menu.some(e => e.is_main_recipe)
 

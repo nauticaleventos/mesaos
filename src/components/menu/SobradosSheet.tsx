@@ -3,7 +3,7 @@ import { X, Plus, Trash2, ChevronDown } from 'lucide-react'
 import { useLeftoversStore, type Leftover } from '../../store/leftoversStore'
 import { useFamilyStore } from '../../store/familyStore'
 import { useMenuStore } from '../../store/menuStore'
-import { getMondayOfWeek, DAY_NAMES_FULL } from '../../lib/motorMenu'
+import { DAY_NAMES_FULL } from '../../lib/motorMenu'
 
 const SUGERENCIAS = [
   'Pollo asado', 'Pechuga de pollo', 'Carne de res', 'Carne molida',
