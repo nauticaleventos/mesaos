@@ -309,9 +309,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       set({ progress: 65 })
 
       // 7. Validación: suficientes recetas
-      if (allRecipes.length < 30) {
+      if (allRecipes.length < 15) {
         set({ generating: false, progress: 0 })
-        return `Necesitas más recetas para generar el menú (tienes ${allRecipes.length}, mínimo 30).`
+        return `Necesitas más recetas para generar el menú (tienes ${allRecipes.length}, mínimo 15).`
       }
 
       // 8. Correr el algoritmo
