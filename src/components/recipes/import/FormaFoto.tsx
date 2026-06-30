@@ -2,10 +2,12 @@ import { useState, useRef } from 'react'
 import { Camera, Upload } from 'lucide-react'
 import { importFromPhoto, fileToBase64, type RecipeImport } from '../../../lib/claudeImport'
 import { ModalWrap } from './ImportModal'
+import { useImportGate } from '../../../lib/useImportGate'
 
 interface Props { onExtracted: (r: RecipeImport) => void; onBack: () => void }
 
 export default function FormaFoto({ onExtracted, onBack }: Props) {
+  const { gate, consumir } = useImportGate()
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
   const [preview, setPreview]   = useState<string | null>(null)
@@ -13,6 +15,7 @@ export default function FormaFoto({ onExtracted, onBack }: Props) {
 
   const handleFile = async (file: File) => {
     setError(null)
+    if (!gate()) return
     // Mostrar preview
     const reader = new FileReader()
     reader.onload = e => setPreview(e.target?.result as string)
@@ -21,7 +24,9 @@ export default function FormaFoto({ onExtracted, onBack }: Props) {
     setLoading(true)
     try {
       const { base64, mime } = await fileToBase64(file)
-      onExtracted(await importFromPhoto(base64, mime))
+      const r = await importFromPhoto(base64, mime)
+      await consumir()
+      onExtracted(r)
     } catch (e) { setError(e instanceof Error ? e.message : 'Error al leer la foto') }
     setLoading(false)
   }

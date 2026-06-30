@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Sparkles, ChefHat, AlertCircle } from 'lucide-react'
 import { importFromManualIA, emptyRecipeImport, type RecipeImport } from '../../../lib/claudeImport'
 import { ModalWrap } from './ImportModal'
+import { useImportGate } from '../../../lib/useImportGate'
 
 interface Props { onExtracted: (r: RecipeImport) => void; onBack: () => void }
 
 type Step = 'form' | 'loading' | 'error'
 
 export default function FormaManual({ onExtracted, onBack }: Props) {
+  const { gate, consumir } = useImportGate()
   const [step,        setStep]        = useState<Step>('form')
   const [nombre,      setNombre]      = useState('')
   const [ingredientes,setIngredientes]= useState('')
@@ -18,12 +20,14 @@ export default function FormaManual({ onExtracted, onBack }: Props) {
 
   const handleSubmit = async () => {
     if (!puedeEnviar) return
+    if (!gate()) return
     setStep('loading')
     setError(null)
     setMissingInfo(null)
 
     try {
       const recipe = await importFromManualIA(nombre.trim(), ingredientes.trim())
+      await consumir()
 
       // Si la IA detectó que falta info, mostrar advertencia pero seguir
       if (recipe.missing_info?.length) {

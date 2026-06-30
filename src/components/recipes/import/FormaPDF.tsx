@@ -13,6 +13,7 @@
 import { useRef, useState } from 'react'
 import { FileText, Upload, Check } from 'lucide-react'
 import { importFromPDF, fileToBase64, type RecipeImport } from '../../../lib/claudeImport'
+import { useImportGate } from '../../../lib/useImportGate'
 
 interface Props {
   onExtracted: (receta: RecipeImport) => void
@@ -22,6 +23,7 @@ interface Props {
 type Fase = 'upload' | 'procesando' | 'lista' | 'error'
 
 export default function FormaPDF({ onExtracted, onBack }: Props) {
+  const { gate, consumir } = useImportGate()
   const inputRef                = useRef<HTMLInputElement>(null)
   const [fase, setFase]         = useState<Fase>('upload')
   const [error, setError]       = useState<string | null>(null)
@@ -41,12 +43,14 @@ export default function FormaPDF({ onExtracted, onBack }: Props) {
       return
     }
 
+    if (!gate()) return
     setFase('procesando')
     setError(null)
 
     try {
       const { base64 } = await fileToBase64(file)
       const found      = await importFromPDF(base64)
+      await consumir()
 
       if (found.length === 0) {
         setError('No encontré recetas en este PDF. ¿Tiene contenido de texto?')

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, FileText, Image } from 'lucide-react'
 import { importFromUrl, type RecipeImport } from '../../../lib/claudeImport'
 import { ModalWrap } from './ImportModal'
+import { useImportGate } from '../../../lib/useImportGate'
 
 interface Props {
   onExtracted:  (r: RecipeImport) => void
@@ -25,6 +26,7 @@ function detectSocialNetwork(url: string): string | null {
 }
 
 export default function FormaUrl({ onExtracted, onBack, onGoToTexto, onGoToFoto }: Props) {
+  const { gate, consumir } = useImportGate()
   const [url, setUrl]               = useState('')
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState<string | null>(null)
@@ -41,9 +43,11 @@ export default function FormaUrl({ onExtracted, onBack, onGoToTexto, onGoToFoto 
       return
     }
 
+    if (!gate()) return
     setLoading(true)
     try {
       const receta = await importFromUrl(url.trim())
+      await consumir()
       onExtracted(receta)
     } catch (e) {
       // Si el error parece de red social (por URL redirect o bloqueo)

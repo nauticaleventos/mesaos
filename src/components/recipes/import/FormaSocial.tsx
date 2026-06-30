@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Share2, FileText, Camera } from 'lucide-react'
 import { importFromSocial, type RecipeImport } from '../../../lib/claudeImport'
 import { ModalWrap } from './ImportModal'
+import { useImportGate } from '../../../lib/useImportGate'
 
 interface Props {
   onExtracted:  (r: RecipeImport) => void
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function FormaSocial({ onExtracted, onBack, onGoToTexto, onGoToFoto }: Props) {
+  const { gate, consumir } = useImportGate()
   const [url, setUrl]             = useState('')
   const [loading, setLoading]     = useState(false)
   const [blocked, setBlocked]     = useState(false)
@@ -18,9 +20,12 @@ export default function FormaSocial({ onExtracted, onBack, onGoToTexto, onGoToFo
 
   const procesar = async () => {
     if (!url.trim()) return
+    if (!gate()) return
     setError(null); setBlocked(false); setLoading(true)
     try {
-      onExtracted(await importFromSocial(url.trim()))
+      const r = await importFromSocial(url.trim())
+      await consumir()
+      onExtracted(r)
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Error al analizar'
       if (msg === 'INSTAGRAM_BLOCKED') {

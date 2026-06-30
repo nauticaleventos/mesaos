@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ClipboardList } from 'lucide-react'
 import { importFromText, type RecipeImport } from '../../../lib/claudeImport'
 import { ModalWrap } from './ImportModal'
+import { useImportGate } from '../../../lib/useImportGate'
 
 interface Props {
   onExtracted: (r: RecipeImport) => void
@@ -20,16 +21,19 @@ Preparación:
 1. En olla grande, cocinar el pollo con cebolla y ajo...`
 
 export default function FormaTexto({ onExtracted, onBack }: Props) {
+  const { gate, consumir } = useImportGate()
   const [texto, setTexto]       = useState('')
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
 
   const procesar = async () => {
     if (!texto.trim()) return
+    if (!gate()) return
     setError(null)
     setLoading(true)
     try {
       const receta = await importFromText(texto)
+      await consumir()
       onExtracted(receta)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al procesar la receta')
