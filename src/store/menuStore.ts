@@ -45,6 +45,7 @@ interface MenuState {
   loading:    boolean
   generating: boolean
   progress:   number   // 0-100
+  avisoVariedad: string | null   // aviso si hay pocas recetas (repetición forzada)
 
   loadConfig:           (familyId: string) => Promise<void>
   saveConfig:           (familyId: string, patch: Partial<MenuConfig>) => Promise<void>
@@ -69,6 +70,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   loading:    false,
   generating: false,
   progress:   0,
+  avisoVariedad: null,
 
   // ── Cargar configuración ────────────────────────────────────────────────────
   loadConfig: async (familyId) => {
@@ -268,7 +270,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       if (recErr) console.error('[generarMenu] error al leer recetas (¿RLS?):', recErr)
       const allRecipes = (recipes ?? []) as RecipeForMenu[]
       mark(`recetas visibles para el usuario = ${allRecipes.length}`)
-      set({ progress: 35 })
+      // Aviso de variedad: con <10 recetas el motor repite hasta 3 veces por semana.
+      set({ progress: 35, avisoVariedad: allRecipes.length < 10
+        ? `Tienes solo ${allRecipes.length} recetas — el menú va a repetir platos. Agrega más recetas para mayor variedad.`
+        : null })
 
       // 4. Sugerencias pendientes
       const memberIds = allMembers.map(m => m.id!).filter(Boolean)

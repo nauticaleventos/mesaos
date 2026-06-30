@@ -4,7 +4,7 @@ import { RefreshCw, Printer, Share2, Search } from 'lucide-react'
 import { useFamilyStore } from '../store/familyStore'
 import { useFridgeStore, type FridgeItem } from '../store/fridgeStore'
 import { useMenuStore }   from '../store/menuStore'
-import { useShoppingListStore, type ShoppingListItem } from '../store/shoppingListStore'
+import { useShoppingListStore, normIngrediente, type ShoppingListItem } from '../store/shoppingListStore'
 import { getMondayOfWeek } from '../lib/motorMenu'
 import { inventarioTiene } from '../lib/matchReceta'
 import BottomNav from '../components/ui/BottomNav'
@@ -71,7 +71,8 @@ export default function MercadoPage() {
   const { family }                      = useFamilyStore()
   const { items: fridgeItems }          = useFridgeStore()
   const { menu }                        = useMenuStore()
-  const { listId, items, loading, generating, loadList, generateList, toggleComprado } = useShoppingListStore()
+  const { listId, items, loading, generating, desglose, loadList, generateList, toggleComprado } = useShoppingListStore()
+  const [expandedItem, setExpandedItem] = useState<string | null>(null)
 
   const [modo, setModoState] = useState<Modo>(
     () => (localStorage.getItem('mesa_mercado_modo') as Modo) ?? 'pasillos'
@@ -677,42 +678,58 @@ export default function MercadoPage() {
                         <span className="ml-auto text-xs text-muted">{pasilloItems.filter(i => !i.comprado).length}</span>
                       </div>
                       <div className="flex flex-col">
-                        {pasilloItems.map(item => (
-                          <button key={item.id}
-                            onClick={() => toggleComprado(item.id, !item.comprado)}
-                            className={`flex items-start gap-3 px-4 py-3 border-b border-border/50 last:border-0 text-left transition-colors ${item.comprado ? 'bg-gray-50' : 'hover:bg-accent/5'}`}>
-                            <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-all ${item.comprado ? 'bg-accent border-accent' : 'border-border'}`}>
-                              {item.comprado && <span className="text-white text-[10px] font-bold">✓</span>}
+                        {pasilloItems.map(item => {
+                          const proc = desglose[normIngrediente(item.ingrediente_nombre)] ?? []
+                          const abierto = expandedItem === item.id
+                          return (
+                          <div key={item.id} className={`border-b border-border/50 last:border-0 ${item.comprado ? 'bg-gray-50' : ''}`}>
+                            <div className="flex items-start gap-3 px-4 py-3">
+                              <button onClick={() => toggleComprado(item.id, !item.comprado)}
+                                className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-all ${item.comprado ? 'bg-accent border-accent' : 'border-border'}`}>
+                                {item.comprado && <span className="text-white text-[10px] font-bold">✓</span>}
+                              </button>
+                              <button onClick={() => setExpandedItem(abierto ? null : item.id)}
+                                className="flex-1 min-w-0 text-left">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`text-sm font-medium ${item.comprado ? 'line-through text-muted' : 'text-text'}`}>
+                                    {item.ingrediente_nombre}
+                                  </span>
+                                  {item.en_nevera && !item.faltante && (
+                                    <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full">✓ en nevera</span>
+                                  )}
+                                  {item.en_nevera && item.faltante && (
+                                    <span className="text-[10px] bg-yellow-50 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded-full">
+                                      {item.cantidad_total > 0 ? `Falta ${Math.round(item.cantidad_total * 10) / 10} ${item.unidad}` : 'Tenés algo'}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  {item.cantidad_total > 0 && (
+                                    <span className="text-xs text-muted font-medium">
+                                      {formatCantidad(item.cantidad_total, item.unidad)}
+                                    </span>
+                                  )}
+                                  {proc.length > 0 && (
+                                    <span className="text-[10px] text-accent">{abierto ? '▴ ocultar' : `▾ de ${proc.length} receta${proc.length > 1 ? 's' : ''}`}</span>
+                                  )}
+                                </div>
+                              </button>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-sm font-medium ${item.comprado ? 'line-through text-muted' : 'text-text'}`}>
-                                  {item.ingrediente_nombre}
-                                </span>
-                                {item.en_nevera && !item.faltante && (
-                                  <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full">✓ en nevera</span>
-                                )}
-                                {item.en_nevera && item.faltante && (
-                                  <span className="text-[10px] bg-yellow-50 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded-full">
-                                    {item.cantidad_total > 0 ? `Falta ${Math.round(item.cantidad_total * 10) / 10} ${item.unidad}` : 'Tenés algo'}
-                                  </span>
-                                )}
+                            {/* Procedencia: de qué recetas viene y cuánto pide cada una */}
+                            {abierto && proc.length > 0 && (
+                              <div className="px-4 pb-3 pl-12 flex flex-col gap-1.5">
+                                {proc.map((p, idx) => (
+                                  <div key={p.recipeId + idx} className="flex items-center gap-2 text-xs">
+                                    <span className="text-muted flex-1 truncate">• {p.receta} → <b className="text-text">{formatCantidad(p.cantidad, p.unidad)}</b></span>
+                                    <button onClick={() => navigate(`/receta/${p.recipeId}`)}
+                                      className="text-accent font-medium whitespace-nowrap hover:underline">Ir a receta →</button>
+                                  </div>
+                                ))}
                               </div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                {item.cantidad_total > 0 && (
-                                  <span className="text-xs text-muted font-medium">
-                                    {formatCantidad(item.cantidad_total, item.unidad)}
-                                  </span>
-                                )}
-                                {item.recetas_origen.length > 0 && (
-                                  <span className="text-[10px] text-muted truncate max-w-[200px]">
-                                    para: {item.recetas_origen.slice(0, 2).join(', ')}{item.recetas_origen.length > 2 ? '…' : ''}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        ))}
+                            )}
+                          </div>
+                          )
+                        })}
                       </div>
                     </div>
                     {mostrarAd && <AdNativeCard />}

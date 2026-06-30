@@ -16,7 +16,7 @@ export default function MenuPage() {
   const { session }             = useAuthStore()
   const { family, members }     = useFamilyStore()
   const { items: fridgeItems }  = useFridgeStore()
-  const { menu, loading, generating, loadConfig, loadMenu, generarMenuMulti } = useMenuStore()
+  const { menu, loading, generating, avisoVariedad, loadConfig, loadMenu, generarMenuMulti } = useMenuStore()
 
   const [error, setError]           = useState<string | null>(null)
   const [confirmar, setConfirmar]   = useState(false)
@@ -98,6 +98,16 @@ export default function MenuPage() {
           <div className="p-4 rounded-2xl bg-red-50 border border-red-200 mb-4">
             <p className="text-sm text-error">{error}</p>
             <button onClick={() => setError(null)} className="text-xs text-error/70 mt-1 underline">Cerrar</button>
+          </div>
+        )}
+
+        {/* Aviso de variedad (pocas recetas → repetición forzada) */}
+        {avisoVariedad && (
+          <div className="p-3 rounded-2xl bg-yellow-50 border border-yellow-200 mb-4 flex items-start gap-2">
+            <span>💡</span>
+            <p className="text-sm text-yellow-800">{avisoVariedad}
+              <button onClick={() => navigate('/recetas')} className="underline font-medium ml-1">Ver recetas</button>
+            </p>
           </div>
         )}
 

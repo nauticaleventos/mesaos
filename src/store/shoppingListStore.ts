@@ -17,11 +17,20 @@ export interface ShoppingListItem {
   recetas_origen:     string[]
 }
 
+// Procedencia: de qué receta(s) viene cada ingrediente y cuánto pide cada una.
+export interface ProcedenciaItem {
+  receta:   string
+  recipeId: string
+  cantidad: number
+  unidad:   string
+}
+
 interface ShoppingListState {
   listId:    string | null
   items:     ShoppingListItem[]
   loading:   boolean
   generating: boolean
+  desglose:  Record<string, ProcedenciaItem[]>   // key: normIngrediente(nombre) → recetas que lo usan
 
   loadList:     (familyId: string) => Promise<void>
   generateList: (familyId: string, fridgeItems: FridgeItem[]) => Promise<void>
@@ -251,7 +260,7 @@ const PREP_CASA = [
   'al gusto','al dente',
 ]
 
-function normIngrediente(s: string): string {
+export function normIngrediente(s: string): string {
   let n = norm(s)
 
   // 1. Quitar números y fracciones al inicio: "1/2 cebolla" → "cebolla"
@@ -324,8 +333,11 @@ function convertirABase(cantidad: number, unidad: string): Medida {
 }
 
 function convertirDesdeBase(cantidad: number, unidad: string): Medida {
-  if (unidad === 'g'  && cantidad >= 1000) return { cantidad: cantidad / 1000, unidad: 'kg' }
-  if (unidad === 'ml' && cantidad >= 1000) return { cantidad: cantidad / 1000, unidad: 'l' }
+  if (unidad === 'g'  && cantidad >= 1000) return { cantidad: Math.round(cantidad / 100) / 10, unidad: 'kg' }
+  if (unidad === 'ml' && cantidad >= 1000) return { cantidad: Math.round(cantidad / 100) / 10, unidad: 'l' }
+  // Unidades CONTABLES (huevos, manzanas, panes, latas…) → redondear hacia ARRIBA.
+  // Nunca "0.67 huevos": siempre se compra una unidad entera.
+  if (unidad === 'unidades') return { cantidad: Math.max(1, Math.ceil(cantidad)), unidad }
   return { cantidad: Math.round(cantidad * 10) / 10, unidad }
 }
 
@@ -452,9 +464,14 @@ async function buildItems(
       ?? CATEGORIA_A_PASILLO[v.categoria]
       ?? 'otros'
 
+    // Contables: redondear el faltante hacia arriba también (la nevera puede dejar fracción)
+    const cantFinal = unidad === 'unidades'
+      ? Math.ceil(faltante ? cantFaltante : 0)
+      : (faltante ? cantFaltante : 0)
+
     result.push({
       ingrediente_nombre: v.nombre,
-      cantidad_total:     faltante ? cantFaltante : 0,
+      cantidad_total:     cantFinal,
       unidad,
       categoria_pasillo:  pasillo,
       en_nevera:          enNevera,
@@ -482,11 +499,53 @@ async function buildItems(
   return [...dedup.values()].sort((a, b) => a.categoria_pasillo.localeCompare(b.categoria_pasillo))
 }
 
+// Procedencia por ingrediente: qué recetas del menú de la semana lo usan y cuánto.
+// Se calcula en memoria (no se persiste) → no requiere columna nueva en BD.
+async function computeDesglose(familyId: string): Promise<Record<string, ProcedenciaItem[]>> {
+  const weekStart = getMondayOfWeek()
+  const { data: menuEntries } = await supabase
+    .from('weekly_menu')
+    .select('recipe_id, servings, recipes(nombre, porciones, ingredientes)')
+    .eq('family_id', familyId)
+    .eq('week_start', weekStart)
+    .eq('is_main_recipe', true)
+
+  // Acumular cantidad cruda escalada por (ingrediente, receta)
+  const acc: Record<string, Record<string, { receta: string; recipeId: string; cant: number; unidad: string }>> = {}
+  for (const entry of (menuEntries ?? [])) {
+    const recipe = (entry as Record<string, unknown>).recipes as {
+      nombre: string; porciones: number | null; ingredientes: { nombre: string; cantidad: number | null; unidad: string | null; esencial: boolean }[]
+    } | null
+    if (!recipe) continue
+    const rid = (entry as { recipe_id: string }).recipe_id
+    const scale = (recipe.porciones && recipe.porciones > 0) ? ((entry as { servings: number }).servings ?? 1) / recipe.porciones : 1
+    for (const ing of (recipe.ingredientes ?? [])) {
+      if (!ing.esencial) continue
+      const key = normIngrediente(ing.nombre)
+      const u   = normUnidad(ing.unidad ?? 'unidades')
+      const cant = (ing.cantidad ?? 1) * scale
+      acc[key] = acc[key] ?? {}
+      if (acc[key][rid]) acc[key][rid].cant += cant
+      else acc[key][rid] = { receta: recipe.nombre, recipeId: rid, cant, unidad: u }
+    }
+  }
+  // Finalizar: redondear (contables hacia arriba) y ordenar por mayor aporte
+  const out: Record<string, ProcedenciaItem[]> = {}
+  for (const key in acc) {
+    out[key] = Object.values(acc[key]).map(p => ({
+      receta: p.receta, recipeId: p.recipeId, unidad: p.unidad,
+      cantidad: (p.unidad === 'unidades' || UNIDADES_CONTEO.has(p.unidad)) ? Math.ceil(p.cant) : Math.round(p.cant * 10) / 10,
+    })).sort((a, b) => b.cantidad - a.cantidad)
+  }
+  return out
+}
+
 export const useShoppingListStore = create<ShoppingListState>((set) => ({
   listId:    null,
   items:     [],
   loading:   false,
   generating: false,
+  desglose:  {},
 
   loadList: async (familyId) => {
     set({ loading: true })
@@ -498,7 +557,7 @@ export const useShoppingListStore = create<ShoppingListState>((set) => ({
       .eq('week_start', weekStart)
       .maybeSingle()
 
-    if (!list) { set({ listId: null, items: [], loading: false }); return }
+    if (!list) { set({ listId: null, items: [], desglose: {}, loading: false }); return }
 
     const { data: items } = await supabase
       .from('shopping_list_items')
@@ -506,7 +565,8 @@ export const useShoppingListStore = create<ShoppingListState>((set) => ({
       .eq('shopping_list_id', list.id)
       .order('categoria_pasillo')
 
-    set({ listId: list.id, items: (items ?? []) as ShoppingListItem[], loading: false })
+    const desglose = await computeDesglose(familyId)
+    set({ listId: list.id, items: (items ?? []) as ShoppingListItem[], desglose, loading: false })
   },
 
   generateList: async (familyId, fridgeItems) => {
@@ -541,7 +601,8 @@ export const useShoppingListStore = create<ShoppingListState>((set) => ({
       .eq('shopping_list_id', list.id)
       .order('categoria_pasillo')
 
-    set({ listId: list.id, items: (savedItems ?? []) as ShoppingListItem[], generating: false })
+    const desglose = await computeDesglose(familyId)
+    set({ listId: list.id, items: (savedItems ?? []) as ShoppingListItem[], desglose, generating: false })
   },
 
   toggleComprado: async (itemId, value) => {

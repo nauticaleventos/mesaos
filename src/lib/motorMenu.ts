@@ -686,6 +686,14 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
     return aptas
   }
 
+  // ── Tope de repeticiones por semana ──────────────────────────────────────
+  // Ninguna receta debe salir más de 2 veces por semana. Si el pool es muy chico
+  // (<10 recetas) se permite hasta 3 para no dejar comidas vacías.
+  const REPEAT_CAP = input.allRecipes.length < 10 ? 3 : 2
+  const weekCount  = new Map<string, number>()
+  const topeWeek   = (id: string) => (weekCount.get(id) ?? 0) >= REPEAT_CAP
+  const registrarSemana = (id: string) => weekCount.set(id, (weekCount.get(id) ?? 0) + 1)
+
   for (let day = 1; day <= 7; day++) {
     const isDayFinde     = day >= 6
     const usedToday      = new Set<string>()   // resetea cada día — evita repetir en mismo día
@@ -736,6 +744,8 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
           if (!tipoMatch(r)) return false
           if (TC_NO_PLATO.has(r.tipo_componente ?? '')) return false  // nunca como plato principal
           if (usedToday.has(r.id)) return false
+          if (topeWeek(r.id)) return false   // tope de repeticiones por semana
+
           if (guestRestrictions.includes('vegetariana') && !r.perfiles?.vegetariana) return false
           if (guestRestrictions.includes('sin_gluten')  && !r.filtros_nutricionales?.sin_gluten)  return false
           if (guestRestrictions.includes('sin_lacteos') && !r.filtros_nutricionales?.sin_lacteos) return false
@@ -850,6 +860,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         if (!baseRecipe) continue
 
         usedToday.add(baseRecipe.id)
+        registrarSemana(baseRecipe.id)
         usedTodayNames.push(baseRecipe.nombre)
 
         // 2. Asignar base a quien le va bien; detectar quién necesita variante
@@ -915,6 +926,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
             altMap.set(m.id!, best)
             altUsed.add(best.id)
             usedToday.add(best.id)
+            registrarSemana(best.id)
             usedTodayNames.push(best.nombre)
             markUsedByMember(m.id!, best.id, day)
           } else {
@@ -990,6 +1002,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
         for (const r of pool) {
           if (usedToday.has(r.id)) continue
           if (excl.has(r.id))      continue
+          if (topeWeek(r.id))      continue   // tope de repeticiones por semana
           const score = calcularScore(r, input, excl, proteinDaysUsed, activeMemberIds, isDayFinde, tipo)
           if (score > bestScore) { bestScore = score; bestRecipe = r }
         }
@@ -1042,6 +1055,7 @@ export function generarMenuSemanal(input: AlgorithmInput): MenuSlot[] {
       // Registrar
       usedByDay.set(bestRecipe.id, day)
       usedToday.add(bestRecipe.id)
+      registrarSemana(bestRecipe.id)
       usedTodayNames.push(bestRecipe.nombre)
       if (tieneProteinaAnimal(bestRecipe)) proteinDaysUsed++
       const initialComp = clasificarComponente(bestRecipe)
