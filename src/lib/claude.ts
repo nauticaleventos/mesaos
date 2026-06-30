@@ -1,13 +1,13 @@
 // Todas las llamadas a Claude van a través de /api/claude (proxy en Vercel)
 // La API key vive en el servidor — nunca se expone al browser
 
-const MODEL = 'claude-sonnet-4-6'
+import { MODELS, type ModelTier } from './anthropic'
 
-async function callClaude(messages: object[], maxTokens = 1024, temperature = 1): Promise<string> {
+async function callClaude(messages: object[], maxTokens = 1024, temperature = 1, model: ModelTier = 'sonnet'): Promise<string> {
   const res = await fetch('/api/claude', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, temperature, messages }),
+    body: JSON.stringify({ model: MODELS[model], max_tokens: maxTokens, temperature, messages }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -64,7 +64,8 @@ INPUT: {{INPUT}}`
 
 async function extractItemsFromText(input: string): Promise<ExtractedItem[]> {
   const prompt = EXTRACTION_PROMPT.replace('{{INPUT}}', input)
-  const text = await callClaude([{ role: 'user', content: prompt }], 1500, 0)
+  // Estructurar/normalizar texto → tarea simple → Haiku.
+  const text = await callClaude([{ role: 'user', content: prompt }], 1500, 0, 'haiku')
 
   const match = text.trim().match(/\{[\s\S]*\}/)
   if (!match) throw new Error('No se pudo parsear la lista')
@@ -214,7 +215,7 @@ export async function getConservationTip(foodName: string): Promise<string> {
     role: 'user',
     content: `Dame UN tip corto y práctico de conservación para: "${foodName}".
 Máximo 2 oraciones. En español colombiano, tono amigable. Solo el tip, sin introducción.`
-  }])
+  }], 1024, 1, 'haiku')   // respuesta directa simple → Haiku
   return text.trim()
 }
 
