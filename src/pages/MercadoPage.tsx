@@ -720,7 +720,12 @@ export default function MercadoPage() {
                               <div className="px-4 pb-3 pl-12 flex flex-col gap-1.5">
                                 {proc.map((p, idx) => (
                                   <div key={p.recipeId + idx} className="flex items-center gap-2 text-xs">
-                                    <span className="text-muted flex-1 truncate">• {p.receta} → <b className="text-text">{formatCantidad(p.cantidad, p.unidad)}</b></span>
+                                    <span className="text-muted flex-1 truncate">
+                                      • {p.receta} → <b className="text-text">{formatCantidad(p.cantidad, p.unidad)}</b>
+                                      {p.veces > 1 && (
+                                        <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${p.veces >= 3 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200'}`}>×{p.veces} veces</span>
+                                      )}
+                                    </span>
                                     <button onClick={() => navigate(`/receta/${p.recipeId}`)}
                                       className="text-accent font-medium whitespace-nowrap hover:underline">Ir a receta →</button>
                                   </div>

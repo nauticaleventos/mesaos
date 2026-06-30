@@ -23,6 +23,7 @@ export interface ProcedenciaItem {
   recipeId: string
   cantidad: number
   unidad:   string
+  veces:    number   // cuántas veces aparece esa receta en la semana
 }
 
 interface ShoppingListState {
@@ -510,8 +511,8 @@ async function computeDesglose(familyId: string): Promise<Record<string, Procede
     .eq('week_start', weekStart)
     .eq('is_main_recipe', true)
 
-  // Acumular cantidad cruda escalada por (ingrediente, receta)
-  const acc: Record<string, Record<string, { receta: string; recipeId: string; cant: number; unidad: string }>> = {}
+  // Acumular cantidad cruda escalada por (ingrediente, receta) + nº de veces
+  const acc: Record<string, Record<string, { receta: string; recipeId: string; cant: number; unidad: string; veces: number }>> = {}
   for (const entry of (menuEntries ?? [])) {
     const recipe = (entry as Record<string, unknown>).recipes as {
       nombre: string; porciones: number | null; ingredientes: { nombre: string; cantidad: number | null; unidad: string | null; esencial: boolean }[]
@@ -525,15 +526,15 @@ async function computeDesglose(familyId: string): Promise<Record<string, Procede
       const u   = normUnidad(ing.unidad ?? 'unidades')
       const cant = (ing.cantidad ?? 1) * scale
       acc[key] = acc[key] ?? {}
-      if (acc[key][rid]) acc[key][rid].cant += cant
-      else acc[key][rid] = { receta: recipe.nombre, recipeId: rid, cant, unidad: u }
+      if (acc[key][rid]) { acc[key][rid].cant += cant; acc[key][rid].veces += 1 }
+      else acc[key][rid] = { receta: recipe.nombre, recipeId: rid, cant, unidad: u, veces: 1 }
     }
   }
   // Finalizar: redondear (contables hacia arriba) y ordenar por mayor aporte
   const out: Record<string, ProcedenciaItem[]> = {}
   for (const key in acc) {
     out[key] = Object.values(acc[key]).map(p => ({
-      receta: p.receta, recipeId: p.recipeId, unidad: p.unidad,
+      receta: p.receta, recipeId: p.recipeId, unidad: p.unidad, veces: p.veces,
       cantidad: (p.unidad === 'unidades' || UNIDADES_CONTEO.has(p.unidad)) ? Math.ceil(p.cant) : Math.round(p.cant * 10) / 10,
     })).sort((a, b) => b.cantidad - a.cantidad)
   }
