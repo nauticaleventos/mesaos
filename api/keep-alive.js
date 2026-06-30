@@ -28,6 +28,26 @@ export default async function handler(req, res) {
     if (error) {
       return res.status(500).json({ ok: false, error: error.message })
     }
+    // Diagnóstico TEMPORAL (?diag=ajo): variantes de "ajo" en el menú de la semana.
+    if (req.query && req.query.diag === 'ajo') {
+      const fam = req.query.fam || '40b2b23b-481d-4524-b9ae-dc6a5786d901'
+      const semana = req.query.semana || '2026-06-29'
+      const wk = await sb.from('weekly_menu')
+        .select('recipe_id, is_main_recipe, recipes(nombre, ingredientes)')
+        .eq('family_id', fam).eq('week_start', semana).eq('is_main_recipe', true)
+      const variantes = {}
+      for (const r of (wk.data || [])) {
+        const rec = r.recipes
+        if (!rec) continue
+        for (const ing of (rec.ingredientes || [])) {
+          if (/ajo/i.test(ing.nombre || '')) {
+            const key = `${ing.nombre} [${ing.unidad}] esencial=${ing.esencial}`
+            variantes[key] = (variantes[key] || 0) + 1
+          }
+        }
+      }
+      return res.status(200).json({ ok: true, ts: new Date().toISOString(), variantes_de_ajo: variantes })
+    }
     return res.status(200).json({ ok: true, ts: new Date().toISOString(), msg: 'Supabase activo' })
   } catch (err) {
     return res.status(500).json({ ok: false, error: String(err) })
