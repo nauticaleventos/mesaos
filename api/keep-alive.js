@@ -28,6 +28,41 @@ export default async function handler(req, res) {
     if (error) {
       return res.status(500).json({ ok: false, error: error.message })
     }
+    // Modo diagnóstico TEMPORAL (?diag=mercado): inspecciona Carrot Cake + escalado + cantidades absurdas.
+    if (req.query && req.query.diag === 'mercado') {
+      // 1) La receta Carrot Cake
+      const cc = await sb.from('recipes')
+        .select('id, nombre, porciones, ingredientes')
+        .ilike('nombre', '%carrot%cake%')
+      // 2) Ocurrencias en weekly_menu (todas las familias/semanas) con servings
+      const ccIds = (cc.data || []).map(r => r.id)
+      let ocurrencias = []
+      if (ccIds.length) {
+        const wm = await sb.from('weekly_menu')
+          .select('family_id, week_start, servings, is_main_recipe, meal_component, recipe_id')
+          .in('recipe_id', ccIds)
+        ocurrencias = wm.data || []
+      }
+      // 3) Escaneo de cantidades absurdas (cualquier ingrediente con cantidad > 50, o huevo > 12)
+      const all = await sb.from('recipes').select('id, nombre, porciones, ingredientes').limit(500)
+      const sospechosas = []
+      for (const r of (all.data || [])) {
+        for (const ing of (r.ingredientes || [])) {
+          const c = Number(ing.cantidad)
+          const esHuevo = /huevo/i.test(ing.nombre || '')
+          if ((!isNaN(c) && c > 50) || (esHuevo && c > 12)) {
+            sospechosas.push({ receta: r.nombre, porciones: r.porciones, ingrediente: ing.nombre, cantidad: ing.cantidad, unidad: ing.unidad })
+          }
+        }
+      }
+      return res.status(200).json({
+        ok: true, ts: new Date().toISOString(),
+        carrot_cake: (cc.data || []).map(r => ({ id: r.id, nombre: r.nombre, porciones: r.porciones, ingredientes: r.ingredientes })),
+        ocurrencias_en_weekly_menu: ocurrencias,
+        recetas_con_cantidades_sospechosas: sospechosas.slice(0, 40),
+        total_sospechosas: sospechosas.length,
+      })
+    }
     return res.status(200).json({ ok: true, ts: new Date().toISOString(), msg: 'Supabase activo' })
   } catch (err) {
     return res.status(500).json({ ok: false, error: String(err) })
