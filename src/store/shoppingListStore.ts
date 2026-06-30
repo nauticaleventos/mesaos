@@ -32,10 +32,17 @@ interface ShoppingListState {
   loading:   boolean
   generating: boolean
   desglose:  Record<string, ProcedenciaItem[]>   // key: normIngrediente(nombre) → recetas que lo usan
+  semanasMercado: string[]                        // week_starts incluidas en la lista (vacío = semana actual)
 
   loadList:     (familyId: string) => Promise<void>
-  generateList: (familyId: string, fridgeItems: FridgeItem[]) => Promise<void>
+  generateList: (familyId: string, fridgeItems: FridgeItem[], weekStarts?: string[]) => Promise<void>
+  setSemanasMercado: (familyId: string, fridgeItems: FridgeItem[], weeks: string[]) => Promise<void>
   toggleComprado: (itemId: string, value: boolean) => Promise<void>
+}
+
+const SEMANAS_LS = 'mesa_mercado_semanas_seleccionadas'
+function leerSemanasLS(): string[] {
+  try { const v = localStorage.getItem(SEMANAS_LS); return v ? JSON.parse(v) : [] } catch { return [] }
 }
 
 // ── Mapeo categoría de ingrediente → pasillo ──────────────────────────────────
@@ -346,17 +353,18 @@ function convertirDesdeBase(cantidad: number, unidad: string): Medida {
 // ── Generación de la lista ────────────────────────────────────────────────────
 async function buildItems(
   familyId: string,
-  fridgeItems: FridgeItem[]
+  fridgeItems: FridgeItem[],
+  weekStarts?: string[]
 ): Promise<Omit<ShoppingListItem, 'id' | 'shopping_list_id'>[]> {
 
-  const weekStart = getMondayOfWeek()
+  const semanas = (weekStarts && weekStarts.length) ? weekStarts : [getMondayOfWeek()]
 
-  // 1. Traer el menú activo con recetas e ingredientes
+  // 1. Traer el menú activo (1 o varias semanas) con recetas e ingredientes
   const { data: menuEntries } = await supabase
     .from('weekly_menu')
     .select('recipe_id, servings, meal_type, recipes(nombre, porciones, ingredientes)')
     .eq('family_id', familyId)
-    .eq('week_start', weekStart)
+    .in('week_start', semanas)
     .eq('is_main_recipe', true)
 
   if (!menuEntries?.length) return []
@@ -503,13 +511,13 @@ async function buildItems(
 
 // Procedencia por ingrediente: qué recetas del menú de la semana lo usan y cuánto.
 // Se calcula en memoria (no se persiste) → no requiere columna nueva en BD.
-async function computeDesglose(familyId: string): Promise<Record<string, ProcedenciaItem[]>> {
-  const weekStart = getMondayOfWeek()
+async function computeDesglose(familyId: string, weekStarts?: string[]): Promise<Record<string, ProcedenciaItem[]>> {
+  const semanas = (weekStarts && weekStarts.length) ? weekStarts : [getMondayOfWeek()]
   const { data: menuEntries } = await supabase
     .from('weekly_menu')
     .select('recipe_id, servings, recipes(nombre, porciones, ingredientes)')
     .eq('family_id', familyId)
-    .eq('week_start', weekStart)
+    .in('week_start', semanas)
     .eq('is_main_recipe', true)
 
   // Acumular cantidad cruda escalada por (ingrediente, receta) + nº de veces
@@ -548,10 +556,12 @@ export const useShoppingListStore = create<ShoppingListState>((set) => ({
   loading:   false,
   generating: false,
   desglose:  {},
+  semanasMercado: leerSemanasLS(),
 
   loadList: async (familyId) => {
     set({ loading: true })
     const weekStart = getMondayOfWeek()
+    const semanas = leerSemanasLS()
     const { data: list } = await supabase
       .from('shopping_lists')
       .select('id')
@@ -567,19 +577,20 @@ export const useShoppingListStore = create<ShoppingListState>((set) => ({
       .eq('shopping_list_id', list.id)
       .order('categoria_pasillo')
 
-    const desglose = await computeDesglose(familyId)
-    set({ listId: list.id, items: (items ?? []) as ShoppingListItem[], desglose, loading: false })
+    const desglose = await computeDesglose(familyId, semanas)
+    set({ listId: list.id, items: (items ?? []) as ShoppingListItem[], desglose, semanasMercado: semanas, loading: false })
   },
 
-  generateList: async (familyId, fridgeItems) => {
+  generateList: async (familyId, fridgeItems, weekStarts) => {
     set({ generating: true })
     const weekStart = getMondayOfWeek()
+    const semanas = (weekStarts && weekStarts.length) ? weekStarts : leerSemanasLS()
 
     // Borrar lista anterior de esta semana si existe
     await supabase.from('shopping_lists')
       .delete().eq('family_id', familyId).eq('week_start', weekStart)
 
-    // Crear nueva lista
+    // Crear nueva lista (anclada a la semana actual; los ítems abarcan las semanas elegidas)
     const { data: list } = await supabase
       .from('shopping_lists')
       .insert({ family_id: familyId, week_start: weekStart })
@@ -587,8 +598,7 @@ export const useShoppingListStore = create<ShoppingListState>((set) => ({
 
     if (!list) { set({ generating: false }); return }
 
-    // Construir items
-    const items = await buildItems(familyId, fridgeItems)
+    const items = await buildItems(familyId, fridgeItems, semanas)
 
     if (items.length > 0) {
       await supabase.from('shopping_list_items').insert(
@@ -596,15 +606,21 @@ export const useShoppingListStore = create<ShoppingListState>((set) => ({
       )
     }
 
-    // Recargar
     const { data: savedItems } = await supabase
       .from('shopping_list_items')
       .select('*')
       .eq('shopping_list_id', list.id)
       .order('categoria_pasillo')
 
-    const desglose = await computeDesglose(familyId)
-    set({ listId: list.id, items: (savedItems ?? []) as ShoppingListItem[], desglose, generating: false })
+    const desglose = await computeDesglose(familyId, semanas)
+    set({ listId: list.id, items: (savedItems ?? []) as ShoppingListItem[], desglose, semanasMercado: semanas, generating: false })
+  },
+
+  // Cambia las semanas incluidas en la lista y la regenera.
+  setSemanasMercado: async (familyId, fridgeItems, weeks) => {
+    try { localStorage.setItem(SEMANAS_LS, JSON.stringify(weeks)) } catch { /* noop */ }
+    set({ semanasMercado: weeks })
+    await (useShoppingListStore.getState().generateList)(familyId, fridgeItems, weeks)
   },
 
   toggleComprado: async (itemId, value) => {

@@ -28,7 +28,7 @@ const PASILLOS: Record<string, { emoji: string; label: string }> = {
 }
 const PASILLO_ORDER = Object.keys(PASILLOS)
 
-type Modo = 'pasillos' | 'alfabetico' | 'proximas' | 'receta'
+type Modo = 'pasillos' | 'alfabetico' | 'proximas' | 'receta' | 'semanas'
 
 const CORTE_MIN: Record<string, number> = {
   desayuno: 8 * 60, brunch: 8 * 60,
@@ -70,8 +70,8 @@ export default function MercadoPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { family }                      = useFamilyStore()
   const { items: fridgeItems }          = useFridgeStore()
-  const { menu }                        = useMenuStore()
-  const { listId, items, loading, generating, desglose, loadList, generateList, toggleComprado } = useShoppingListStore()
+  const { menu, semanasGeneradas, cargarSemanas } = useMenuStore()
+  const { listId, items, loading, generating, desglose, semanasMercado, loadList, generateList, setSemanasMercado, toggleComprado } = useShoppingListStore()
   const [expandedItem, setExpandedItem] = useState<string | null>(null)
 
   const [modo, setModoState] = useState<Modo>(
@@ -98,8 +98,34 @@ export default function MercadoPage() {
 
   const weekStart = getMondayOfWeek()
   const tieneMenu = menu.some(e => e.is_main_recipe)
+  const multiSemana = semanasGeneradas.length > 1
 
-  useEffect(() => { if (family?.id) loadList(family.id) }, [family?.id])
+  useEffect(() => { if (family?.id) { loadList(family.id); cargarSemanas(family.id) } }, [family?.id])
+
+  // Default de semanas según frecuencia de mercado (solo la primera vez, si no hay selección).
+  useEffect(() => {
+    if (!family?.id || semanasGeneradas.length === 0 || semanasMercado.length > 0) return
+    const fm = family.frecuencia_mercado
+    const n = fm === 'mensual' ? semanasGeneradas.length : fm === 'quincenal' ? 2 : 1
+    setSemanasMercado(family.id, fridgeItems, semanasGeneradas.slice(0, n))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [family?.id, semanasGeneradas.length])
+
+  // Rango de fechas de una semana: "30/06 al 06/07"
+  const rangoSemana = (ws: string): string => {
+    const fmt = (iso: string) => { const p = iso.split('-'); return `${p[2]}/${p[1]}` }
+    const fin = (() => { const d = new Date(ws + 'T12:00:00'); d.setDate(d.getDate() + 6); return d.toISOString().split('T')[0] })()
+    return `${fmt(ws)} al ${fmt(fin)}`
+  }
+  // Semanas efectivamente incluidas en la lista (vacío = semana actual).
+  const semanasActivas = semanasMercado.length ? semanasMercado : (semanasGeneradas.length ? [semanasGeneradas[0]] : [weekStart])
+  const toggleSemana = (ws: string) => {
+    if (!family?.id) return
+    const sel = semanasMercado.length ? semanasMercado : semanasActivas
+    const next = sel.includes(ws) ? sel.filter(w => w !== ws) : [...sel, ws].sort()
+    if (next.length === 0) return // no permitir 0 semanas
+    setSemanasMercado(family.id, fridgeItems, next)
+  }
 
   // ── Recetas del menú para sub-selector ───────────────────────────────────
   const recetasMenu: string[] = useMemo(() => {
@@ -346,6 +372,7 @@ export default function MercadoPage() {
     if (recetaFiltro)                    return `🍽️ Ingredientes para ${recetaFiltro}:\n`
     if (modo === 'receta' && recetaModo) return `🍽️ Ingredientes para ${recetaModo}:\n`
     if (modo === 'proximas')             return `⏰ Lista para las próximas ${nComidas} comidas:\n`
+    if (modo === 'semanas' && multiSemana) return `🛒 ${tituloSemanas}:\n`
     if (modo === 'alfabetico')           return '🛒 Lista de mercado (A-Z):\n'
     return '🛒 Lista de mercado:\n'
   }
@@ -357,6 +384,9 @@ export default function MercadoPage() {
       return `/mercado/imprimir?receta=${encodeURIComponent(recetaModo)}`
     if (modo === 'proximas' && proximasRecetas.length > 0)
       return `/mercado/imprimir?recetas=${encodeURIComponent(proximasRecetas.join(','))}&n=${nComidas}`
+    // Por semanas: pasar el título dinámico (la lista guardada ya abarca esas semanas)
+    if (modo === 'semanas' && multiSemana)
+      return `/mercado/imprimir?titulo=${encodeURIComponent(tituloSemanas)}`
     if (modo === 'alfabetico')
       return '/mercado/imprimir?modo=alfabetico'
     return '/mercado/imprimir'
@@ -387,7 +417,23 @@ export default function MercadoPage() {
     { value: 'alfabetico', label: '🔤 Orden alfabético'    },
     { value: 'proximas',   label: '⏰ Próximas comidas'    },
     { value: 'receta',     label: '🍽️ Una receta del menú' },
+    // "Por semanas" solo si hay menú multi-semana generado
+    ...(multiSemana ? [{ value: 'semanas' as Modo, label: '📅 Por semanas' }] : []),
   ]
+
+  // Título dinámico de la lista según semanas incluidas.
+  const tituloSemanas = (() => {
+    const sel = semanasActivas
+    if (sel.length === 0) return ''
+    const idxs = sel.map(ws => semanasGeneradas.indexOf(ws)).filter(i => i >= 0).map(i => i + 1).sort((a, b) => a - b)
+    const primera = sel[0], ultima = sel[sel.length - 1]
+    const fmt = (iso: string) => { const p = iso.split('-'); return `${p[2]}/${p[1]}` }
+    const fin = (() => { const d = new Date(ultima + 'T12:00:00'); d.setDate(d.getDate() + 6); return d.toISOString().split('T')[0] })()
+    const rango = `del ${fmt(primera)} al ${fmt(fin)}`
+    if (sel.length === semanasGeneradas.length && semanasGeneradas.length > 1) return `Lista para las ${sel.length} semanas (${rango})`
+    if (sel.length === 1) return `Lista para semana ${idxs[0] ?? 1} (${rangoSemana(sel[0])})`
+    return `Lista para semanas ${idxs.join('-')} (${rango})`
+  })()
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
@@ -473,6 +519,26 @@ export default function MercadoPage() {
             >
               {modoOpciones.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
+
+            {/* Por semanas: multi-select de checkboxes */}
+            {modo === 'semanas' && (
+              <div className="flex flex-col gap-1.5">
+                {semanasGeneradas.map((ws, i) => {
+                  const marcada = semanasActivas.includes(ws)
+                  return (
+                    <button key={ws} type="button" onClick={() => toggleSemana(ws)}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border text-left transition-all ${marcada ? 'border-accent bg-accent/5' : 'border-border bg-white'}`}>
+                      <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${marcada ? 'bg-accent border-accent' : 'border-border'}`}>
+                        {marcada && <span className="text-white text-[10px] font-bold">✓</span>}
+                      </span>
+                      <span className={`text-sm ${marcada ? 'text-accent font-medium' : 'text-text'}`}>Semana {i + 1} <span className="text-muted text-xs">(del {rangoSemana(ws)})</span></span>
+                    </button>
+                  )
+                })}
+                {generating && <p className="text-xs text-muted">Recalculando lista…</p>}
+                {!generating && <p className="text-xs text-accent font-medium mt-1">{tituloSemanas}</p>}
+              </div>
+            )}
 
             {/* Próximas X: input numérico libre */}
             {modo === 'proximas' && (

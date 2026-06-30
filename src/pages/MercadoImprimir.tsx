@@ -32,6 +32,8 @@ export default function MercadoImprimir() {
   const nParam   = searchParams.get('n') ?? null
   // ?modo=alfabetico → solo cambia título
   const modoParam = searchParams.get('modo') ?? null
+  // ?titulo=... → título dinámico (modo Por semanas)
+  const tituloParam = searchParams.get('titulo') ? decodeURIComponent(searchParams.get('titulo')!) : null
 
   const { family } = useFamilyStore()
   const { items, loadList } = useShoppingListStore()
@@ -55,6 +57,7 @@ export default function MercadoImprimir() {
 
   const tituloDoc = recetaFiltro  ? `🍽️ Lista para: ${recetaFiltro}`
     : recetasParam                ? `⏰ Próximas ${nParam ?? recetasParam.length} comidas`
+    : tituloParam                 ? `🛒 ${tituloParam}`
     : modoParam === 'alfabetico'  ? '🛒 Lista de mercado (A–Z)'
     : '🛒 Lista de mercado'
 
