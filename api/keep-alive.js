@@ -119,6 +119,33 @@ export default async function handler(req, res) {
         recipes_privadas: privadas.count,
       })
     }
+    // Modo diagnóstico temporal (?diag=impersonate): corre como ALE (su RLS real).
+    if (req.query && req.query.diag === 'impersonate') {
+      const email = req.query.email || 'alesofiad@gmail.com'
+      const fam = req.query.fam || '678d5356-24d2-4ac6-b5f6-6aa264774418'
+      const anonKey = process.env.VITE_SUPABASE_ANON_KEY
+      const link = await sb.auth.admin.generateLink({ type: 'magiclink', email })
+      const tokenHash = link.data && link.data.properties ? link.data.properties.hashed_token : null
+      if (!tokenHash) return res.status(200).json({ ok: false, step: 'generateLink', error: link.error ? link.error.message : 'sin token' })
+      const anon = createClient(SUPABASE_URL, anonKey)
+      const verify = await anon.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' })
+      const accessToken = verify.data && verify.data.session ? verify.data.session.access_token : null
+      if (!accessToken) return res.status(200).json({ ok: false, step: 'verifyOtp', error: verify.error ? verify.error.message : 'sin sesión' })
+      const asAle = createClient(SUPABASE_URL, anonKey, { global: { headers: { Authorization: `Bearer ${accessToken}` } } })
+      const rec = await asAle.from('recipes').select('id', { count: 'exact', head: true })
+        .eq('is_active_for_menu', true).not('tipo_comida', 'is', null)
+      const ins = await asAle.from('weekly_menu').insert({
+        family_id: fam, week_start: '2000-01-01', day_of_week: 1, meal_type: 'almuerzo',
+        meal_component: 'proteina', nombre_custom: '__DIAG__', recipe_id: null, member_id: null, servings: 1, status: 'planned',
+      })
+      await asAle.from('weekly_menu').delete().eq('family_id', fam).eq('week_start', '2000-01-01')
+      return res.status(200).json({
+        ok: true, ts: new Date().toISOString(),
+        ale_uid: verify.data.user ? verify.data.user.id : null,
+        recetas_que_ve_ale: rec.count, recetas_error: rec.error ? rec.error.message : null,
+        insert_como_ale_ok: !ins.error, insert_como_ale_error: ins.error ? ins.error.message : null,
+      })
+    }
     // Modo diagnóstico temporal (?diag=1): conteo real saltando RLS (service key).
     if (req.query && req.query.diag) {
       const total = await sb.from('recipes').select('id', { count: 'exact', head: true })
