@@ -32,14 +32,14 @@ export default async function handler(req, res) {
     // prueba un INSERT/DELETE de esquema (con service key, salta RLS).
     if (req.query && req.query.diag === 'rls') {
       const fam = req.query.fam || '40b2b23b-481d-4524-b9ae-dc6a5786d901'
-      const members = await sb.from('family_members')
-        .select('id, name, user_id, role').eq('family_id', fam)
+      const members = await sb.from('family_members').select('*').eq('family_id', fam)
+      const cols = members.data && members.data[0] ? Object.keys(members.data[0]) : []
       const wmCount = await sb.from('weekly_menu')
         .select('id', { count: 'exact', head: true }).eq('family_id', fam)
-      // Prueba de esquema: insertar y borrar una fila marcada (semana ficticia 2000-01-01)
+      // Prueba de esquema con meal_component VÁLIDO (semana ficticia 2000-01-01)
       const testRow = {
         family_id: fam, week_start: '2000-01-01', day_of_week: 1,
-        meal_type: 'diag', meal_component: 'diag', nombre_custom: '__DIAG_TEST__',
+        meal_type: 'almuerzo', meal_component: 'proteina', nombre_custom: '__DIAG_TEST__',
         recipe_id: null, member_id: null, servings: 1, status: 'planned',
       }
       const ins = await sb.from('weekly_menu').insert(testRow)
@@ -47,7 +47,8 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ok: true, ts: new Date().toISOString(),
         family: fam,
-        family_members: (members.data || []).map(m => ({ name: m.name, user_id: m.user_id, role: m.role })),
+        family_members_columnas: cols,
+        family_members: (members.data || []).map(m => ({ name: m.name, role: m.role, linked_user_id: m.linked_user_id })),
         family_members_error: members.error ? members.error.message : null,
         weekly_menu_filas_actuales: wmCount.count,
         insert_test_ok: !ins.error,
