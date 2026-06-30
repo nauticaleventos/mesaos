@@ -1,11 +1,20 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import {
-  generarMenuSemanal, getMondayOfWeek, getMondayNWeeksAgo, buildMealSlots,
+  generarMenuSemanal, getMondayOfWeek, getMondayNWeeksAgo, getMondayPlusWeeks, buildMealSlots,
   type MenuConfig, type RecipeForMenu, type MenuSlot,
 } from '../lib/motorMenu'
 import { calcularNivelNevera } from '../lib/nivelNevera'
 import type { FridgeItem } from './fridgeStore'
+
+// Opciones de generación. Para multi-semana: weekStart fija la semana objetivo,
+// extraRecent inyecta recetas ya usadas en otras semanas del lote (variedad),
+// partOfBatch evita que cada semana resetee el spinner / recargue (lo hace el orquestador).
+export interface GenOpts {
+  weekStart?:   string
+  extraRecent?: string[]
+  partOfBatch?: boolean
+}
 
 export interface EnrichedMenuEntry {
   id:             string
@@ -40,7 +49,8 @@ interface MenuState {
   loadConfig:           (familyId: string) => Promise<void>
   saveConfig:           (familyId: string, patch: Partial<MenuConfig>) => Promise<void>
   loadMenu:             (familyId: string, weekStart?: string) => Promise<void>
-  generarMenu:          (familyId: string, fridgeItems: FridgeItem[], healthyMode: boolean) => Promise<string | null>
+  generarMenu:          (familyId: string, fridgeItems: FridgeItem[], healthyMode: boolean, opts?: GenOpts) => Promise<string | null>
+  generarMenuMulti:     (familyId: string, fridgeItems: FridgeItem[], healthyMode: boolean, numSemanas: number) => Promise<string | null>
   marcarCocinada:       (id: string) => Promise<void>
   saltarReceta:         (id: string) => Promise<void>
   buscarAlternativas:   (entryId: string, razon: SwapReason) => Promise<RecipeForMenu[]>
@@ -152,9 +162,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   // ── Generar menú semanal ────────────────────────────────────────────────────
-  generarMenu: async (familyId, fridgeItems, healthyMode) => {
+  generarMenu: async (familyId, fridgeItems, healthyMode, opts = {}) => {
     set({ generating: true, progress: 0 })
-    const weekStart = getMondayOfWeek()
+    const weekStart = opts.weekStart ?? getMondayOfWeek()
     let stage = 'inicio'
     const t0 = Date.now()
     const mark = (s: string) => { stage = s; console.log(`[generarMenu] ${s} +${Date.now() - t0}ms`) }
@@ -284,6 +294,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         .lt('week_start', weekStart)
 
       const recentRecipeIds = new Set((recentMenus ?? []).map((m: { recipe_id: string }) => m.recipe_id))
+      // Multi-semana: las recetas ya usadas en otras semanas del lote también penalizan
+      // (empuja variedad entre semanas — que no salga el mismo lunes 4 veces).
+      ;(opts.extraRecent ?? []).forEach(id => recentRecipeIds.add(id))
 
       // 6b. Recetas del menú actual — excluir del pool al regenerar.
       // Garantiza resultados distintos: el fridge bonus (500) domina la penalización suave.
@@ -407,15 +420,17 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       set({ progress: 100 })
 
-      // 10. Recargar el menú
-      mark('recargando menú')
-      await get().loadMenu(familyId, weekStart)
-      set({ generating: false, progress: 0 })
+      // 10. Recargar el menú (en lote lo hace el orquestador al final, una sola vez)
+      if (!opts.partOfBatch) {
+        mark('recargando menú')
+        await get().loadMenu(familyId, weekStart)
+        set({ generating: false, progress: 0 })
+      }
       mark('listo')
       return null
 
     } catch (e) {
-      set({ generating: false, progress: 0 })
+      if (!opts.partOfBatch) set({ generating: false, progress: 0 })
       console.error(`[generarMenu] EXCEPCIÓN en etapa "${stage}":`, e)
       return String(e)
     }
@@ -430,10 +445,43 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     ])
     if (result === '__TIMEOUT__') {
       console.error(`[generarMenu] TIMEOUT (>${TIMEOUT_MS}ms) — atascado en etapa: ${stage}`)
-      set({ generating: false, progress: 0 })
+      if (!opts.partOfBatch) set({ generating: false, progress: 0 })
       return `La generación tardó demasiado y se canceló (se quedó en: "${stage}"). Suele ser un bloqueo de permisos (RLS) en la base de datos. Reintenta; si persiste, hay que ajustar las políticas RLS.`
     }
     return result
+  },
+
+  // ── Generación MULTI-SEMANA — orquesta varias semanas seguidas ──────────────
+  // Genera 1..N semanas consecutivas. Cada semana penaliza las recetas ya usadas
+  // en las semanas previas del lote (variedad). Inserta cada una con su week_start.
+  generarMenuMulti: async (familyId, fridgeItems, healthyMode, numSemanas) => {
+    const n = Math.max(1, Math.min(4, numSemanas | 0))
+    set({ generating: true, progress: 0 })
+    const base = getMondayOfWeek()
+    const semanas = Array.from({ length: n }, (_, i) => getMondayPlusWeeks(i))
+    const acumulado = new Set<string>()
+    try {
+      for (let i = 0; i < semanas.length; i++) {
+        set({ progress: Math.round((i / n) * 100) })
+        const err = await get().generarMenu(familyId, fridgeItems, healthyMode, {
+          weekStart:   semanas[i],
+          extraRecent: [...acumulado],
+          partOfBatch: true,
+        })
+        if (err) { set({ generating: false, progress: 0 }); return err }
+        // Acumular las recetas de esta semana para empujar variedad en las siguientes
+        const { data } = await supabase.from('weekly_menu')
+          .select('recipe_id').eq('family_id', familyId).eq('week_start', semanas[i])
+        ;(data ?? []).forEach((r: { recipe_id: string | null }) => { if (r.recipe_id) acumulado.add(r.recipe_id) })
+      }
+      // Recargar la semana base (la que se muestra) una sola vez
+      await get().loadMenu(familyId, base)
+      set({ generating: false, progress: 0 })
+      return null
+    } catch (e) {
+      set({ generating: false, progress: 0 })
+      return String(e)
+    }
   },
 
   // ── Marcar cocinada + auto-registrar sobra de proteína ──────────────────────

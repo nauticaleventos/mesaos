@@ -1297,5 +1297,12 @@ export function getMondayNWeeksAgo(n: number): string {
   return getMondayOfWeek(d)
 }
 
+// Lunes de la semana que está N semanas DESPUÉS de la base (n=0 → semana actual).
+export function getMondayPlusWeeks(n: number, base = new Date()): string {
+  const d = new Date(getMondayOfWeek(base) + 'T12:00:00')
+  d.setDate(d.getDate() + n * 7)
+  return getMondayOfWeek(d)
+}
+
 export const DAY_NAMES = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 export const DAY_NAMES_FULL = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']

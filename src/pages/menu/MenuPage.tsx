@@ -4,7 +4,7 @@ import { useAuthStore }   from '../../store/authStore'
 import { useFamilyStore } from '../../store/familyStore'
 import { useFridgeStore } from '../../store/fridgeStore'
 import { useMenuStore }   from '../../store/menuStore'
-import { getMondayOfWeek } from '../../lib/motorMenu'
+import { getMondayOfWeek, getMondayPlusWeeks } from '../../lib/motorMenu'
 import { calcularNivelNevera } from '../../lib/nivelNevera'
 import ConfigMenu from '../../components/menu/ConfigMenu'
 import VistaMenu  from '../../components/menu/VistaMenu'
@@ -16,12 +16,14 @@ export default function MenuPage() {
   const { session }             = useAuthStore()
   const { family, members }     = useFamilyStore()
   const { items: fridgeItems }  = useFridgeStore()
-  const { menu, loading, generating, loadConfig, loadMenu, generarMenu } = useMenuStore()
+  const { menu, loading, generating, loadConfig, loadMenu, generarMenuMulti } = useMenuStore()
 
   const [error, setError]           = useState<string | null>(null)
   const [confirmar, setConfirmar]   = useState(false)
   const [showAd, setShowAd]         = useState(false)
   const [toastRegen, setToastRegen] = useState(false)
+  const [toastMulti, setToastMulti] = useState<string | null>(null)
+  const [numSemanas, setNumSemanas] = useState(1)   // 1 / 2 / 4 semanas a generar
 
   const healthyMode = family?.healthy_mode_active ?? false
   const weekStart   = getMondayOfWeek()
@@ -37,14 +39,21 @@ export default function MenuPage() {
     if (!family?.id) return
     if (tieneMenu && !confirmar) { setConfirmar(true); return }
     const eraRegeneracion = tieneMenu
+    // Al regenerar se reemplaza solo la semana actual; al generar fresco, 1/2/4 semanas.
+    const semanas = eraRegeneracion ? 1 : numSemanas
     setConfirmar(false)
     setError(null)
-    const err = await generarMenu(family.id, fridgeItems, healthyMode)
+    const err = await generarMenuMulti(family.id, fridgeItems, healthyMode, semanas)
     if (err) {
       setError(err)
     } else if (eraRegeneracion) {
       setToastRegen(true)
       setTimeout(() => setToastRegen(false), 3000)
+    } else if (semanas > 1) {
+      const fmtDM = (iso: string) => { const p = iso.split('-'); return `${p[2]}/${p[1]}` }
+      const finIso = (() => { const dt = new Date(getMondayPlusWeeks(semanas - 1) + 'T12:00:00'); dt.setDate(dt.getDate() + 6); return dt.toISOString().split('T')[0] })()
+      setToastMulti(`✅ Generadas ${semanas} semanas: del ${fmtDM(getMondayOfWeek())} al ${fmtDM(finIso)}`)
+      setTimeout(() => setToastMulti(null), 5000)
     } else {
       setShowAd(true)  // Intersticial solo en primera generación
     }
@@ -116,6 +125,24 @@ export default function MenuPage() {
             {/* Si no hay menú generado: mostrar config */}
             {!tieneMenu && !loading && (
               <>
+                {/* Cuántas semanas generar (mercado mensual) — acceso libre en Beta */}
+                <div className="card mb-3">
+                  <p className="text-sm font-semibold text-text mb-2">¿Cuántas semanas generar?</p>
+                  <div className="flex gap-2">
+                    {[1, 2, 4].map(n => (
+                      <button key={n} type="button" onClick={() => setNumSemanas(n)}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                          numSemanas === n
+                            ? 'bg-accent text-white border-accent'
+                            : 'bg-white text-muted border-border hover:border-accent'}`}>
+                        {n} {n === 1 ? 'semana' : 'semanas'}
+                      </button>
+                    ))}
+                  </div>
+                  {numSemanas > 1 && (
+                    <p className="text-xs text-muted mt-2">Se generan {numSemanas} semanas seguidas con variedad entre ellas. Ideal si haces mercado mensual.</p>
+                  )}
+                </div>
                 <ConfigMenu
                   familyId={family.id}
                   healthyMode={healthyMode}
@@ -166,6 +193,12 @@ export default function MenuPage() {
       {toastRegen && (
         <div className="fixed bottom-24 left-4 right-4 max-w-sm mx-auto bg-gray-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg z-30 text-center">
           ✅ Menú regenerado
+        </div>
+      )}
+
+      {toastMulti && (
+        <div className="fixed bottom-24 left-4 right-4 max-w-sm mx-auto bg-gray-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg z-30 text-center">
+          {toastMulti}
         </div>
       )}
     </div>
