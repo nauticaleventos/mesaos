@@ -28,6 +28,32 @@ export default async function handler(req, res) {
     if (error) {
       return res.status(500).json({ ok: false, error: error.message })
     }
+    // Modo diagnóstico temporal (?diag=rls): chequea family_members, weekly_menu y
+    // prueba un INSERT/DELETE de esquema (con service key, salta RLS).
+    if (req.query && req.query.diag === 'rls') {
+      const fam = req.query.fam || '40b2b23b-481d-4524-b9ae-dc6a5786d901'
+      const members = await sb.from('family_members')
+        .select('id, name, user_id, role').eq('family_id', fam)
+      const wmCount = await sb.from('weekly_menu')
+        .select('id', { count: 'exact', head: true }).eq('family_id', fam)
+      // Prueba de esquema: insertar y borrar una fila marcada (semana ficticia 2000-01-01)
+      const testRow = {
+        family_id: fam, week_start: '2000-01-01', day_of_week: 1,
+        meal_type: 'diag', meal_component: 'diag', nombre_custom: '__DIAG_TEST__',
+        recipe_id: null, member_id: null, servings: 1, status: 'planned',
+      }
+      const ins = await sb.from('weekly_menu').insert(testRow)
+      await sb.from('weekly_menu').delete().eq('family_id', fam).eq('week_start', '2000-01-01')
+      return res.status(200).json({
+        ok: true, ts: new Date().toISOString(),
+        family: fam,
+        family_members: (members.data || []).map(m => ({ name: m.name, user_id: m.user_id, role: m.role })),
+        family_members_error: members.error ? members.error.message : null,
+        weekly_menu_filas_actuales: wmCount.count,
+        insert_test_ok: !ins.error,
+        insert_test_error: ins.error ? ins.error.message : null,
+      })
+    }
     // Modo diagnóstico temporal (?diag=1): conteo real saltando RLS (service key).
     if (req.query && req.query.diag) {
       const total = await sb.from('recipes').select('id', { count: 'exact', head: true })
