@@ -6,6 +6,18 @@ import {
 } from '../lib/motorMenu'
 import { calcularNivelNevera } from '../lib/nivelNevera'
 import type { FridgeItem } from './fridgeStore'
+import { useShoppingListStore } from './shoppingListStore'
+
+// Regenera la lista de mercado tras cambiar el menú (B). Respeta las semanas que
+// el usuario tiene seleccionadas en el mercado. Nunca rompe la generación del menú.
+async function regenerarMercado(familyId: string, fridgeItems: FridgeItem[]) {
+  try {
+    const sl = useShoppingListStore.getState()
+    if (sl.listId || sl.semanasMercado.length) {
+      await sl.generateList(familyId, fridgeItems, sl.semanasMercado.length ? sl.semanasMercado : undefined)
+    }
+  } catch (e) { console.error('[regenerarMercado] no se pudo actualizar la lista:', e) }
+}
 
 // Opciones de generación. Para multi-semana: weekStart fija la semana objetivo,
 // extraRecent inyecta recetas ya usadas en otras semanas del lote (variedad),
@@ -471,6 +483,8 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         mark('recargando menú')
         await get().loadMenu(familyId, weekStart)
         set({ generating: false, progress: 0 })
+        // B — regenerar lista de mercado al cambiar el menú (solo fuera de lote)
+        await regenerarMercado(familyId, fridgeItems)
       }
       mark('listo')
       return null
@@ -523,6 +537,8 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       // Recargar la semana base (la que se muestra) una sola vez
       await get().loadMenu(familyId, base)
       set({ generating: false, progress: 0 })
+      // B — regenerar lista de mercado una vez al terminar el lote
+      await regenerarMercado(familyId, fridgeItems)
       return null
     } catch (e) {
       set({ generating: false, progress: 0 })

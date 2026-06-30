@@ -55,9 +55,9 @@ export default function MercadoImprimir() {
     porPasillo.get(item.categoria_pasillo)!.push(item)
   }
 
-  const tituloDoc = recetaFiltro  ? `🍽️ Lista para: ${recetaFiltro}`
+  const tituloDoc = tituloParam   ? `🛒 ${tituloParam}`
+    : recetaFiltro                ? `🍽️ Lista para: ${recetaFiltro}`
     : recetasParam                ? `⏰ Próximas ${nParam ?? recetasParam.length} comidas`
-    : tituloParam                 ? `🛒 ${tituloParam}`
     : modoParam === 'alfabetico'  ? '🛒 Lista de mercado (A–Z)'
     : '🛒 Lista de mercado'
 

@@ -33,6 +33,7 @@ interface ShoppingListState {
   generating: boolean
   desglose:  Record<string, ProcedenciaItem[]>   // key: normIngrediente(nombre) → recetas que lo usan
   semanasMercado: string[]                        // week_starts incluidas en la lista (vacío = semana actual)
+  listaDesactualizada: boolean                    // el menú cambió después de armar la lista (C)
 
   loadList:     (familyId: string) => Promise<void>
   generateList: (familyId: string, fridgeItems: FridgeItem[], weekStarts?: string[]) => Promise<void>
@@ -557,19 +558,21 @@ export const useShoppingListStore = create<ShoppingListState>((set) => ({
   generating: false,
   desglose:  {},
   semanasMercado: leerSemanasLS(),
+  listaDesactualizada: false,
 
   loadList: async (familyId) => {
     set({ loading: true })
     const weekStart = getMondayOfWeek()
     const semanas = leerSemanasLS()
+    const semanasEfectivas = semanas.length ? semanas : [weekStart]
     const { data: list } = await supabase
       .from('shopping_lists')
-      .select('id')
+      .select('id, created_at')
       .eq('family_id', familyId)
       .eq('week_start', weekStart)
       .maybeSingle()
 
-    if (!list) { set({ listId: null, items: [], desglose: {}, loading: false }); return }
+    if (!list) { set({ listId: null, items: [], desglose: {}, listaDesactualizada: false, loading: false }); return }
 
     const { data: items } = await supabase
       .from('shopping_list_items')
@@ -577,8 +580,17 @@ export const useShoppingListStore = create<ShoppingListState>((set) => ({
       .eq('shopping_list_id', list.id)
       .order('categoria_pasillo')
 
+    // C — ¿el menú cambió después de armar la lista? (created_at del menú vs de la lista)
+    let desactualizada = false
+    try {
+      const { data: ult } = await supabase.from('weekly_menu')
+        .select('created_at').eq('family_id', familyId).in('week_start', semanasEfectivas)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      if (ult?.created_at && list.created_at) desactualizada = new Date(ult.created_at) > new Date(list.created_at)
+    } catch { /* noop */ }
+
     const desglose = await computeDesglose(familyId, semanas)
-    set({ listId: list.id, items: (items ?? []) as ShoppingListItem[], desglose, semanasMercado: semanas, loading: false })
+    set({ listId: list.id, items: (items ?? []) as ShoppingListItem[], desglose, semanasMercado: semanas, listaDesactualizada: desactualizada, loading: false })
   },
 
   generateList: async (familyId, fridgeItems, weekStarts) => {
@@ -613,7 +625,7 @@ export const useShoppingListStore = create<ShoppingListState>((set) => ({
       .order('categoria_pasillo')
 
     const desglose = await computeDesglose(familyId, semanas)
-    set({ listId: list.id, items: (savedItems ?? []) as ShoppingListItem[], desglose, semanasMercado: semanas, generating: false })
+    set({ listId: list.id, items: (savedItems ?? []) as ShoppingListItem[], desglose, semanasMercado: semanas, listaDesactualizada: false, generating: false })
   },
 
   // Cambia las semanas incluidas en la lista y la regenera.

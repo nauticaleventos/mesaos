@@ -28,7 +28,9 @@ const PASILLOS: Record<string, { emoji: string; label: string }> = {
 }
 const PASILLO_ORDER = Object.keys(PASILLOS)
 
-type Modo = 'pasillos' | 'alfabetico' | 'proximas' | 'receta' | 'semanas'
+// Filtro = qué incluir · Orden = cómo mostrar (independientes y combinables)
+type Filtro = 'todo' | 'proximas' | 'receta' | 'semanas'
+type Orden  = 'pasillos' | 'alfabetico'
 
 const CORTE_MIN: Record<string, number> = {
   desayuno: 8 * 60, brunch: 8 * 60,
@@ -71,11 +73,14 @@ export default function MercadoPage() {
   const { family }                      = useFamilyStore()
   const { items: fridgeItems }          = useFridgeStore()
   const { menu, semanasGeneradas, cargarSemanas } = useMenuStore()
-  const { listId, items, loading, generating, desglose, semanasMercado, loadList, generateList, setSemanasMercado, toggleComprado } = useShoppingListStore()
+  const { listId, items, loading, generating, desglose, semanasMercado, listaDesactualizada, loadList, generateList, setSemanasMercado, toggleComprado } = useShoppingListStore()
   const [expandedItem, setExpandedItem] = useState<string | null>(null)
 
-  const [modo, setModoState] = useState<Modo>(
-    () => (localStorage.getItem('mesa_mercado_modo') as Modo) ?? 'pasillos'
+  const [filtro, setFiltroState] = useState<Filtro>(
+    () => (localStorage.getItem('mesa_mercado_filtro') as Filtro) ?? 'todo'
+  )
+  const [orden, setOrdenState] = useState<Orden>(
+    () => (localStorage.getItem('mesa_mercado_orden') as Orden) ?? 'pasillos'
   )
   const [nComidas, setNComidasState] = useState<number>(
     () => parseInt(localStorage.getItem('mesa_mercado_n_comidas') ?? '7', 10)
@@ -83,11 +88,14 @@ export default function MercadoPage() {
   const [nComidasStr, setNComidasStr] = useState(
     () => localStorage.getItem('mesa_mercado_n_comidas') ?? '7'
   )
-  const [recetaModo, setRecetaModo]     = useState<string>('')
+  const [recetaModo, setRecetaModo]     = useState<string>(() => localStorage.getItem('mesa_mercado_receta_filtro') ?? '')
   const [busqueda, setBusqueda]         = useState('')
   const [noUsanExpandido, setNoUsanExpandido] = useState(false)
+  const [filtroDefaultAplicado, setFiltroDefaultAplicado] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
 
-  const setModo    = (m: Modo) => { setModoState(m); localStorage.setItem('mesa_mercado_modo', m) }
+  const setFiltro = (f: Filtro) => { setFiltroState(f); localStorage.setItem('mesa_mercado_filtro', f) }
+  const setOrden  = (o: Orden)  => { setOrdenState(o);  localStorage.setItem('mesa_mercado_orden', o) }
   const setNComidas = (n: number) => {
     setNComidasState(n)
     setNComidasStr(String(n))
@@ -136,8 +144,25 @@ export default function MercadoPage() {
   }, [menu])
 
   useEffect(() => {
-    if (modo === 'receta' && !recetaModo && recetasMenu.length > 0) setRecetaModo(recetasMenu[0])
-  }, [modo, recetasMenu])
+    if (filtro === 'receta' && !recetaModo && recetasMenu.length > 0) setRecetaModo(recetasMenu[0])
+  }, [filtro, recetasMenu, recetaModo])
+
+  // Persistir la receta filtrada
+  useEffect(() => { if (recetaModo) localStorage.setItem('mesa_mercado_receta_filtro', recetaModo) }, [recetaModo])
+
+  // Si quedó 'semanas' guardado pero ya no hay multi-semana, volver a 'todo'.
+  useEffect(() => { if (filtro === 'semanas' && !multiSemana) setFiltro('todo') }, [filtro, multiSemana])
+
+  // Default inteligente del FILTRO según frecuencia de mercado (una sola vez).
+  useEffect(() => {
+    if (filtroDefaultAplicado || !family?.id) return
+    if (localStorage.getItem('mesa_mercado_filtro')) { setFiltroDefaultAplicado(true); return }
+    const fm = family.frecuencia_mercado
+    if ((fm === 'mensual' || fm === 'quincenal') && semanasGeneradas.length > 1) setFiltro('semanas')
+    else setFiltro('todo')
+    setFiltroDefaultAplicado(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [family?.id, semanasGeneradas.length])
 
   // ── Comidas activas (ordenadas) — base para secciones ───────────────────
   interface MealEntry { dayOfWeek: number; dayLabel: string; mealType: string; mealLabel: string; recipeName: string }
@@ -168,7 +193,7 @@ export default function MercadoPage() {
       recipeName: e.recipe!.nombre,
     })
 
-    if (modo === 'proximas') {
+    if (filtro === 'proximas') {
       const sorted = base
         .filter(e => {
           if (e.day_of_week > isoDow) return true
@@ -184,7 +209,7 @@ export default function MercadoPage() {
       return dedup(sorted).slice(0, nComidas).map(toMealEntry)
     }
 
-    const targetRecipe = modo === 'receta' ? recetaModo : recetaFiltro
+    const targetRecipe = filtro === 'receta' ? recetaModo : recetaFiltro
     if (targetRecipe) {
       const sorted = base
         .filter(e => e.recipe!.nombre === targetRecipe)
@@ -197,7 +222,7 @@ export default function MercadoPage() {
     }
 
     return []
-  }, [menu, modo, nComidas, recetaModo, recetaFiltro])
+  }, [menu, filtro, nComidas, recetaModo, recetaFiltro])
 
   // Nombres de recetas de las comidas activas (para filtrar items)
   const proximasRecetas: string[] = useMemo(
@@ -237,13 +262,13 @@ export default function MercadoPage() {
         if (!match) return false
         return i.faltante || enFridgeActual(i.ingrediente_nombre)
       }
-      if (modo === 'proximas') {
+      if (filtro === 'proximas') {
         const byReceta = proximasRecetas.some(r => i.recetas_origen.includes(r))
         const byIng    = !byReceta && proximasRecetas.some(r => itemMatchesRecipe(i.ingrediente_nombre, r))
         if (!byReceta && !byIng) return false
         return i.faltante || enFridgeActual(i.ingrediente_nombre)
       }
-      if (modo === 'receta') {
+      if (filtro === 'receta') {
         if (!recetaModo) return false
         const match = i.recetas_origen.includes(recetaModo) || itemMatchesRecipe(i.ingrediente_nombre, recetaModo)
         if (!match) return false
@@ -254,30 +279,7 @@ export default function MercadoPage() {
       return i.faltante
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, busqueda, recetaFiltro, modo, proximasRecetas, recetaModo, fridgeItems, recipeIngMap])
-
-  // ── Secciones por comida/día (modos proximas, receta, recetaFiltro) ──────
-  const usarSecciones = modo === 'proximas' || modo === 'receta' || recetaFiltro !== null
-
-  interface Section { key: string; header: string; recipeName: string; rows: ShoppingListItem[] }
-
-  const sections: Section[] = useMemo(() => {
-    if (!usarSecciones) return []
-    return activeMeals
-      .map(meal => ({
-        key:        `${meal.dayOfWeek}::${meal.mealType}::${meal.recipeName}`,
-        header:     `${meal.mealLabel} · ${meal.dayLabel}`,
-        recipeName: meal.recipeName,
-        rows: items.filter(i => {
-          const match = i.recetas_origen.includes(meal.recipeName) ||
-                        itemMatchesRecipe(i.ingrediente_nombre, meal.recipeName)
-          if (!match) return false
-          return i.faltante || !inventarioTiene(fridgeItems, i.ingrediente_nombre).tiene
-        }),
-      }))
-      .filter(s => s.rows.length > 0)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [usarSecciones, activeMeals, items, fridgeItems, recipeIngMap])
+  }, [items, busqueda, recetaFiltro, filtro, proximasRecetas, recetaModo, fridgeItems, recipeIngMap])
 
   // ── Contexto inline para modo alfabético ─────────────────────────────────
   const recipeContextMap = useMemo(() => {
@@ -306,19 +308,20 @@ export default function MercadoPage() {
 
   // ── Widget nevera: ingredientes del scope vs nevera ──────────────────────
   const scopeIngredientes = useMemo(() => {
+    // El scope de la nevera se recalcula según el FILTRO activo.
     const scopeRecipes = new Set<string>()
-    if (usarSecciones) {
-      activeMeals.forEach(m => scopeRecipes.add(m.recipeName))
-    } else {
-      menu.filter(e => e.is_main_recipe && e.recipe?.nombre).forEach(e => scopeRecipes.add(e.recipe!.nombre))
-    }
+    if (filtro === 'proximas')                 activeMeals.forEach(m => scopeRecipes.add(m.recipeName))
+    else if (filtro === 'receta' && recetaModo) scopeRecipes.add(recetaModo)
+    else if (recetaFiltro)                      scopeRecipes.add(recetaFiltro)
+    else menu.filter(e => e.is_main_recipe && e.recipe?.nombre).forEach(e => scopeRecipes.add(e.recipe!.nombre))
     const noms = new Set<string>()
     for (const e of menu) {
       if (!e.is_main_recipe || !e.recipe?.nombre || !scopeRecipes.has(e.recipe.nombre)) continue
       for (const ing of (e.recipe.ingredientes ?? [])) noms.add(ing.nombre)
     }
     return [...noms]
-  }, [menu, usarSecciones, activeMeals])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menu, filtro, activeMeals, recetaModo, recetaFiltro])
 
   const { fridgeUsados, fridgeNoUsados } = useMemo(() => {
     if (fridgeItems.length === 0) return { fridgeUsados: [] as FridgeItem[], fridgeNoUsados: [] as FridgeItem[] }
@@ -335,13 +338,13 @@ export default function MercadoPage() {
   // ── Agrupación por pasillo (modo pasillos y fallback) ────────────────────
   const porPasillo = useMemo(() => {
     const map = new Map<string, ShoppingListItem[]>()
-    if (modo === 'pasillos') {
+    if (orden === 'pasillos') {
       for (const item of itemsFiltrados) {
         const p = item.categoria_pasillo
         if (!map.has(p)) map.set(p, [])
         map.get(p)!.push(item)
       }
-    } else if (modo === 'alfabetico') {
+    } else if (orden === 'alfabetico') {
       const sorted = [...itemsFiltrados].sort((a, b) =>
         a.ingrediente_nombre.localeCompare(b.ingrediente_nombre, 'es')
       )
@@ -350,9 +353,9 @@ export default function MercadoPage() {
     for (const [p, arr] of map.entries())
       map.set(p, arr.sort((a, b) => a.ingrediente_nombre.localeCompare(b.ingrediente_nombre, 'es')))
     return map
-  }, [itemsFiltrados, modo])
+  }, [itemsFiltrados, orden])
 
-  const pasillosConItems = modo === 'pasillos'
+  const pasillosConItems = orden === 'pasillos'
     ? PASILLO_ORDER.filter(p => porPasillo.has(p))
     : porPasillo.has('_alpha') ? ['_alpha'] : []
 
@@ -360,44 +363,37 @@ export default function MercadoPage() {
   const comprados      = items.filter(i => i.comprado).length
 
   // ── Share / Print ────────────────────────────────────────────────────────
-  const getTitulo = (): string => {
-    if (recetaFiltro)                    return `Ingredientes para ${recetaFiltro}`
-    if (modo === 'receta' && recetaModo) return `Ingredientes para ${recetaModo}`
-    if (modo === 'proximas')             return `Lista próximas ${nComidas} comidas`
-    if (modo === 'alfabetico')           return 'Lista de mercado (A-Z)'
-    return 'Lista de mercado mesa.os'
+  // Etiqueta del scope (qué incluye) según filtro.
+  const scopeLabel = (): string => {
+    if (recetaFiltro)            return recetaFiltro
+    if (filtro === 'receta')     return recetaModo || 'una receta'
+    if (filtro === 'proximas')   return `próximas ${nComidas} comidas`
+    if (filtro === 'semanas' && multiSemana) return tituloSemanas.replace(/^Lista para /, '')
+    return 'todo el menú'
   }
-
-  const getEncabezado = (): string => {
-    if (recetaFiltro)                    return `🍽️ Ingredientes para ${recetaFiltro}:\n`
-    if (modo === 'receta' && recetaModo) return `🍽️ Ingredientes para ${recetaModo}:\n`
-    if (modo === 'proximas')             return `⏰ Lista para las próximas ${nComidas} comidas:\n`
-    if (modo === 'semanas' && multiSemana) return `🛒 ${tituloSemanas}:\n`
-    if (modo === 'alfabetico')           return '🛒 Lista de mercado (A-Z):\n'
-    return '🛒 Lista de mercado:\n'
-  }
+  const ordenLabel = orden === 'alfabetico' ? 'alfabético' : 'por pasillos'
+  const getTitulo    = (): string => `Lista para ${scopeLabel()} (${ordenLabel})`
+  const getEncabezado = (): string => `🛒 ${getTitulo()}:\n`
 
   const getPrintUrl = (): string => {
+    // Título combinado (filtro + orden) + params de filtrado de items.
+    const t = `&titulo=${encodeURIComponent(getTitulo())}`
+    const o = orden === 'alfabetico' ? '&orden=alfabetico' : ''
     if (recetaFiltro)
-      return `/mercado/imprimir?receta=${encodeURIComponent(recetaFiltro)}`
-    if (modo === 'receta' && recetaModo)
-      return `/mercado/imprimir?receta=${encodeURIComponent(recetaModo)}`
-    if (modo === 'proximas' && proximasRecetas.length > 0)
-      return `/mercado/imprimir?recetas=${encodeURIComponent(proximasRecetas.join(','))}&n=${nComidas}`
-    // Por semanas: pasar el título dinámico (la lista guardada ya abarca esas semanas)
-    if (modo === 'semanas' && multiSemana)
-      return `/mercado/imprimir?titulo=${encodeURIComponent(tituloSemanas)}`
-    if (modo === 'alfabetico')
-      return '/mercado/imprimir?modo=alfabetico'
-    return '/mercado/imprimir'
+      return `/mercado/imprimir?receta=${encodeURIComponent(recetaFiltro)}${t}${o}`
+    if (filtro === 'receta' && recetaModo)
+      return `/mercado/imprimir?receta=${encodeURIComponent(recetaModo)}${t}${o}`
+    if (filtro === 'proximas' && proximasRecetas.length > 0)
+      return `/mercado/imprimir?recetas=${encodeURIComponent(proximasRecetas.join(','))}&n=${nComidas}${t}${o}`
+    return `/mercado/imprimir?x=1${t}${o}`
   }
 
   const handleShare = async () => {
     const shareItems = items.filter(i => {
       if (!i.faltante || i.comprado) return false
       if (recetaFiltro)        return i.recetas_origen.includes(recetaFiltro)
-      if (modo === 'proximas') return proximasRecetas.some(r => i.recetas_origen.includes(r))
-      if (modo === 'receta')   return recetaModo ? i.recetas_origen.includes(recetaModo) : true
+      if (filtro === 'proximas') return proximasRecetas.some(r => i.recetas_origen.includes(r))
+      if (filtro === 'receta')   return recetaModo ? i.recetas_origen.includes(recetaModo) : true
       return true
     })
     const texto = getEncabezado() + shareItems
@@ -409,16 +405,23 @@ export default function MercadoPage() {
 
   const handleGenerar = async () => {
     if (!family?.id) return
-    await generateList(family.id, fridgeItems)
+    await generateList(family.id, fridgeItems, filtro === 'semanas' ? semanasActivas : undefined)
   }
 
-  const modoOpciones: { value: Modo; label: string }[] = [
-    { value: 'pasillos',   label: '🛒 Pasillos del super'  },
-    { value: 'alfabetico', label: '🔤 Orden alfabético'    },
-    { value: 'proximas',   label: '⏰ Próximas comidas'    },
-    { value: 'receta',     label: '🍽️ Una receta del menú' },
-    // "Por semanas" solo si hay menú multi-semana generado
-    ...(multiSemana ? [{ value: 'semanas' as Modo, label: '📅 Por semanas' }] : []),
+  // D — Regenerar lista manual (respeta el filtro activo).
+  const handleRegenerarLista = async () => {
+    if (!family?.id) return
+    await generateList(family.id, fridgeItems, filtro === 'semanas' ? semanasActivas : undefined)
+    setToast('Lista actualizada')
+    setTimeout(() => setToast(null), 2500)
+  }
+
+  // Opciones del FILTRO (qué incluir). "Por semanas" solo con menú multi-semana.
+  const filtroOpciones: { value: Filtro; label: string }[] = [
+    { value: 'todo',     label: '🛒 Todo el menú'        },
+    { value: 'proximas', label: '⏰ Próximas comidas'     },
+    { value: 'receta',   label: '🍽️ Una receta del menú' },
+    ...(multiSemana ? [{ value: 'semanas' as Filtro, label: '📅 Por semanas' }] : []),
   ]
 
   // Título dinámico de la lista según semanas incluidas.
@@ -509,19 +512,42 @@ export default function MercadoPage() {
           </div>
         )}
 
-        {/* Selector de modo — visible en cuanto hay menú */}
+        {/* C — Banner: el menú cambió y la lista puede estar desactualizada */}
+        {tieneMenu && !loading && !generating && listaDesactualizada && (
+          <div className="p-3 rounded-2xl bg-orange-50 border border-orange-200 mb-3 flex items-center gap-2">
+            <span>⚠️</span>
+            <p className="text-sm text-orange-800 flex-1">Tu menú cambió. La lista puede estar desactualizada.</p>
+            <button onClick={handleRegenerarLista} className="text-xs font-semibold text-white bg-orange-500 px-3 py-1.5 rounded-lg whitespace-nowrap">Regenerar ahora</button>
+          </div>
+        )}
+
+        {/* Selectores: Filtrar (qué incluir) + Ordenar (cómo mostrar) + Regenerar */}
         {tieneMenu && !loading && !generating && !recetaFiltro && (
           <div className="flex flex-col gap-2 mb-3">
-            <select
-              value={modo}
-              onChange={e => setModo(e.target.value as Modo)}
-              className="w-full px-3 py-2 rounded-xl border border-border bg-white text-sm text-text focus:outline-none focus:border-accent"
-            >
-              {modoOpciones.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <div className="flex items-end gap-2">
+              <div className="flex-1 min-w-0">
+                <label className="text-[10px] text-muted font-medium block mb-0.5">Filtrar</label>
+                <select value={filtro} onChange={e => setFiltro(e.target.value as Filtro)}
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-white text-sm text-text focus:outline-none focus:border-accent">
+                  {filtroOpciones.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="w-[42%] min-w-0">
+                <label className="text-[10px] text-muted font-medium block mb-0.5">Ordenar</label>
+                <select value={orden} onChange={e => setOrden(e.target.value as Orden)}
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-white text-sm text-text focus:outline-none focus:border-accent">
+                  <option value="pasillos">🛒 Pasillos</option>
+                  <option value="alfabetico">🔤 Alfabético</option>
+                </select>
+              </div>
+              <button onClick={handleRegenerarLista} title="Regenerar lista"
+                className="flex-shrink-0 w-10 h-[38px] rounded-xl border border-border bg-white text-muted hover:text-accent hover:border-accent flex items-center justify-center transition-all">
+                <RefreshCw size={16} />
+              </button>
+            </div>
 
             {/* Por semanas: multi-select de checkboxes */}
-            {modo === 'semanas' && (
+            {filtro === 'semanas' && (
               <div className="flex flex-col gap-1.5">
                 {semanasGeneradas.map((ws, i) => {
                   const marcada = semanasActivas.includes(ws)
@@ -541,7 +567,7 @@ export default function MercadoPage() {
             )}
 
             {/* Próximas X: input numérico libre */}
-            {modo === 'proximas' && (
+            {filtro === 'proximas' && (
               <div className="flex items-center gap-3">
                 <label className="text-xs text-muted font-medium flex-shrink-0">¿Cuántas comidas?</label>
                 <input
@@ -566,7 +592,7 @@ export default function MercadoPage() {
             )}
 
             {/* Receta: sub-selector */}
-            {modo === 'receta' && (
+            {filtro === 'receta' && (
               recetasMenu.length > 0 ? (
                 <select
                   value={recetaModo}
@@ -580,7 +606,7 @@ export default function MercadoPage() {
               )
             )}
 
-            {modo === 'proximas' && activeMeals.length === 0 && (
+            {filtro === 'proximas' && activeMeals.length === 0 && (
               <p className="text-xs text-muted px-1">No hay comidas planeadas próximamente.</p>
             )}
           </div>
@@ -681,52 +707,14 @@ export default function MercadoPage() {
 
             {itemsFiltrados.length === 0 && (
               <p className="text-center text-sm text-muted py-8">
-                {modo === 'proximas' ? 'No hay ingredientes faltantes para las próximas comidas.' :
-                 modo === 'receta'   ? 'No hay ingredientes faltantes para esta receta.' :
+                {filtro === 'proximas' ? 'No hay ingredientes faltantes para las próximas comidas.' :
+                 filtro === 'receta'   ? 'No hay ingredientes faltantes para esta receta.' :
                                       'No hay ingredientes faltantes.'}
               </p>
             )}
 
-            {/* ── Secciones por comida/día (proximas, receta, recetaFiltro) ── */}
-            {usarSecciones && sections.map(section => (
-              <div key={section.key} className="mb-4 card p-0 overflow-hidden">
-                <div className="px-4 py-2.5 bg-gray-50 border-b border-border flex items-center gap-2">
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wider">{section.header}</p>
-                  <span className="ml-auto text-[10px] text-muted italic truncate max-w-[120px]">{section.recipeName}</span>
-                </div>
-                <div className="flex flex-col">
-                  {section.rows.map(item => (
-                    <button key={`${section.key}::${item.id}`}
-                      onClick={() => toggleComprado(item.id, !item.comprado)}
-                      className={`flex items-start gap-3 px-4 py-3 border-b border-border/50 last:border-0 text-left transition-colors ${item.comprado ? 'bg-gray-50' : 'hover:bg-accent/5'}`}>
-                      <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-all ${item.comprado ? 'bg-accent border-accent' : 'border-border'}`}>
-                        {item.comprado && <span className="text-white text-[10px] font-bold">✓</span>}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className={`text-sm font-medium ${item.comprado ? 'line-through text-muted' : 'text-text'}`}>
-                          {item.ingrediente_nombre}
-                        </span>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {item.cantidad_total > 0 && (
-                            <span className="text-xs text-muted font-medium">
-                              {formatCantidad(item.cantidad_total, item.unidad)}
-                            </span>
-                          )}
-                          {item.en_nevera && item.faltante && (
-                            <span className="text-[10px] bg-yellow-50 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded-full">
-                              {item.cantidad_total > 0 ? `Falta ${Math.round(item.cantidad_total * 10) / 10} ${item.unidad}` : 'Tenés algo'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            {/* ── Pasillos (modo pasillos) ── */}
-            {!usarSecciones && modo === 'pasillos' && (() => {
+            {/* ── Pasillos (orden = pasillos) ── */}
+            {orden === 'pasillos' && (() => {
               let acumulados = 0
               return pasillosConItems.map(pasillo => {
                 const cfg = PASILLOS[pasillo] ?? { emoji: '🔤', label: 'Todos' }
@@ -810,7 +798,7 @@ export default function MercadoPage() {
             })()}
 
             {/* ── Alfabético — plano A-Z con contexto inline ── */}
-            {!usarSecciones && modo === 'alfabetico' && (() => {
+            {orden === 'alfabetico' && (() => {
               const alphaItems = porPasillo.get('_alpha') ?? []
               if (alphaItems.length === 0) return null
               return (
@@ -849,7 +837,7 @@ export default function MercadoPage() {
             })()}
 
             {/* Ya tenés en casa (solo pasillos) */}
-            {!recetaFiltro && modo === 'pasillos' && items.filter(i => !i.faltante && i.en_nevera).length > 0 && (
+            {!recetaFiltro && orden === 'pasillos' && items.filter(i => !i.faltante && i.en_nevera).length > 0 && (
               <div className="mt-2 card p-0 overflow-hidden opacity-60">
                 <div className="px-4 py-2.5 bg-green-50 border-b border-border flex items-center gap-2">
                   <span className="text-base">✅</span>
@@ -868,6 +856,12 @@ export default function MercadoPage() {
           </>
         )}
       </div>
+
+      {toast && (
+        <div className="fixed bottom-24 left-4 right-4 max-w-sm mx-auto bg-gray-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg z-30 text-center">
+          ✅ {toast}
+        </div>
+      )}
     </div>
   )
 }
