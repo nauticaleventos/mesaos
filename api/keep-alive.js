@@ -102,6 +102,23 @@ export default async function handler(req, res) {
       }
       return res.status(200).json({ ok: true, ts: new Date().toISOString(), ale_auth_uid: aleUid, familias_de_ale: out })
     }
+    // Modo diagnóstico temporal (?diag=recetas): desglose por visibility/activas.
+    if (req.query && req.query.diag === 'recetas') {
+      const q = (b) => b.select('id', { count: 'exact', head: true })
+      const total      = await q(sb.from('recipes'))
+      const activas    = await q(sb.from('recipes')).eq('is_active_for_menu', true).not('tipo_comida', 'is', null)
+      const publicas   = await q(sb.from('recipes')).eq('visibility', 'public')
+      const pubActivas = await q(sb.from('recipes')).eq('visibility', 'public').eq('is_active_for_menu', true).not('tipo_comida', 'is', null)
+      const privadas   = await q(sb.from('recipes')).eq('visibility', 'private')
+      return res.status(200).json({
+        ok: true, ts: new Date().toISOString(),
+        recipes_total: total.count,
+        recipes_activas_para_menu: activas.count,
+        recipes_publicas: publicas.count,
+        recipes_publicas_y_activas: pubActivas.count,
+        recipes_privadas: privadas.count,
+      })
+    }
     // Modo diagnóstico temporal (?diag=1): conteo real saltando RLS (service key).
     if (req.query && req.query.diag) {
       const total = await sb.from('recipes').select('id', { count: 'exact', head: true })
