@@ -8,7 +8,7 @@ import { useFamilyStore } from '../../store/familyStore'
 import DiaCard from './DiaCard'
 import SobradosSheet from './SobradosSheet'
 import DiaDificilSheet from './DiaDificilSheet'
-import { getMondayOfWeek, DAY_NAMES } from '../../lib/motorMenu'
+import { DAY_NAMES } from '../../lib/motorMenu'
 
 interface Props {
   onRegenerar: () => void
@@ -17,6 +17,7 @@ interface Props {
 
 export default function VistaMenu({ onRegenerar, generating }: Props) {
   const { menu }                   = useMenuStore()
+  const weekActiva                 = useMenuStore(s => s.weekActiva)
   const { family }                 = useFamilyStore()
   const { leftovers, loadLeftovers } = useLeftoversStore()
 
@@ -32,7 +33,7 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
     setSharing(true)
     setShareError(null)
     try {
-      const ws = getMondayOfWeek()
+      const ws = weekActiva
       const token = crypto.randomUUID().replace(/-/g, '')
       const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       const { error } = await supabase.from('shared_menus').insert({
@@ -62,7 +63,7 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
   }, [family?.id, loadLeftovers])
 
   // Construir las 7 fechas de la semana
-  const monday = new Date(getMondayOfWeek() + 'T12:00:00')
+  const monday = new Date(weekActiva + 'T12:00:00')
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
@@ -96,7 +97,7 @@ export default function VistaMenu({ onRegenerar, generating }: Props) {
           )}
         </div>
         <div className="flex gap-2">
-          <button onClick={() => window.open(`/menu/imprimir/${getMondayOfWeek()}`, '_blank')}
+          <button onClick={() => window.open(`/menu/imprimir/${weekActiva}`, '_blank')}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:border-accent hover:text-accent transition-colors print:hidden">
             <Printer size={15} />
           </button>

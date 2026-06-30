@@ -32,6 +32,7 @@ export default function SobradosSheet({ onClose }: Props) {
   const { family }                                 = useFamilyStore()
   const { leftovers, addLeftover, removeLeftover } = useLeftoversStore()
   const { menu, asignarSobraEnMenu }               = useMenuStore()
+  const weekActiva                                 = useMenuStore(s => s.weekActiva)
   const [nombre,   setNombre]   = useState('')
   const [cantidad, setCantidad] = useState('')
   const [saving,   setSaving]   = useState(false)
@@ -117,7 +118,7 @@ export default function SobradosSheet({ onClose }: Props) {
     setPickerId(null)
     setErrorId(null)
     setErrorMsg('')
-    const { ok, msg } = await asignarSobraEnMenu(family.id, getMondayOfWeek(), slot.dayOfWeek, slot.mealType, l.ingredient_name)
+    const { ok, msg } = await asignarSobraEnMenu(family.id, weekActiva, slot.dayOfWeek, slot.mealType, l.ingredient_name)
     if (ok) {
       setAsignados(prev => ({ ...prev, [l.id]: slot.label }))
     } else {

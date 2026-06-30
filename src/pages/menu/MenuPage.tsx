@@ -16,47 +16,75 @@ export default function MenuPage() {
   const { session }             = useAuthStore()
   const { family, members }     = useFamilyStore()
   const { items: fridgeItems }  = useFridgeStore()
-  const { menu, loading, generating, avisoVariedad, loadConfig, loadMenu, generarMenuMulti } = useMenuStore()
+  const { menu, loading, generating, avisoVariedad, weekActiva, semanasGeneradas,
+          loadConfig, loadMenu, generarMenu, generarMenuMulti, setWeekActiva, cargarSemanas, borrarSemana } = useMenuStore()
 
   const [error, setError]           = useState<string | null>(null)
   const [confirmar, setConfirmar]   = useState(false)
+  const [confirmarBorrar, setConfirmarBorrar] = useState(false)
   const [showAd, setShowAd]         = useState(false)
   const [toastRegen, setToastRegen] = useState(false)
   const [toastMulti, setToastMulti] = useState<string | null>(null)
   const [numSemanas, setNumSemanas] = useState(1)   // 1 / 2 / 4 semanas a generar
 
-  const healthyMode = family?.healthy_mode_active ?? false
-  const weekStart   = getMondayOfWeek()
-  const tieneMenu   = menu.some(e => e.is_main_recipe)
+  const healthyMode    = family?.healthy_mode_active ?? false
+  const semanaActual   = getMondayOfWeek()
+  const weekStart      = weekActiva
+  const esSemanaPasada = weekActiva < semanaActual
+  const tieneMenu      = menu.some(e => e.is_main_recipe)
 
   useEffect(() => {
     if (!family?.id) return
-    loadConfig(family.id)
-    loadMenu(family.id, weekStart)
+    const fid = family.id
+    ;(async () => {
+      await loadConfig(fid)
+      await cargarSemanas(fid)   // valida/reubica la semana activa
+      await loadMenu(fid, useMenuStore.getState().weekActiva)
+    })()
   }, [family?.id])
 
+  // Etiqueta de cada tab: "Esta" / "Próxima" / "Del DD/MM"
+  const fmtDM = (iso: string) => { const p = iso.split('-'); return `${p[2]}/${p[1]}` }
+  const subLabelSemana = (ws: string): string => {
+    if (ws === semanaActual) return 'Esta'
+    if (ws === getMondayPlusWeeks(1)) return 'Próxima'
+    return `Del ${fmtDM(ws)}`
+  }
+
+  // Generar fresco (1/2/4 semanas) desde la semana actual.
   const handleGenerar = async () => {
     if (!family?.id) return
-    if (tieneMenu && !confirmar) { setConfirmar(true); return }
-    const eraRegeneracion = tieneMenu
-    // Al regenerar se reemplaza solo la semana actual; al generar fresco, 1/2/4 semanas.
-    const semanas = eraRegeneracion ? 1 : numSemanas
-    setConfirmar(false)
     setError(null)
+    const semanas = numSemanas
     const err = await generarMenuMulti(family.id, fridgeItems, healthyMode, semanas)
-    if (err) {
-      setError(err)
-    } else if (eraRegeneracion) {
-      setToastRegen(true)
-      setTimeout(() => setToastRegen(false), 3000)
-    } else if (semanas > 1) {
-      const fmtDM = (iso: string) => { const p = iso.split('-'); return `${p[2]}/${p[1]}` }
+    if (err) { setError(err); return }
+    await cargarSemanas(family.id)
+    await setWeekActiva(family.id, semanaActual)
+    if (semanas > 1) {
       const finIso = (() => { const dt = new Date(getMondayPlusWeeks(semanas - 1) + 'T12:00:00'); dt.setDate(dt.getDate() + 6); return dt.toISOString().split('T')[0] })()
-      setToastMulti(`✅ Generadas ${semanas} semanas: del ${fmtDM(getMondayOfWeek())} al ${fmtDM(finIso)}`)
+      setToastMulti(`✅ Generadas ${semanas} semanas: del ${fmtDM(semanaActual)} al ${fmtDM(finIso)}`)
       setTimeout(() => setToastMulti(null), 5000)
     } else {
-      setShowAd(true)  // Intersticial solo en primera generación
+      setShowAd(true)
     }
+  }
+
+  // Regenerar SOLO la semana que se está viendo (no toca las otras).
+  const handleRegenerarSemana = async () => {
+    if (!family?.id) return
+    if (!confirmar) { setConfirmar(true); return }
+    setConfirmar(false); setError(null)
+    const err = await generarMenu(family.id, fridgeItems, healthyMode, { weekStart: weekActiva })
+    if (err) { setError(err); return }
+    await cargarSemanas(family.id)
+    setToastRegen(true); setTimeout(() => setToastRegen(false), 3000)
+  }
+
+  // Borrar SOLO la semana que se está viendo.
+  const handleBorrarSemana = async () => {
+    if (!family?.id) return
+    setConfirmarBorrar(false)
+    await borrarSemana(family.id, weekActiva)
   }
 
   if (!session || !family) return null
@@ -78,7 +106,32 @@ export default function MenuPage() {
         </div>
       </div>
 
+      {/* Selector de semanas (solo si hay menú multi-semana) */}
+      {members.length > 0 && semanasGeneradas.length > 1 && (
+        <div className="px-4 pt-3">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {semanasGeneradas.map((ws, i) => (
+              <button key={ws} onClick={() => setWeekActiva(family.id, ws)}
+                className={`flex-shrink-0 px-3.5 py-2 rounded-xl border text-center transition-all ${
+                  ws === weekActiva ? 'border-accent bg-accent/5 text-accent' : 'border-border bg-white text-muted hover:border-accent/50'}`}>
+                <div className="text-sm font-semibold leading-tight">Semana {i + 1}</div>
+                <div className="text-[10px] mt-0.5">{subLabelSemana(ws)}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="px-4 py-4">
+        {/* Semana pasada */}
+        {members.length > 0 && esSemanaPasada && (
+          <div className="p-3 rounded-2xl bg-gray-100 border border-gray-200 mb-4 flex items-center gap-2">
+            <span>📅</span>
+            <p className="text-sm text-gray-600 flex-1">Esta semana ya pasó.</p>
+            <button onClick={() => setWeekActiva(family.id, semanaActual)} className="text-xs text-accent underline whitespace-nowrap">Ir a esta semana</button>
+          </div>
+        )}
+
         {/* Sin miembros */}
         {members.length === 0 && (
           <div className="card flex flex-col items-center gap-4 py-8 text-center">
@@ -111,15 +164,29 @@ export default function MenuPage() {
           </div>
         )}
 
-        {/* Confirmar regenerar */}
+        {/* Confirmar regenerar (solo la semana visible) */}
         {confirmar && (
           <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-4 pb-8">
             <div className="card w-full max-w-sm flex flex-col gap-4">
-              <p className="font-semibold text-text text-center">¿Regenerar el menú?</p>
-              <p className="text-muted text-sm text-center">Esto reemplazará el menú actual de esta semana.</p>
+              <p className="font-semibold text-text text-center">¿Regenerar esta semana?</p>
+              <p className="text-muted text-sm text-center">Reemplazará el menú de la {subLabelSemana(weekActiva).toLowerCase()} semana. Las otras semanas no se tocan.</p>
               <div className="flex gap-3">
                 <button onClick={() => setConfirmar(false)} className="btn-ghost flex-1">Cancelar</button>
-                <button onClick={handleGenerar} className="btn-primary flex-1">Sí, regenerar</button>
+                <button onClick={handleRegenerarSemana} className="btn-primary flex-1">Sí, regenerar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmar borrar la semana visible */}
+        {confirmarBorrar && (
+          <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-4 pb-8">
+            <div className="card w-full max-w-sm flex flex-col gap-4">
+              <p className="font-semibold text-text text-center">¿Borrar esta semana?</p>
+              <p className="text-muted text-sm text-center">Se libera el menú de esta semana. Las otras quedan intactas.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmarBorrar(false)} className="btn-ghost flex-1">Cancelar</button>
+                <button onClick={handleBorrarSemana} className="flex-1 py-3 rounded-xl bg-error text-white font-semibold text-sm">Sí, borrar</button>
               </div>
             </div>
           </div>
@@ -191,9 +258,16 @@ export default function MenuPage() {
               <>
                 <WidgetNevera fridgeItems={fridgeItems} menu={menu} />
                 <VistaMenu
-                  onRegenerar={handleGenerar}
+                  onRegenerar={() => { if (!confirmar) setConfirmar(true) }}
                   generating={generating}
                 />
+                {/* Borrar la semana visible (solo si hay varias generadas) */}
+                {semanasGeneradas.length > 1 && (
+                  <button onClick={() => setConfirmarBorrar(true)}
+                    className="w-full mt-3 py-2.5 text-sm text-muted hover:text-error transition-colors">
+                    🗑️ Borrar esta semana
+                  </button>
+                )}
               </>
             )}
           </>

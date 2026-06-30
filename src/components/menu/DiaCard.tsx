@@ -255,6 +255,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
   const fridgeItems = useFridgeStore(s => s.items)
   const family      = useFamilyStore(s => s.family)
   const { quitarComponente, agregarComponente, replicarEnSemana } = useMenuStore()
+  const weekActiva = useMenuStore(s => s.weekActiva)
 
   const [expanded, setExpanded]           = useState(false)
   const [showCambiar, setShowCambiar]     = useState(false)
@@ -289,7 +290,7 @@ function MealSection({ tipo, mealTime, dayOfWeek, components, members, onAddSobr
   const tipoBase  = tipo.toLowerCase()
   const isSimple  = tipoBase === 'desayuno' || tipoBase === 'snack' ||
                     tipoBase.includes('merienda') || tipoBase.includes('snack')
-  const weekStart = getMondayOfWeek()
+  const weekStart = weekActiva
 
   const buscarReceta = async (q: string, tc: string) => {
     let query = supabase.from('recipes').select('id, nombre').eq('is_active_for_menu', true).limit(50)

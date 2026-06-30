@@ -46,10 +46,15 @@ interface MenuState {
   generating: boolean
   progress:   number   // 0-100
   avisoVariedad: string | null   // aviso si hay pocas recetas (repetición forzada)
+  weekActiva:   string           // semana que se está viendo (multi-semana)
+  semanasGeneradas: string[]     // week_starts (≥ semana actual) que tienen menú
 
   loadConfig:           (familyId: string) => Promise<void>
   saveConfig:           (familyId: string, patch: Partial<MenuConfig>) => Promise<void>
   loadMenu:             (familyId: string, weekStart?: string) => Promise<void>
+  setWeekActiva:        (familyId: string, weekStart: string) => Promise<void>
+  cargarSemanas:        (familyId: string) => Promise<void>
+  borrarSemana:         (familyId: string, weekStart: string) => Promise<void>
   generarMenu:          (familyId: string, fridgeItems: FridgeItem[], healthyMode: boolean, opts?: GenOpts) => Promise<string | null>
   generarMenuMulti:     (familyId: string, fridgeItems: FridgeItem[], healthyMode: boolean, numSemanas: number) => Promise<string | null>
   marcarCocinada:       (id: string) => Promise<void>
@@ -71,6 +76,8 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   generating: false,
   progress:   0,
   avisoVariedad: null,
+  weekActiva: (typeof localStorage !== 'undefined' && localStorage.getItem('mesa_week_activa')) || getMondayOfWeek(),
+  semanasGeneradas: [],
 
   // ── Cargar configuración ────────────────────────────────────────────────────
   loadConfig: async (familyId) => {
@@ -161,6 +168,40 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       }))
 
     set({ menu: enriched, loading: false })
+  },
+
+  // ── Navegación entre semanas (multi-semana) ─────────────────────────────────
+  setWeekActiva: async (familyId, weekStart) => {
+    if (typeof localStorage !== 'undefined') localStorage.setItem('mesa_week_activa', weekStart)
+    set({ weekActiva: weekStart })
+    await get().loadMenu(familyId, weekStart)
+  },
+
+  // Carga las semanas (≥ semana actual) que tienen menú generado, ordenadas.
+  cargarSemanas: async (familyId) => {
+    const desde = getMondayOfWeek()
+    const { data } = await supabase
+      .from('weekly_menu')
+      .select('week_start')
+      .eq('family_id', familyId)
+      .gte('week_start', desde)
+    const semanas = [...new Set((data ?? []).map((r: { week_start: string }) => r.week_start))].sort()
+    set({ semanasGeneradas: semanas })
+    // Si la semana activa ya no existe entre las generadas (y no es pasada), volver a la actual.
+    const wa = get().weekActiva
+    if (wa >= desde && semanas.length > 0 && !semanas.includes(wa)) {
+      await get().setWeekActiva(familyId, semanas[0])
+    }
+  },
+
+  // Borra el menú de una semana específica (no toca las demás).
+  borrarSemana: async (familyId, weekStart) => {
+    await supabase.from('weekly_menu').delete().eq('family_id', familyId).eq('week_start', weekStart)
+    await get().cargarSemanas(familyId)
+    // Reubicar la vista: si borramos la activa, ir a otra semana generada o a la actual.
+    const semanas = get().semanasGeneradas
+    const destino = semanas.includes(get().weekActiva) ? get().weekActiva : (semanas[0] ?? getMondayOfWeek())
+    await get().setWeekActiva(familyId, destino)
   },
 
   // ── Generar menú semanal ────────────────────────────────────────────────────
