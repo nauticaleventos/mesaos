@@ -79,6 +79,29 @@ export default async function handler(req, res) {
         ale_en_family_users: !!(aleUid && (famUsers.data || []).some(f => f.user_id === aleUid && f.is_active)),
       })
     }
+    // Modo diagnóstico temporal (?diag=ale): familias REALES de Ale + owner match + menú.
+    if (req.query && req.query.diag === 'ale') {
+      const email = req.query.email || 'alesofiad@gmail.com'
+      let aleUid = null
+      const list = await sb.auth.admin.listUsers({ page: 1, perPage: 200 })
+      const u = (list.data && list.data.users || []).find(x => (x.email || '').toLowerCase() === email.toLowerCase())
+      aleUid = u ? u.id : null
+      const fus = await sb.from('family_users').select('family_id, base_role, is_active').eq('user_id', aleUid)
+      const out = []
+      for (const fu of (fus.data || [])) {
+        const fr = await sb.from('families').select('name, owner_user_id').eq('id', fu.family_id).maybeSingle()
+        const wm = await sb.from('weekly_menu').select('id', { count: 'exact', head: true }).eq('family_id', fu.family_id)
+        out.push({
+          family_id: fu.family_id,
+          family_name: fr.data ? fr.data.name : null,
+          mi_rol: fu.base_role, is_active: fu.is_active,
+          owner_user_id: fr.data ? fr.data.owner_user_id : null,
+          soy_owner: !!(fr.data && fr.data.owner_user_id === aleUid),
+          weekly_menu_filas: wm.count,
+        })
+      }
+      return res.status(200).json({ ok: true, ts: new Date().toISOString(), ale_auth_uid: aleUid, familias_de_ale: out })
+    }
     // Modo diagnóstico temporal (?diag=1): conteo real saltando RLS (service key).
     if (req.query && req.query.diag) {
       const total = await sb.from('recipes').select('id', { count: 'exact', head: true })
