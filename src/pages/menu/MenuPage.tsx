@@ -22,6 +22,7 @@ export default function MenuPage() {
   const [error, setError]           = useState<string | null>(null)
   const [confirmar, setConfirmar]   = useState(false)
   const [confirmarBorrar, setConfirmarBorrar] = useState(false)
+  const [confirmarMulti, setConfirmarMulti]   = useState(false)
   const [showAd, setShowAd]         = useState(false)
   const [toastRegen, setToastRegen] = useState(false)
   const [toastMulti, setToastMulti] = useState<string | null>(null)
@@ -88,6 +89,25 @@ export default function MenuPage() {
   }
 
   if (!session || !family) return null
+
+  // Selector de cuántas semanas generar (reutilizable: sin menú y con menú)
+  const selectorSemanas = (
+    <div className="card mb-3">
+      <p className="text-sm font-semibold text-text mb-2">¿Cuántas semanas generar?</p>
+      <div className="flex gap-2">
+        {[1, 2, 4].map(n => (
+          <button key={n} type="button" onClick={() => setNumSemanas(n)}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+              numSemanas === n ? 'bg-accent text-white border-accent' : 'bg-white text-muted border-border hover:border-accent'}`}>
+            {n} {n === 1 ? 'semana' : 'semanas'}
+          </button>
+        ))}
+      </div>
+      {numSemanas > 1 && (
+        <p className="text-xs text-muted mt-2">Se generan {numSemanas} semanas seguidas con variedad entre ellas. Ideal si haces mercado mensual o quincenal.</p>
+      )}
+    </div>
+  )
 
   return (
     <div className="min-h-screen pb-28 max-w-lg mx-auto overflow-x-hidden">
@@ -178,6 +198,24 @@ export default function MenuPage() {
           </div>
         )}
 
+        {/* Confirmar generar varias semanas (reemplaza desde la semana actual) */}
+        {confirmarMulti && (
+          <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-4 pb-8">
+            <div className="card w-full max-w-sm flex flex-col gap-4">
+              <p className="font-semibold text-text text-center">¿Generar {numSemanas} {numSemanas === 1 ? 'semana' : 'semanas'}?</p>
+              <p className="text-muted text-sm text-center">
+                {numSemanas === 1
+                  ? 'Reemplaza el menú de esta semana.'
+                  : `Reemplaza desde esta semana en adelante (${numSemanas} semanas).`}
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmarMulti(false)} className="btn-ghost flex-1">Cancelar</button>
+                <button onClick={() => { setConfirmarMulti(false); handleGenerar() }} className="btn-primary flex-1">Sí, generar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Confirmar borrar la semana visible */}
         {confirmarBorrar && (
           <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-4 pb-8">
@@ -202,24 +240,8 @@ export default function MenuPage() {
             {/* Si no hay menú generado: mostrar config */}
             {!tieneMenu && !loading && (
               <>
-                {/* Cuántas semanas generar (mercado mensual) — acceso libre en Beta */}
-                <div className="card mb-3">
-                  <p className="text-sm font-semibold text-text mb-2">¿Cuántas semanas generar?</p>
-                  <div className="flex gap-2">
-                    {[1, 2, 4].map(n => (
-                      <button key={n} type="button" onClick={() => setNumSemanas(n)}
-                        className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-                          numSemanas === n
-                            ? 'bg-accent text-white border-accent'
-                            : 'bg-white text-muted border-border hover:border-accent'}`}>
-                        {n} {n === 1 ? 'semana' : 'semanas'}
-                      </button>
-                    ))}
-                  </div>
-                  {numSemanas > 1 && (
-                    <p className="text-xs text-muted mt-2">Se generan {numSemanas} semanas seguidas con variedad entre ellas. Ideal si haces mercado mensual.</p>
-                  )}
-                </div>
+                {/* Cuántas semanas generar (acceso libre en Beta) */}
+                {selectorSemanas}
                 <ConfigMenu
                   familyId={family.id}
                   healthyMode={healthyMode}
@@ -256,6 +278,12 @@ export default function MenuPage() {
             {/* Menú generado */}
             {tieneMenu && !loading && (
               <>
+                {/* Generar más semanas (visible también con menú ya generado) */}
+                {selectorSemanas}
+                <button onClick={() => setConfirmarMulti(true)}
+                  className="btn-primary w-full mb-4">
+                  Generar {numSemanas} {numSemanas === 1 ? 'semana' : 'semanas'} {numSemanas === 1 ? '(reemplaza esta)' : '(desde esta semana)'}
+                </button>
                 <WidgetNevera fridgeItems={fridgeItems} menu={menu} />
                 <VistaMenu
                   onRegenerar={() => { if (!confirmar) setConfirmar(true) }}
