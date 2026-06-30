@@ -4,9 +4,10 @@ import { useAuthStore } from '../../store/authStore'
 import { useFamilyStore } from '../../store/familyStore'
 import StepFamilyName from '../../components/onboarding/StepFamilyName'
 import StepAddMemberSimple from '../../components/onboarding/StepAddMemberSimple'
+import StepHabitos from '../../components/onboarding/StepHabitos'
 import StepDone from '../../components/onboarding/StepDone'
 
-type Step = 'family' | 'members' | 'done'
+type Step = 'family' | 'members' | 'habitos' | 'done'
 
 export default function OnboardingPage() {
   const [step, setStep]     = useState<Step>('family')
@@ -39,8 +40,12 @@ export default function OnboardingPage() {
           familyName={family?.name ?? ''}
           memberCount={members.length}
           onAdded={handleMemberAdded}
-          onFinish={handleFinish}
+          onFinish={() => setStep('habitos')}
         />
+      )}
+
+      {step === 'habitos' && (
+        <StepHabitos onContinue={() => setStep('done')} />
       )}
 
       {step === 'done' && (

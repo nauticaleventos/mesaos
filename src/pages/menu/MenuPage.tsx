@@ -43,6 +43,12 @@ export default function MenuPage() {
     })()
   }, [family?.id])
 
+  // Lógica de conexión: el default de semanas a generar depende de cómo merca la familia.
+  useEffect(() => {
+    const fm = family?.frecuencia_mercado
+    setNumSemanas(fm === 'mensual' ? 4 : fm === 'quincenal' ? 2 : 1)
+  }, [family?.frecuencia_mercado])
+
   // Etiqueta de cada tab: "Esta" / "Próxima" / "Del DD/MM"
   const fmtDM = (iso: string) => { const p = iso.split('-'); return `${p[2]}/${p[1]}` }
   const subLabelSemana = (ws: string): string => {

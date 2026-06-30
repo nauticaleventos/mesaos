@@ -16,6 +16,9 @@ export interface Family {
   name: string
   owner_user_id: string
   healthy_mode_active: boolean
+  frecuencia_coccion?: string      // diario_varias | diario_una | 2x_semana | 1x_semana
+  dias_coccion?: string[] | null   // días de cocción (L-D) si aplica
+  frecuencia_mercado?: string      // diario | semanal | quincenal | mensual
   created_at: string
   updated_at: string
 }

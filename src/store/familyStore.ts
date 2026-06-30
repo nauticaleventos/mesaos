@@ -23,6 +23,7 @@ interface FamilyState {
   deleteActivity:  (id: string) => Promise<void>
   // Healthy mode
   setHealthyMode:  (active: boolean) => Promise<void>
+  updateFamily:    (patch: Partial<import('../lib/types').Family>) => Promise<void>
 }
 
 export const useFamilyStore = create<FamilyState>((set, get) => ({
@@ -201,5 +202,13 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
     if (!family) return
     await supabase.from('families').update({ healthy_mode_active: active }).eq('id', family.id)
     set(s => ({ family: s.family ? { ...s.family, healthy_mode_active: active } : null }))
+  },
+
+  // Actualiza campos de la familia (hábitos: frecuencia de cocción/mercado, etc.)
+  updateFamily: async (patch) => {
+    const { family } = get()
+    if (!family) return
+    await supabase.from('families').update(patch).eq('id', family.id)
+    set(s => ({ family: s.family ? { ...s.family, ...patch } : null }))
   },
 }))
