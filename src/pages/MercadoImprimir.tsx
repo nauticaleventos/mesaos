@@ -14,6 +14,7 @@ const PASILLOS: Record<string, { emoji: string; label: string }> = {
   enlatados:          { emoji: '🥫', label: 'Enlatados' },
   aceites_condimentos:{ emoji: '🫒', label: 'Aceites y condimentos' },
   snacks_dulces:      { emoji: '🍬', label: 'Snacks y dulces' },
+  suplementos:        { emoji: '💪', label: 'Suplementos y proteínas' },
   bebidas:            { emoji: '🥤', label: 'Bebidas' },
   aseo_hogar:         { emoji: '🧼', label: 'Aseo' },
   otros:              { emoji: '📦', label: 'Otros' },

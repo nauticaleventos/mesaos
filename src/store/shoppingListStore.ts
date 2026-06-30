@@ -80,14 +80,38 @@ const KEYWORDS_PASILLO: [string, string][] = [
   ...['detergente','jabon de manos','jabón en barra','lavaplatos','suavizante','blanqueador','papel higienico','servilletas','papel cocina','esponja','bolsa de basura','desinfectante'].map(k => [k, 'aseo_hogar'] as [string, string]),
 ]
 
+// Overrides PRIORITARIOS — se evalúan ANTES que la búsqueda general para resolver
+// ambigüedades (ej. "gelatina de piña" matchea "piña"→frutas, pero es un postre).
+const KEYWORDS_PRIORITARIOS: [string, string][] = [
+  ['gelatina de',  'snacks_dulces'],    // gelatinas de sabor (postre), no fruta
+  ['cacahuate',    'snacks_dulces'],    // = maní → frutos secos (con las almendras)
+  ['cacahuete',    'snacks_dulces'],
+  ['mani',         'snacks_dulces'],
+  ['nuez pecana',  'snacks_dulces'],    // pecana → frutos secos, no "nuez moscada"
+  ['pecana',       'snacks_dulces'],
+  // Proteína en polvo / suplementos — todos juntos, sin importar el sabor
+  ['whey protein',          'suplementos'],
+  ['proteina en polvo',     'suplementos'],
+  ['proteina vegetal',      'suplementos'],
+  ['proteina vainilla',     'suplementos'],
+  ['proteina chocolate',    'suplementos'],
+  // Ajo porro = puerro (verdura), NO confundir con ajo
+  ['ajo porro',    'frutas_verduras'],
+  ['puerro',       'frutas_verduras'],
+]
+
 // Función principal de categorización por nombre
 function resolverPasilloNombre(nombre: string): string | null {
   const n = norm(nombre)
-  // Búsqueda exacta primero
+  // 0. Overrides prioritarios (por inclusión) — ganan a todo lo demás
+  for (const [kw, pasillo] of KEYWORDS_PRIORITARIOS) {
+    if (n.includes(norm(kw))) return pasillo
+  }
+  // 1. Búsqueda exacta
   for (const [kw, pasillo] of KEYWORDS_PASILLO) {
     if (n === norm(kw)) return pasillo
   }
-  // Búsqueda por inclusión (el nombre contiene la keyword o viceversa)
+  // 2. Búsqueda por inclusión (el nombre contiene la keyword o viceversa)
   for (const [kw, pasillo] of KEYWORDS_PASILLO) {
     const nkw = norm(kw)
     if (n.includes(nkw) || nkw.includes(n)) return pasillo
@@ -152,7 +176,7 @@ const MANTENER_EXACTO = [
   'ajo en polvo','cebolla en polvo','cebolla deshidratada',
   'avena en hojuelas','avena instantanea',
   'mantequilla sin sal','mantequilla con sal',
-  'yogurt griego','yogur griego',
+  'yogurt griego',   // (las grafías yogur/yoghurt ya se estandarizan a "yogurt" antes)
   'pan integral','pan de molde integral',
   'linaza molida',
   'polvo de hornear','polvo para hornear',  // evita que "para hornear" se corte
@@ -232,6 +256,11 @@ function normIngrediente(s: string): string {
 
   // 1. Quitar números y fracciones al inicio: "1/2 cebolla" → "cebolla"
   n = n.replace(/^[\d\/\.,\s]+/, '').trim()
+
+  // 1b. Estandarizar grafías de yogurt (yogur / yoghurt / yogurt → yogurt).
+  //     Sin esto, "yogurt griego" vs "yogur griego" vs "yoghurt griego" se
+  //     normalizaban distinto y aparecían como 3 ítems separados en la lista.
+  n = n.replace(/\byogh?urt?\b/g, 'yogurt')
 
   // 2. Revisar si es un producto especial que mantener exacto
   for (const exacto of MANTENER_EXACTO) {
