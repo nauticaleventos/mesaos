@@ -96,10 +96,11 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
       return null
     }
 
-    // 1. Crear familia
+    // 1. Crear familia — trial Pro de 7 días al registrarse.
+    const trialUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     const { data: family, error: e1 } = await supabase
       .from('families')
-      .insert({ name, owner_user_id: userId })
+      .insert({ name, owner_user_id: userId, tier: 'pro', tier_until: trialUntil })
       .select()
       .single()
 

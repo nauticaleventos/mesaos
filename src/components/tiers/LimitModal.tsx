@@ -18,19 +18,22 @@ const BENEFICIOS = [
 ]
 
 export default function LimitModal() {
-  const { accion, cerrar } = useLimiteStore()
+  const { accion, modo, cerrar } = useLimiteStore()
   const tier = useFamilyStore(s => s.tierActual())
   if (!accion) return null
 
   const label = ACCION_LABEL[accion as Action] ?? 'esta función'
+  const esInfo = modo === 'info'
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[60] px-4 pb-6" onClick={cerrar}>
       <div className="card w-full max-w-sm flex flex-col gap-4 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="text-center">
-          <p className="text-3xl">🔒</p>
-          <h2 className="text-lg font-serif font-semibold text-text mt-1">Llegaste al límite de tu plan {tier === 'free' ? 'Free' : tier === 'plus' ? 'Plus' : 'Pro'}</h2>
-          <p className="text-sm text-muted mt-1">Te quedaste sin {label} este mes.</p>
+          <p className="text-3xl">{esInfo ? '✨' : '🔒'}</p>
+          <h2 className="text-lg font-serif font-semibold text-text mt-1">
+            {esInfo ? 'Beneficios de los planes' : `Llegaste al límite de tu plan ${tier === 'free' ? 'Free' : tier === 'plus' ? 'Plus' : 'Pro'}`}
+          </h2>
+          {!esInfo && <p className="text-sm text-muted mt-1">Te quedaste sin {label} este mes.</p>}
         </div>
 
         <div className="flex flex-col gap-3">

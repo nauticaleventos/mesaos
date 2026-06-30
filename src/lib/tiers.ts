@@ -94,6 +94,13 @@ export function usoMes(family: FamilyTierFields | null): UsoMes {
   return { ...USO_DEFAULT, ...(family?.uso_mes ?? {}) }
 }
 
+/** Días que quedan del trial Pro (0 si no hay trial vigente). */
+export function diasRestantesTrial(family: FamilyTierFields | null): number {
+  if (!family?.tier_until || family.tier !== 'pro') return 0
+  const ms = new Date(family.tier_until).getTime() - Date.now()
+  return ms > 0 ? Math.ceil(ms / (24 * 60 * 60 * 1000)) : 0
+}
+
 /**
  * Calcula el "patch" de mantenimiento a aplicar al cargar la familia:
  *  - Trial Pro expirado (tier_until < ahora) → tier='free', tier_until=null.

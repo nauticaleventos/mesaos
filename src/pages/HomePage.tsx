@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Refrigerator, CalendarDays, Settings } from 'lucide-react'
+import MiPlan from '../components/tiers/MiPlan'
+import { diasRestantesTrial } from '../lib/tiers'
 import { useAuthStore } from '../store/authStore'
 import { useFamilyStore } from '../store/familyStore'
 import { useFridgeStore } from '../store/fridgeStore'
@@ -171,6 +173,16 @@ export default function HomePage() {
           </button>
         </div>
       </div>
+
+      {/* Banner de trial Pro */}
+      {diasRestantesTrial(family) > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-center gap-2">
+          <span>✨</span>
+          <p className="text-sm text-amber-800 flex-1">
+            Te quedan <b>{diasRestantesTrial(family)} día{diasRestantesTrial(family) !== 1 ? 's' : ''}</b> de <b>Pro gratis</b>. Probá todas las funciones.
+          </p>
+        </div>
+      )}
 
       {/* Miembros */}
       <div>
@@ -353,6 +365,9 @@ export default function HomePage() {
                   </button>
                 )}
               </div>
+
+              {/* Mi plan (tier + uso + beneficios) */}
+              <MiPlan />
 
               {/* Permisos chef */}
               {familyUsers.filter(fu => fu.base_role !== 'owner').length > 0 && (
