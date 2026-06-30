@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { X, Clock, ChefHat } from 'lucide-react'
 import { useMenuStore, type EnrichedMenuEntry, type RecipeForMenu, type SwapReason } from '../../store/menuStore'
+import { useFamilyStore } from '../../store/familyStore'
+import { useLimiteStore } from '../../store/limiteStore'
 
 const RAZONES: { id: SwapReason; label: string; desc: string }[] = [
   { id: 'no_ingredientes', label: '🧊 No tengo los ingredientes', desc: 'Buscar con lo que hay disponible' },
@@ -16,6 +18,8 @@ interface Props {
 
 export default function CambiarSheet({ entry, onClose }: Props) {
   const { buscarAlternativas, cambiarReceta } = useMenuStore()
+  const { puedeUsar, consumirUso } = useFamilyStore()
+  const abrirLimite = useLimiteStore(s => s.abrir)
   const [razon,        setRazon]        = useState<SwapReason | null>(null)
   const [todasAlts,    setTodasAlts]    = useState<RecipeForMenu[]>([])
   const [visibles,     setVisibles]     = useState(5)
@@ -36,8 +40,10 @@ export default function CambiarSheet({ entry, onClose }: Props) {
   }
 
   const handleSwap = async (recipeId: string) => {
+    if (!puedeUsar('cambios_receta')) { onClose(); abrirLimite('cambios_receta'); return }
     setSwapping(recipeId)
     await cambiarReceta(entry.id, recipeId)
+    await consumirUso('cambios_receta')
     onClose()
   }
 

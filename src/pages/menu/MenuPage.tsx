@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore }   from '../../store/authStore'
 import { useFamilyStore } from '../../store/familyStore'
+import { useLimiteStore } from '../../store/limiteStore'
 import { useFridgeStore } from '../../store/fridgeStore'
 import { useMenuStore }   from '../../store/menuStore'
 import { getMondayOfWeek, getMondayPlusWeeks } from '../../lib/motorMenu'
@@ -14,7 +15,8 @@ import { AdBanner, AdInterstitial, AdRewarded } from '../../components/ads/AdPla
 export default function MenuPage() {
   const navigate = useNavigate()
   const { session }             = useAuthStore()
-  const { family, members }     = useFamilyStore()
+  const { family, members, puedeUsar, consumirUso } = useFamilyStore()
+  const abrirLimite = useLimiteStore(s => s.abrir)
   const { items: fridgeItems }  = useFridgeStore()
   const { menu, loading, generating, avisoVariedad, weekActiva, semanasGeneradas,
           loadConfig, loadMenu, generarMenu, generarMenuMulti, setWeekActiva, cargarSemanas, borrarSemana } = useMenuStore()
@@ -62,8 +64,12 @@ export default function MenuPage() {
     if (!family?.id) return
     setError(null)
     const semanas = numSemanas
+    // Tier: multi-semana es Pro; generar_menu tiene cupo mensual.
+    if (semanas > 1 && !puedeUsar('multi_semana')) { abrirLimite('multi_semana'); return }
+    if (!puedeUsar('generar_menu')) { abrirLimite('generar_menu'); return }
     const err = await generarMenuMulti(family.id, fridgeItems, healthyMode, semanas)
     if (err) { setError(err); return }
+    await consumirUso('generar_menu')
     await cargarSemanas(family.id)
     await setWeekActiva(family.id, semanaActual)
     if (semanas > 1) {
@@ -80,8 +86,10 @@ export default function MenuPage() {
     if (!family?.id) return
     if (!confirmar) { setConfirmar(true); return }
     setConfirmar(false); setError(null)
+    if (!puedeUsar('generar_menu')) { abrirLimite('generar_menu'); return }
     const err = await generarMenu(family.id, fridgeItems, healthyMode, { weekStart: weekActiva })
     if (err) { setError(err); return }
+    await consumirUso('generar_menu')
     await cargarSemanas(family.id)
     setToastRegen(true); setTimeout(() => setToastRegen(false), 3000)
   }

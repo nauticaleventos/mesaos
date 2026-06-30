@@ -1,6 +1,8 @@
 import { useRef, useState, useCallback } from 'react'
 import { scanFoodPhoto, scanFoodPhotoGroup, scanReceiptPhoto, type FoodFromPhoto } from '../../lib/claude'
 import { useFridgeStore, type FridgeItem, type NewFridgeItem } from '../../store/fridgeStore'
+import { useFamilyStore } from '../../store/familyStore'
+import { useLimiteStore } from '../../store/limiteStore'
 import EnrichFromPhoto from './EnrichFromPhoto'
 
 interface SavedResult {
@@ -18,6 +20,8 @@ interface Props {
 }
 
 export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
+  const { puedeUsar, consumirUso } = useFamilyStore()
+  const abrirLimite = useLimiteStore(s => s.abrir)
   const batchRef   = useRef<HTMLInputElement>(null)
   const groupRef   = useRef<HTMLInputElement>(null)
   const receiptRef = useRef<HTMLInputElement>(null)
@@ -103,16 +107,19 @@ export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
 
   // ── Modo batch: cada foto = un producto distinto ──────────────────────────────
   const processBatch = async (files: FileList) => {
+    if (!puedeUsar('fotos_nevera')) { abrirLimite('fotos_nevera'); return }
     setError(null); setResults([]); setDone(false)
     setScanning(true); setTotal(files.length); setCurrent(0)
 
     for (let i = 0; i < files.length; i++) {
+      if (!puedeUsar('fotos_nevera')) { setScanning(false); abrirLimite('fotos_nevera'); break }
       setCurrent(i + 1)
       setProgress(`Analizando foto ${i + 1} de ${files.length}...`)
       try {
         const raw  = await readFile(files[i])
         const comp = await compressImage(raw)
         const det  = await scanFoodPhoto(comp.split(',')[1], 'image/jpeg')
+        await consumirUso('fotos_nevera')
         await saveAndTrack(det, `Foto ${i + 1}`)
       } catch (e) {
         addResult({ name: `Foto ${i + 1}`, success: false, error: e instanceof Error ? e.message : String(e) })
@@ -124,6 +131,7 @@ export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
   // ── Modo grupo: varias fotos = UN mismo producto ──────────────────────────────
   const processGroup = async (files: FileList) => {
     if (files.length < 2) return processBatch(files)
+    if (!puedeUsar('fotos_nevera')) { abrirLimite('fotos_nevera'); return }
     setError(null); setResults([]); setDone(false)
     setScanning(true); setTotal(1); setCurrent(1)
     setProgress(`Combinando ${files.length} fotos del mismo producto...`)
@@ -137,6 +145,7 @@ export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
         })
       )
       const det = await scanFoodPhotoGroup(images)
+      await consumirUso('fotos_nevera')
       await saveAndTrack(det, 'Grupo')
     } catch (e) {
       addResult({ name: 'Grupo de fotos', success: false, error: e instanceof Error ? e.message : String(e) })
@@ -170,6 +179,7 @@ export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
   const processReceipt = async (files: FileList) => {
     const file = files[0]
     if (!file) return
+    if (!puedeUsar('fotos_nevera')) { abrirLimite('fotos_nevera'); return }
     setError(null); setResults([]); setDone(false)
     setScanning(true); setTotal(1); setCurrent(1)
     setProgress('Leyendo el tiquete de compra...')
@@ -179,6 +189,7 @@ export default function PhotoScan({ onSave, onDone, onEdit }: Props) {
       const comp      = await compressImage(raw)
       const base64    = comp.split(',')[1]
       const detected  = await scanReceiptPhoto(base64)
+      await consumirUso('fotos_nevera')
 
       setProgress(`Guardando ${detected.length} artículo${detected.length !== 1 ? 's' : ''}...`)
       setTotal(detected.length); setCurrent(0)

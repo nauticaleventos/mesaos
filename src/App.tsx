@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import LimitModal from './components/tiers/LimitModal'
 import { supabase } from './lib/supabase'
 import { useAuthStore } from './store/authStore'
 import { useFamilyStore } from './store/familyStore'
@@ -130,6 +131,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppRoutes />
+      <LimitModal />
     </BrowserRouter>
   )
 }

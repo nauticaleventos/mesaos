@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Settings, ShoppingCart, Sparkles, RefreshCcw, X, Check } from 'lucide-react'
 import Holidays from 'date-holidays'
 import { useFamilyStore }  from '../store/familyStore'
+import { useLimiteStore }  from '../store/limiteStore'
 import { useFridgeStore }  from '../store/fridgeStore'
 import { useLoncheraStore, COMPONENTES_CONFIG, type LoncheraComponente, type LoncheraMemberConfig } from '../store/loncheraStore'
 import { supabase }        from '../lib/supabase'
@@ -217,7 +218,8 @@ export default function LoncheraPage() {
   if (IS_FREE) return <TierGate />
 
   const navigate = useNavigate()
-  const { family, members } = useFamilyStore()
+  const { family, members, puedeUsar, consumirUso } = useFamilyStore()
+  const abrirLimite = useLimiteStore(s => s.abrir)
   const { items: fridgeItems } = useFridgeStore()
   const {
     entries, configs, familyLoncheraModo, paisFestivos, loading, generating,
@@ -283,9 +285,11 @@ export default function LoncheraPage() {
     setShowConfig(false)
   }
 
-  const handleGenerar = () => {
+  const handleGenerar = async () => {
     if (!family?.id) return
-    generarLonchera(family.id, fridgeItems.map(f => f.name))
+    if (!puedeUsar('lonchera')) { abrirLimite('lonchera'); return }
+    await generarLonchera(family.id, fridgeItems.map(f => f.name))
+    await consumirUso('lonchera')
   }
 
   const handleSorpresa = () => {

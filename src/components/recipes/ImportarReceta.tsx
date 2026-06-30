@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRecipesStore, type Recipe } from '../../store/recipesStore'
+import { useFamilyStore } from '../../store/familyStore'
+import { useLimiteStore } from '../../store/limiteStore'
 
 interface Props {
   familyId: string
@@ -18,9 +20,12 @@ export default function ImportarReceta({ familyId, onSaved, onCancel }: Props) {
   const [preview, setPreview]       = useState<Partial<Recipe> | null>(null)
   const [error, setError]           = useState<string | null>(null)
   const addRecipe                   = useRecipesStore(s => s.addRecipe)
+  const { puedeUsar, consumirUso }  = useFamilyStore()
+  const abrirLimite                 = useLimiteStore(s => s.abrir)
 
   const importarDesdeUrl = async () => {
     if (!url.trim()) return
+    if (!puedeUsar('importar_ia')) { abrirLimite('importar_ia'); return }
     setError(null); setLoading(true); setPreview(null)
     try {
       const res  = await fetch('/api/importar-receta', {
@@ -30,6 +35,7 @@ export default function ImportarReceta({ familyId, onSaved, onCancel }: Props) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Error al importar')
+      await consumirUso('importar_ia')
       setPreview({ ...data.recipe, is_base_recipe: false, family_id: familyId })
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))

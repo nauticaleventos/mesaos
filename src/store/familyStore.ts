@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase'
 import type { Family, FamilyUser, FamilyMember, MemberActivity } from '../lib/types'
 export type { FamilyMember } from '../lib/types'
 import { DEFAULT_PERMISSIONS } from '../lib/types'
-import { patchMantenimientoTier } from '../lib/tiers'
+import { patchMantenimientoTier, tierEfectivo, usoMes, canUse, limiteDe, ACCIONES_CONTADAS, type Action, type Tier } from '../lib/tiers'
+import { useAuthStore } from './authStore'
 
 interface FamilyState {
   family:        Family | null
@@ -25,6 +26,10 @@ interface FamilyState {
   // Healthy mode
   setHealthyMode:  (active: boolean) => Promise<void>
   updateFamily:    (patch: Partial<import('../lib/types').Family>) => Promise<void>
+  // Tiers
+  tierActual:      () => Tier
+  puedeUsar:       (action: Action) => boolean
+  consumirUso:     (action: Action) => Promise<boolean>
 }
 
 export const useFamilyStore = create<FamilyState>((set, get) => ({
@@ -221,5 +226,39 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
     if (!family) return
     await supabase.from('families').update(patch).eq('id', family.id)
     set(s => ({ family: s.family ? { ...s.family, ...patch } : null }))
+  },
+
+  // ── Tiers ──────────────────────────────────────────────────────────────────
+  tierActual: () => tierEfectivo(get().family, useAuthStore.getState().user?.email),
+
+  // Chequeo SIN consumir (para UI / pre-validación).
+  puedeUsar: (action) => {
+    const { family } = get()
+    const tier = tierEfectivo(family, useAuthStore.getState().user?.email)
+    const uso = usoMes(family)
+    if ((ACCIONES_CONTADAS as readonly string[]).includes(action)) {
+      const usado = (uso as unknown as Record<string, number>)[action] ?? 0
+      return usado < limiteDe(tier, action, family)
+    }
+    return canUse(tier, action, 0)
+  },
+
+  // Chequea y CONSUME (incrementa el contador). Devuelve true si estaba permitido.
+  consumirUso: async (action) => {
+    const { family } = get()
+    if (!family) return false
+    const tier = tierEfectivo(family, useAuthStore.getState().user?.email)
+    const uso = usoMes(family)
+    if ((ACCIONES_CONTADAS as readonly string[]).includes(action)) {
+      const usado = (uso as unknown as Record<string, number>)[action] ?? 0
+      if (usado >= limiteDe(tier, action, family)) return false
+      if (limiteDe(tier, action, family) !== Infinity) {
+        const nuevo = { ...uso, [action]: usado + 1 }
+        try { await supabase.from('families').update({ uso_mes: nuevo }).eq('id', family.id) } catch { /* col pendiente */ }
+        set(s => ({ family: s.family ? { ...s.family, uso_mes: nuevo } : null }))
+      }
+      return true
+    }
+    return canUse(tier, action, 0)
   },
 }))

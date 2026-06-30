@@ -31,6 +31,58 @@ interface FamilyTierFields {
   mes_reset?: string | null
 }
 
+// ── Acciones y límites por tier ──────────────────────────────────────────────
+export type Action =
+  | 'generar_menu' | 'multi_semana' | 'chat_tita' | 'importar_ia' | 'fotos_nevera'
+  | 'cambios_receta' | 'lonchera' | 'lonchera_personalizada' | 'meal_prep_completo'
+  | 'dashboard_ahorro' | 'auto_renovar' | 'prediccion_inventario' | 'modo_presupuesto'
+  | 'tita_ayuda'
+
+// Acciones con CONTADOR mensual (las demás son features booleanas).
+export const ACCIONES_CONTADAS = ['generar_menu', 'chat_tita', 'importar_ia', 'fotos_nevera', 'cambios_receta', 'lonchera'] as const
+
+export const LIMITES: Record<Tier, Record<Action, number | boolean>> = {
+  free: {
+    generar_menu: 1, multi_semana: 0, chat_tita: 0, importar_ia: 10, fotos_nevera: 2,
+    cambios_receta: 3, lonchera: 1, lonchera_personalizada: false, meal_prep_completo: false,
+    dashboard_ahorro: false, auto_renovar: false, prediccion_inventario: false,
+    modo_presupuesto: false, tita_ayuda: false,
+  },
+  plus: {
+    generar_menu: 4, multi_semana: 0, chat_tita: 50, importar_ia: Infinity, fotos_nevera: 20,
+    cambios_receta: Infinity, lonchera: Infinity, lonchera_personalizada: false, meal_prep_completo: false,
+    dashboard_ahorro: false, auto_renovar: false, prediccion_inventario: false,
+    modo_presupuesto: false, tita_ayuda: false,
+  },
+  pro: {
+    generar_menu: Infinity, multi_semana: Infinity, chat_tita: Infinity, importar_ia: Infinity,
+    fotos_nevera: Infinity, cambios_receta: Infinity, lonchera: Infinity, lonchera_personalizada: true,
+    meal_prep_completo: true, dashboard_ahorro: true, auto_renovar: true, prediccion_inventario: true,
+    modo_presupuesto: true, tita_ayuda: true,
+  },
+}
+
+/** ¿Puede usar la acción? (features booleanas o contadores con uso actual). */
+export function canUse(tier: Tier, action: Action, currentUse?: number): boolean {
+  const limit = LIMITES[tier][action]
+  if (typeof limit === 'boolean') return limit
+  if (limit === Infinity) return true
+  return (currentUse ?? 0) < limit
+}
+
+/** Límite numérico de una acción (incluye desbloqueos para Free.generar_menu). */
+export function limiteDe(tier: Tier, action: Action, family?: FamilyTierFields | null): number {
+  const base = LIMITES[tier][action]
+  if (typeof base === 'boolean') return base ? Infinity : 0
+  if (base === Infinity) return Infinity
+  // Free puede sumar desbloqueos a generar_menu (Fase 5), tope +4 (total 5).
+  if (tier === 'free' && action === 'generar_menu') {
+    const extra = (family?.uso_mes?.desbloqueos ?? []).reduce((s, d) => s + (d.cantidad || 0), 0)
+    return base + Math.min(4, extra)
+  }
+  return base
+}
+
 /** Tier EFECTIVO: super-usuario siempre Pro; si no, el de la familia (o 'free'). */
 export function tierEfectivo(family: FamilyTierFields | null, email?: string | null): Tier {
   if (email && SUPER_USERS.includes(email.toLowerCase())) return 'pro'
