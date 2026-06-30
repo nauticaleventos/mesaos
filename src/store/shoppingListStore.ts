@@ -235,6 +235,7 @@ const PREP_CASA = [
   'en rodajas','en cubos','en tiras','en juliana','en brunoise',
   'en trozos','en dados','en laminas','en rebanadas','en mitades',
   'en pedazos','en lascas','en bastones','en hojuelas',
+  'por la mitad','a la mitad','partido','partida','partidos','partidas',
   // Cocción
   'cocido','cocida','cocidos','cocidas',
   'crudo','cruda','crudos','crudas',
