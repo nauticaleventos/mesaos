@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { Family, FamilyUser, FamilyMember, MemberActivity } from '../lib/types'
 export type { FamilyMember } from '../lib/types'
 import { DEFAULT_PERMISSIONS } from '../lib/types'
+import { patchMantenimientoTier } from '../lib/tiers'
 
 interface FamilyState {
   family:        Family | null
@@ -49,6 +50,16 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
     }
 
     const family = fu.families as unknown as Family
+
+    // Mantenimiento de tier: trial Pro expirado + reset mensual de contadores.
+    // Tolerante: si las columnas aún no existen (migración pendiente), no hace nada.
+    try {
+      const patch = patchMantenimientoTier(family)
+      if (patch) {
+        const { error } = await supabase.from('families').update(patch).eq('id', family.id)
+        if (!error) Object.assign(family, patch)
+      }
+    } catch { /* columnas de tier aún no migradas */ }
 
     const { data: members } = await supabase
       .from('family_members')

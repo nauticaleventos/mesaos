@@ -19,6 +19,11 @@ export interface Family {
   frecuencia_coccion?: string      // diario_varias | diario_una | 2x_semana | 1x_semana
   dias_coccion?: string[] | null   // días de cocción (L-D) si aplica
   frecuencia_mercado?: string      // diario | semanal | quincenal | mensual
+  // ── Sistema de tiers ──
+  tier?: 'free' | 'plus' | 'pro'
+  tier_until?: string | null       // fecha fin de Pro temporal (trial)
+  uso_mes?: import('./tiers').UsoMes
+  mes_reset?: string | null        // fecha del último reset de contadores
   created_at: string
   updated_at: string
 }
