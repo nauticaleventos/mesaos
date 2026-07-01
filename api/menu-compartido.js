@@ -2,9 +2,7 @@
 // Devuelve el menú semanal para un token compartido válido (sin auth requerida)
 
 import { createClient } from '@supabase/supabase-js'
-
-const SUPABASE_URL         = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './_lib/supabase.js'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
